@@ -5,11 +5,11 @@ import { useState, useEffect, useRef, useCallback } from "react";
 // Artwork uses gradient placeholders; swap with hosted URLs for production.
 const LOGO_IMG = "/logo.png";
 const ART_IMGS = [
-  "/sanity.jpg",
+  "/sanity-is-in-rare-supply.jpg",
   "/please-wake-up.jpg",
-  "/storm.jpg",
-  "/beast.jpg",
-  "/resistance.jpg",
+  "/the-boy-who-walked-out-of-the-storm.jpg",
+  "/the-beast.jpg",
+  "/the-great-resistance.jpg",
 ];
 
 // ─── PALETTE ────────────────────────────────────────────
