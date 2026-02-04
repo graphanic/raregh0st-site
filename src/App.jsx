@@ -4,7 +4,13 @@ import { useState, useEffect, useRef, useCallback } from "react";
 // Logo served from public/logo.png — swap the file to update site-wide.
 // Artwork uses gradient placeholders; swap with hosted URLs for production.
 const LOGO_IMG = "/logo.png";
-const ART_IMGS = [null, null, null, null, null];
+const ART_IMGS = [
+  "/sanity.jpg",
+  "/please-wake-up.jpg",
+  "/storm.jpg",
+  "/beast.jpg",
+  "/resistance.jpg",
+];
 
 // ─── PALETTE ────────────────────────────────────────────
 const P = {
