@@ -1741,13 +1741,15 @@ const NotFound = ({ setSection }) => (
 // ─── COOKIE CONSENT ─────────────────────────────────────
 const CookieConsent = () => {
   const [visible, setVisible] = useState(false);
-  const [dismissed, setDismissed] = useState(false);
+  const [dismissed, setDismissed] = useState(() => loadLocal("cookies", false));
   
   useEffect(() => {
-    // Check if already consented (using a simple approach since localStorage may not persist in artifact)
+    if (dismissed) return;
     const timer = setTimeout(() => setVisible(true), 2500);
     return () => clearTimeout(timer);
-  }, []);
+  }, [dismissed]);
+  
+  const handleDismiss = () => { setDismissed(true); saveLocal("cookies", true); };
   
   if (dismissed || !visible) return null;
   
@@ -1768,7 +1770,7 @@ const CookieConsent = () => {
         </div>
       </div>
       <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={() => setDismissed(true)} style={{
+        <button onClick={handleDismiss} style={{
           background: `${P.cyan}12`, border: `1px solid ${P.cyan}30`, color: P.ghost,
           fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2,
           padding: "8px 16px", cursor: "pointer", textTransform: "uppercase",
@@ -1777,7 +1779,7 @@ const CookieConsent = () => {
           onMouseEnter={(e) => { e.target.style.background = `${P.cyan}22`; }}
           onMouseLeave={(e) => { e.target.style.background = `${P.cyan}12`; }}
         >Accept</button>
-        <button onClick={() => setDismissed(true)} style={{
+        <button onClick={handleDismiss} style={{
           background: "none", border: `1px solid ${P.steel}22`, color: P.bone,
           fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2,
           padding: "8px 16px", cursor: "pointer", textTransform: "uppercase", opacity: 0.4,
@@ -1791,19 +1793,28 @@ const CookieConsent = () => {
   );
 };
 
+// ─── PERSISTENCE HELPERS ────────────────────────────────
+const saveLocal = (key, val) => { try { localStorage.setItem(`rg_${key}`, JSON.stringify(val)); } catch(e) {} };
+const loadLocal = (key, fallback) => { try { const v = localStorage.getItem(`rg_${key}`); return v ? JSON.parse(v) : fallback; } catch(e) { return fallback; } };
+
 // ═══════════════════════════════════════════════
 export default function App() {
   const [loading, setLoading] = useState(true);
-  const [section, setSection] = useState("hero");
+  const [section, setSection] = useState(() => {
+    const saved = loadLocal("section", "hero");
+    // Don't restore showcase/case-study without data, and always show hero on fresh visit
+    return ["showcase", "case-study"].includes(saved) ? "hero" : saved;
+  });
   const [selected, setSelected] = useState(null);
   const [designProject, setDesignProject] = useState(null);
-  const [portfolioTab, setPortfolioTab] = useState("curated");
-  const [cart, setCart] = useState([]);
+  const [portfolioTab, setPortfolioTab] = useState(() => loadLocal("tab", "curated"));
+  const [cart, setCart] = useState(() => loadLocal("cart", []));
   const [toast, setToast] = useState(null);
   useImageProtection();
-  const addToCart = (p) => { setCart(prev => [...prev, p]); setToast(`Added "${p.title}"`); setTimeout(() => setToast(null), 2000); };
-  const removeFromCart = (i) => setCart(prev => prev.filter((_, idx) => idx !== i));
-  useEffect(() => { window.scrollTo({ top: 0, behavior: "smooth" }); }, [section]);
+  const addToCart = (p) => { setCart(prev => { const next = [...prev, p]; saveLocal("cart", next); return next; }); setToast(`Added "${p.title}"`); setTimeout(() => setToast(null), 2000); };
+  const removeFromCart = (i) => setCart(prev => { const next = prev.filter((_, idx) => idx !== i); saveLocal("cart", next); return next; });
+  useEffect(() => { saveLocal("section", section); window.scrollTo({ top: 0, behavior: "smooth" }); }, [section]);
+  useEffect(() => { saveLocal("tab", portfolioTab); }, [portfolioTab]);
   const validSections = ["hero", "portfolio", "showcase", "case-study", "media", "the-work", "now", "about", "shop", "contact", "cart", "privacy", "terms", "shipping"];
   const is404 = !validSections.includes(section);
   return (
