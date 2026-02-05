@@ -325,8 +325,8 @@ const TheWork = () => {
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
         <div style={{ marginBottom: 56, opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(16px)", transition: "all 0.8s cubic-bezier(0.16,1,0.3,1)" }}>
-          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8, color: P.magenta, textTransform: "uppercase", marginBottom: 12 }}>Project Angel</div>
-          <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: 0 }}>The Work</h2>
+          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.magenta, textTransform: "uppercase", marginBottom: 12 }}>The Work</div>
+          <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: 0 }}>Project Angel</h2>
           <div style={{ width: 40, height: 1, marginTop: 20, background: `linear-gradient(to right, ${P.magenta}, ${P.cyan})` }} />
         </div>
         <div style={{ maxWidth: 700, marginBottom: 72, opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(12px)", transition: "all 1s cubic-bezier(0.16,1,0.3,1) 0.15s" }}>
@@ -396,8 +396,8 @@ const NowPage = () => {
   return (
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
       <div style={{ maxWidth: 700, margin: "0 auto", padding: "0 40px", opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(12px)", transition: "all 0.7s cubic-bezier(0.16,1,0.3,1)" }}>
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8, color: P.green, textTransform: "uppercase", marginBottom: 12 }}>Living Status</div>
-        <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: "0 0 12px 0" }}>Now</h2>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.green, textTransform: "uppercase", marginBottom: 12 }}>Now</div>
+        <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: "0 0 12px 0" }}>What I'm Doing</h2>
         <div style={{ width: 40, height: 1, background: `linear-gradient(to right, ${P.green}, transparent)`, marginBottom: 48 }} />
         <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 44 }}>
           <div style={{ width: 8, height: 8, borderRadius: "50%", background: P.green, boxShadow: `0 0 12px ${P.green}55`, animation: "pulse 3s infinite" }} />
@@ -502,8 +502,8 @@ const MediaHub = () => {
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
         <div style={{ marginBottom: 36 }}>
-          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8, color: P.cyan, textTransform: "uppercase", marginBottom: 12 }}>Watch &middot; Listen &middot; Follow</div>
-          <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: 0 }}>Media Hub</h2>
+          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.cyan, textTransform: "uppercase", marginBottom: 12 }}>Media</div>
+          <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: 0 }}>Watch · Listen · Follow</h2>
           <div style={{ width: 40, height: 1, marginTop: 20, background: `linear-gradient(to right, ${P.cyan}, transparent)` }} />
         </div>
         <TwitchPanel />
@@ -914,9 +914,10 @@ const Portfolio = ({ setSection, setSelected, setDesignProject, addToCart, portf
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
         {/* Header */}
         <div style={{ marginBottom: 40 }}>
-          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8, color: P.cyan, textTransform: "uppercase", marginBottom: 12 }}>Multi-Disciplinary Creative</div>
-          <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: 0 }}>Portfolio</h2>
-          <div style={{ width: 40, height: 1, background: `linear-gradient(to right, ${P.cyan}, transparent)`, marginTop: 20 }} />
+          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.cyan, textTransform: "uppercase", marginBottom: 12 }}>Portfolio</div>
+          <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: 0 }}>The Work</h2>
+          <div style={{ width: 40, height: 1, background: `linear-gradient(to right, ${P.cyan}, transparent)`, marginTop: 20, marginBottom: 8 }} />
+          <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.4, lineHeight: 1.6 }}>Multi-disciplinary creative — art, design, photography, motion, and AI collaboration.</div>
         </div>
 
         {/* Category tabs */}
@@ -999,7 +1000,7 @@ const About = () => {
   return (
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
       <div style={{ maxWidth: 700, margin: "0 auto", padding: "0 40px", opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(12px)", transition: "all 0.7s cubic-bezier(0.16,1,0.3,1)" }}>
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8, color: P.cyan, textTransform: "uppercase", marginBottom: 12 }}>The Artist</div>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.cyan, textTransform: "uppercase", marginBottom: 12 }}>The Artist</div>
         <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: "0 0 36px 0" }}>Eric Mackenzie Fallis</h2>
         <div style={{ width: 40, height: 1, background: `linear-gradient(to right, ${P.magenta}, transparent)`, marginBottom: 40 }} />
         <div style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.9, color: P.bone, opacity: 0.7 }}>
@@ -1126,8 +1127,8 @@ const Shop = ({ addToCart }) => {
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
         {/* Header */}
         <div style={{ marginBottom: 40 }}>
-          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8, color: P.magenta, textTransform: "uppercase", marginBottom: 12 }}>Prints · Apparel · Digital · Courses</div>
-          <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: 0 }}>The Shop</h2>
+          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.magenta, textTransform: "uppercase", marginBottom: 12 }}>Shop</div>
+          <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: 0 }}>Prints · Apparel · Digital · Courses</h2>
           <div style={{ width: 40, height: 1, background: `linear-gradient(to right, ${P.magenta}, transparent)`, marginTop: 16 }} />
           <div style={{ marginTop: 12, fontFamily: "'Courier New', monospace", fontSize: 9, color: P.bone, opacity: 0.25, letterSpacing: 2 }}>FULFILLED BY PRINTFUL × SHOPIFY · PRINT ON DEMAND</div>
         </div>
@@ -1273,12 +1274,13 @@ const Hero = ({ setSection }) => {
 
   return (
     <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", position: "relative", overflow: "hidden" }}>
-      {/* Moon - flat 2D white */}
+      {/* Moon - dark radial, future True3D parallax canvas */}
       <div style={{
         position: "absolute",
         width: "clamp(400px, 50vw, 650px)", height: "clamp(400px, 50vw, 650px)",
         borderRadius: "50%",
-        background: "#ffffff",
+        background: `radial-gradient(circle at 50% 40%, #1e1e2e 0%, #141420 45%, #0c0c16 70%, ${P.abyss} 100%)`,
+        boxShadow: `0 0 120px 40px ${P.abyss}, inset 0 0 80px rgba(0,0,0,0.4)`,
         opacity: vis ? 1 : 0,
         transition: "opacity 2.5s cubic-bezier(0.16,1,0.3,1)",
         zIndex: 0,
@@ -1292,24 +1294,24 @@ const Hero = ({ setSection }) => {
       }}>
         <img src={LOGO_IMG} alt="RareGh0st" style={{
           width: "clamp(100px, 15vw, 160px)", height: "clamp(100px, 15vw, 160px)",
-          filter: `drop-shadow(0 0 20px hsl(${logoGlow}, 100%, 50%, 0.2)) drop-shadow(0 0 40px hsl(${(logoGlow + 180) % 360}, 100%, 50%, 0.1))`,
+          filter: `brightness(1.1) drop-shadow(0 0 24px hsl(${logoGlow}, 100%, 50%, 0.25)) drop-shadow(0 0 48px hsl(${(logoGlow + 180) % 360}, 100%, 50%, 0.12))`,
           animation: "breathe 4s ease-in-out infinite",
         }} />
       </div>
       {/* Title - below logo */}
       <div style={{ textAlign: "center", opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(28px)", transition: "all 1.5s cubic-bezier(0.16,1,0.3,1)", zIndex: 2 }}>
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 12, color: P.cyan, marginBottom: 22, textTransform: "uppercase" }}>The Art of</div>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 8, color: P.cyan, marginBottom: 22, textTransform: "uppercase", opacity: 0.85, textShadow: `0 0 20px ${P.cyan}25` }}>The Art of</div>
         <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(48px, 10vw, 110px)", fontWeight: 400, color: P.ghost, margin: 0, lineHeight: 0.9, letterSpacing: -2 }}>
-          <span style={{ color: P.cyan }}>Rare</span><span style={{ color: P.magenta }}>Gh</span><span style={{ color: "#2a2a3a", opacity: 0.12 }}>0</span><span style={{ color: P.magenta }}>st</span>
+          <span style={{ color: P.cyan }}>Rare</span><span style={{ color: P.magenta }}>Gh</span><span style={{ color: P.steel, opacity: 0.45 }}>0</span><span style={{ color: P.magenta }}>st</span>
         </h1>
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8, color: P.bone, marginTop: 28, opacity: 0.5, textTransform: "uppercase" }}>Trauma Integration Made Visible</div>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.bone, marginTop: 28, opacity: 0.6, textTransform: "uppercase", textShadow: `0 0 16px ${P.abyss}` }}>Trauma Integration Made Visible</div>
       </div>
       {/* CTAs */}
       <div style={{ display: "flex", gap: 14, marginTop: 36, zIndex: 2, flexWrap: "wrap", justifyContent: "center" }}>
         {[{ label: "Portfolio", dest: "portfolio", color: P.cyan }, { label: "Shop", dest: "shop", color: P.gold }, { label: "Media", dest: "media", color: P.magenta }, { label: "The Work", dest: "the-work", color: P.purple }, { label: "Now", dest: "now", color: P.green }].map(({ label, dest, color }) => (
-          <button key={dest} onClick={() => setSection(dest)} style={{ background: "none", border: `1px solid ${color}25`, color, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 5, padding: "12px 26px", cursor: "pointer", textTransform: "uppercase", opacity: vis ? 1 : 0, transition: "all 1.5s ease, border-color 0.3s, box-shadow 0.3s" }}
-            onMouseEnter={(e) => { e.target.style.borderColor = color; e.target.style.boxShadow = `0 0 18px ${color}15`; }}
-            onMouseLeave={(e) => { e.target.style.borderColor = `${color}25`; e.target.style.boxShadow = "none"; }}
+          <button key={dest} onClick={() => setSection(dest)} style={{ background: `${color}18`, border: `1px solid ${color}35`, color, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 5, padding: "12px 26px", cursor: "pointer", textTransform: "uppercase", opacity: vis ? 1 : 0, transition: "all 1.5s ease, background 0.3s, border-color 0.3s, box-shadow 0.3s" }}
+            onMouseEnter={(e) => { e.target.style.background = `${color}28`; e.target.style.borderColor = `${color}55`; e.target.style.boxShadow = `0 0 18px ${color}15`; }}
+            onMouseLeave={(e) => { e.target.style.background = `${color}18`; e.target.style.borderColor = `${color}35`; e.target.style.boxShadow = "none"; }}
           >{label}</button>
         ))}
       </div>
@@ -1347,9 +1349,10 @@ const Contact = () => {
       <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 40px" }}>
         {/* Header */}
         <div style={{ marginBottom: 48 }}>
-          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8, color: P.gold, textTransform: "uppercase", marginBottom: 12 }}>Commissions · Collaborations · Connect</div>
+          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.gold, textTransform: "uppercase", marginBottom: 12 }}>Contact</div>
           <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: 0 }}>Get In Touch</h2>
-          <div style={{ width: 40, height: 1, background: `linear-gradient(to right, ${P.gold}, transparent)`, marginTop: 16 }} />
+          <div style={{ width: 40, height: 1, background: `linear-gradient(to right, ${P.gold}, transparent)`, marginTop: 16, marginBottom: 8 }} />
+          <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.4, lineHeight: 1.6 }}>Commissions, collaborations, and creative partnerships.</div>
         </div>
 
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "start" }}>
