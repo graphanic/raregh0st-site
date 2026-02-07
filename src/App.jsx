@@ -1525,9 +1525,9 @@ const Hero = ({ setSection }) => {
 
       // Rotate grid layers around the moon axis (960,540 in SVG coords)
       const gr = gridRotation.current;
-      gr.circles = (gr.circles + dt * 0.06) % 360;     // ~6 deg/100s = 1 revolution per 100 min
-      gr.radials = (gr.radials - dt * 0.075) % 360;     // counter-clockwise, slightly faster
-      gr.ticks = (gr.ticks + dt * 0.15) % 360;          // tick ring spins faster
+      gr.circles = (gr.circles + dt * 0.5) % 360;      // ~1 revolution per 12 min
+      gr.radials = (gr.radials - dt * 0.7) % 360;       // counter-clockwise, slightly faster
+      gr.ticks = (gr.ticks + dt * 1.2) % 360;           // tick ring spins fastest
       if (circlesRef.current) circlesRef.current.setAttribute("transform", `rotate(${gr.circles} 960 540)`);
       if (radialsRef.current) radialsRef.current.setAttribute("transform", `rotate(${gr.radials} 960 540)`);
       if (ticksRef.current) ticksRef.current.setAttribute("transform", `rotate(${gr.ticks} 960 540)`);
