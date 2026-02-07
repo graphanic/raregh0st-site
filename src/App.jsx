@@ -1761,7 +1761,7 @@ const Hero = ({ setSection }) => {
 
       // ── Moon image ──
       if (moonImg.current) {
-        const moonSize = Math.min(Math.max(350, cw * 0.45), 580);
+        const moonSize = Math.min(Math.max(438, cw * 0.5625), 725);
         const r = moonSize / 2;
         ctx.save();
         ctx.beginPath();
