@@ -1406,15 +1406,21 @@ const Hero = ({ setSection }) => {
   const setLayerRef = (i) => (el) => { layerRefs.current[i] = el; };
   const layerBase = { position: "absolute", inset: -60, pointerEvents: "none", willChange: "transform" };
 
-  // ── Navigation nodes — positioned like planets on a star chart ──
-  // x,y are percentages from center (0,0). Radius is the node circle size.
-  const nodes = [
-    { label: "Portfolio", dest: "portfolio", color: P.cyan,    x: -28, y: -22, radius: 52, ringCount: 3, desc: "Curated Works" },
-    { label: "Shop",      dest: "shop",      color: P.gold,    x: 30,  y: -18, radius: 44, ringCount: 2, desc: "Prints & Originals" },
-    { label: "Media",     dest: "media",     color: P.magenta, x: -32, y: 24,  radius: 40, ringCount: 2, desc: "Motion & Sound" },
-    { label: "The Work",  dest: "the-work",  color: P.purple,  x: 26,  y: 28,  radius: 46, ringCount: 3, desc: "Process & Philosophy" },
-    { label: "Now",       dest: "now",       color: P.green,   x: 0,   y: -36, radius: 34, ringCount: 2, desc: "Current Status" },
+  // ── Navigation nodes — snapped to radial grid lines ──
+  // Defined by angle (degrees, snapped to 15deg grid) + distance from center.
+  // The HUD grid in L2 has 24 radial lines at 0,15,30,...345 degrees.
+  // angle=0 is right, 90=down, 180=left, 270=up (screen coords).
+  const nodesDef = [
+    { label: "Portfolio", dest: "portfolio", color: P.cyan,    angle: 225, dist: 34, radius: 52, ringCount: 3, desc: "Curated Works" },
+    { label: "Shop",      dest: "shop",      color: P.gold,    angle: 330, dist: 34, radius: 44, ringCount: 2, desc: "Prints & Originals" },
+    { label: "Media",     dest: "media",     color: P.magenta, angle: 150, dist: 38, radius: 40, ringCount: 2, desc: "Motion & Sound" },
+    { label: "The Work",  dest: "the-work",  color: P.purple,  angle: 45,  dist: 36, radius: 46, ringCount: 3, desc: "Process & Philosophy" },
+    { label: "Now",       dest: "now",       color: P.green,   angle: 270, dist: 34, radius: 34, ringCount: 2, desc: "Current Status" },
   ];
+  const nodes = nodesDef.map(n => {
+    const rad = (n.angle * Math.PI) / 180;
+    return { ...n, x: Math.cos(rad) * n.dist, y: Math.sin(rad) * n.dist };
+  });
 
   return (
     <div ref={containerRef} style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", position: "relative", overflow: "hidden" }}>
