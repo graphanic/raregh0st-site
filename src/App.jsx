@@ -2067,10 +2067,7 @@ const Hero = ({ setSection }) => {
         <div style={{ textAlign: "center" }}>
           <div style={{
             fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8,
-            color: P.bone, textTransform: "uppercase",
-            background: `${P.abyss}cc`, backdropFilter: "blur(8px)",
-            padding: "6px 18px", borderRadius: 20,
-            border: `1px solid ${P.steel}30`,
+            color: P.magenta, textTransform: "uppercase",
             marginBottom: 22,
           }}><MorphText speed={80}>The Art of</MorphText></div>
           <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(48px, 10vw, 110px)", fontWeight: 400, margin: 0, lineHeight: 0.9, letterSpacing: -2 }}>
@@ -2081,10 +2078,7 @@ const Hero = ({ setSection }) => {
           </h1>
           <div style={{
             fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 6,
-            color: P.bone, textTransform: "uppercase",
-            background: `${P.abyss}cc`, backdropFilter: "blur(8px)",
-            padding: "6px 18px", borderRadius: 20,
-            border: `1px solid ${P.steel}30`,
+            color: P.cyan, textTransform: "uppercase",
             marginTop: 28, opacity: 0.8,
           }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
         </div>
