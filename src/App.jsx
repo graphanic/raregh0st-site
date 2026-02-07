@@ -1363,38 +1363,37 @@ const Cart = ({ cart, removeFromCart }) => {
 // ─── PARALLAX HERO — Destiny-style Director HUD Map ─────────
 // Circular navigation nodes connected by geometric grid lines,
 // layered with parallax depth. Mouse-driven "window" effect.
+
+// ─── CANVAS HERO (GPU-accelerated solar system) ──────────
+// One <canvas> replaces ~150 DOM elements. All orbits, grid, stars, and nodes
+// drawn in a single render pass. Scales to 75+ nodes at 60fps.
 const Hero = ({ setSection }) => {
-  const [vis, setVis] = useState(false);
-  const [hoveredNode, setHoveredNode] = useState(null);
   const containerRef = useRef(null);
-  const layerRefs = useRef([]);
-  const nodeRefs = useRef([]);
-  const fieldRef = useRef(null);
-  const mouse = useRef({ x: 0, y: 0 });
+  const canvasRef = useRef(null);
+  const overlayRef = useRef(null);
+  const bgRef = useRef(null);
+  const vigRef = useRef(null);
+  const [vis, setVis] = useState(false);
+
+  // All animation state in refs (no React re-renders during animation)
+  const mouse = useRef({ x: 0, y: 0, px: 0, py: 0, w: 0, h: 0 });
   const smoothed = useRef({ x: 0, y: 0 });
   const raf = useRef(null);
   const lastTime = useRef(null);
   const zoomTarget = useRef(1);
   const zoomCurrent = useRef(1);
-  // Panning state
   const panTarget = useRef({ x: 0, y: 0 });
   const panCurrent = useRef({ x: 0, y: 0 });
-  // Grid rotation refs (SVG <g> elements driven by RAF, not CSS animation)
-  const circlesRef = useRef(null);
-  const radialsRef = useRef(null);
-  const ticksRef = useRef(null);
-  const gridRotation = useRef({ circles: 0, radials: 0, ticks: 0 });
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const dragPanStart = useRef({ x: 0, y: 0 });
+  const gridRot = useRef({ circles: 0, radials: 0, ticks: 0 });
+  const hoveredRef = useRef(-1);
+  const nodeScreenPos = useRef([]);
+  const visRef = useRef(false);
+  const fadeIn = useRef(0);
 
-  // L0:cosmos L1:stars L2:field(grid+moon+center+nodes) L3:vignette
-  const depths = [0.02, 0.04, 0.015, 0.07];
-  const maxShift = 40;
-
-  // ── Navigation nodes — orbiting the central moon ──
-  // Wider orbits so they spread across the viewport. Farther = slower.
-  // Nodes can have `moons` — sub-items that orbit the node itself.
+  // ── Navigation nodes ──
   const nodes = [
     { label: "Portfolio", dest: "portfolio", color: P.cyan,    orbitRadius: 480, speed: 200, startAngle: 200, radius: 52, ringCount: 3, desc: "Curated Works" },
     { label: "Shop",      dest: "shop",      color: P.gold,    orbitRadius: 620, speed: 280, startAngle: 340, radius: 54, ringCount: 2, desc: "Prints & Originals", moons: [
@@ -1409,17 +1408,37 @@ const Hero = ({ setSection }) => {
     { label: "Now",       dest: "now",       color: P.green,   orbitRadius: 340, speed: 140, startAngle: 270, radius: 34, ringCount: 2, desc: "Current Status" },
   ];
 
-  // Build flat list of all sub-moons for RAF tracking
+  // Flat moon list
   const allMoons = [];
   nodes.forEach((node, ni) => {
     if (node.moons) node.moons.forEach((moon, mi) => {
       allMoons.push({ nodeIndex: ni, moonIndex: mi, ...moon });
     });
   });
-  const moonRefs = useRef([]);
 
-  useEffect(() => { setTimeout(() => setVis(true), 100); }, []);
+  const orbitAngles = useRef(nodes.map(n => n.startAngle));
+  const moonAnglesRef = useRef(allMoons.map(m => m.startAngle));
 
+  // Stars (generated once, drawn every frame — trivial in canvas)
+  const starsData = useRef(Array.from({ length: 80 }, () => ({
+    x: Math.random(), y: Math.random(),
+    size: Math.random() * 1.8 + 0.3,
+    opacity: Math.random() * 0.5 + 0.1,
+    color: [P.ghost, P.cyan, P.magenta][Math.floor(Math.random() * 3)],
+    phase: Math.random() * Math.PI * 2,
+    twinkleSpeed: Math.random() * 0.8 + 0.4,
+  })));
+
+  // Moon image preload
+  const moonImg = useRef(null);
+  useEffect(() => {
+    const img = new Image();
+    img.src = "/images/moon.png";
+    img.onload = () => { moonImg.current = img; };
+    setTimeout(() => { setVis(true); visRef.current = true; }, 100);
+  }, []);
+
+  // ── Event handlers ──
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -1432,161 +1451,529 @@ const Hero = ({ setSection }) => {
       mouse.current.py = e.clientY - rect.top;
       mouse.current.w = rect.width;
       mouse.current.h = rect.height;
-      // Drag panning
       if (isDragging.current) {
-        const dx = e.clientX - dragStart.current.x;
-        const dy = e.clientY - dragStart.current.y;
-        panTarget.current.x = dragPanStart.current.x + dx;
-        panTarget.current.y = dragPanStart.current.y + dy;
+        panTarget.current.x = dragPanStart.current.x + (e.clientX - dragStart.current.x);
+        panTarget.current.y = dragPanStart.current.y + (e.clientY - dragStart.current.y);
       }
     };
+
+    const onWheel = (e) => {
+      e.preventDefault();
+      const d = e.deltaY > 0 ? -0.08 : 0.08;
+      zoomTarget.current = Math.max(0.3, Math.min(2.5, zoomTarget.current + d));
+    };
+
+    const checkNodeClick = (mx, my) => {
+      for (let i = 0; i < nodeScreenPos.current.length; i++) {
+        const np = nodeScreenPos.current[i];
+        if (!np) continue;
+        if (Math.hypot(mx - np.x, my - np.y) < np.r) {
+          setSection(nodes[i].dest);
+          return true;
+        }
+      }
+      return false;
+    };
+
     const onDown = (e) => {
-      if (e.button !== 0) return;
+      const rect = el.getBoundingClientRect();
+      if (checkNodeClick(e.clientX - rect.left, e.clientY - rect.top)) return;
       isDragging.current = true;
       dragStart.current = { x: e.clientX, y: e.clientY };
       dragPanStart.current = { x: panTarget.current.x, y: panTarget.current.y };
-      el.style.cursor = "grabbing";
     };
-    const onUp = () => {
-      isDragging.current = false;
-      el.style.cursor = "";
-    };
-    const onWheel = (e) => {
-      e.preventDefault();
+    const onUp = () => { isDragging.current = false; };
+
+    const onTouchStart = (e) => {
+      const t = e.touches[0];
       const rect = el.getBoundingClientRect();
-      // Mouse position relative to viewport center
-      const mx = e.clientX - rect.left - rect.width / 2;
-      const my = e.clientY - rect.top - rect.height / 2;
-      const oldZoom = zoomTarget.current;
-      const delta = e.deltaY > 0 ? -0.08 : 0.08;
-      const newZoom = Math.max(0.3, Math.min(2.5, oldZoom + delta));
-      // Adjust pan so the point under the mouse stays fixed
-      const factor = 1 - newZoom / oldZoom;
-      panTarget.current.x += (mx - panTarget.current.x) * factor;
-      panTarget.current.y += (my - panTarget.current.y) * factor;
-      zoomTarget.current = newZoom;
+      if (checkNodeClick(t.clientX - rect.left, t.clientY - rect.top)) return;
+      isDragging.current = true;
+      dragStart.current = { x: t.clientX, y: t.clientY };
+      dragPanStart.current = { x: panTarget.current.x, y: panTarget.current.y };
     };
+    const onTouchMove = (e) => {
+      const t = e.touches[0];
+      const rect = el.getBoundingClientRect();
+      mouse.current.x = ((t.clientX - rect.left) / rect.width - 0.5) * 2;
+      mouse.current.y = ((t.clientY - rect.top) / rect.height - 0.5) * 2;
+      mouse.current.px = t.clientX - rect.left;
+      mouse.current.py = t.clientY - rect.top;
+      if (isDragging.current) {
+        panTarget.current.x = dragPanStart.current.x + (t.clientX - dragStart.current.x);
+        panTarget.current.y = dragPanStart.current.y + (t.clientY - dragStart.current.y);
+      }
+    };
+    const onTouchEnd = () => { isDragging.current = false; };
+
     el.addEventListener("mousemove", onMove);
-    el.addEventListener("mousedown", onDown);
-    window.addEventListener("mouseup", onUp);
     el.addEventListener("wheel", onWheel, { passive: false });
+    el.addEventListener("mousedown", onDown);
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: true });
+    el.addEventListener("touchend", onTouchEnd);
+    window.addEventListener("mouseup", onUp);
+
     return () => {
       el.removeEventListener("mousemove", onMove);
-      el.removeEventListener("mousedown", onDown);
-      window.removeEventListener("mouseup", onUp);
       el.removeEventListener("wheel", onWheel);
+      el.removeEventListener("mousedown", onDown);
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+      window.removeEventListener("mouseup", onUp);
     };
-  }, []);
+  }, [setSection]);
 
-  // Orbit angles stored in a ref so they persist across frames
-  const orbitAngles = useRef(nodes.map(n => n.startAngle));
-  const moonAngles = useRef(allMoons.map(m => m.startAngle));
-
+  // ── Main animation loop ──
   useEffect(() => {
-    const ease = 0.08;
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    const dpr = window.devicePixelRatio || 1;
+
+    let cw, ch;
+    const resize = () => {
+      const p = canvas.parentElement;
+      if (!p) return;
+      const rect = p.getBoundingClientRect();
+      cw = rect.width;
+      ch = rect.height;
+      canvas.width = cw * dpr;
+      canvas.height = ch * dpr;
+      canvas.style.width = cw + "px";
+      canvas.style.height = ch + "px";
+    };
+    resize();
+    window.addEventListener("resize", resize);
+
     const tick = (timestamp) => {
-      // Delta time
       if (!lastTime.current) lastTime.current = timestamp;
-      const dt = Math.min((timestamp - lastTime.current) / 1000, 0.1); // cap at 100ms
+      const dt = Math.min((timestamp - lastTime.current) / 1000, 0.1);
       lastTime.current = timestamp;
 
-      // Parallax layers
-      smoothed.current.x += (mouse.current.x - smoothed.current.x) * ease;
-      smoothed.current.y += (mouse.current.y - smoothed.current.y) * ease;
+      // Fade in (~2s)
+      if (visRef.current && fadeIn.current < 1) fadeIn.current = Math.min(1, fadeIn.current + dt * 0.5);
+      const a = fadeIn.current;
+
+      // Smooth mouse
+      smoothed.current.x += (mouse.current.x - smoothed.current.x) * 0.08;
+      smoothed.current.y += (mouse.current.y - smoothed.current.y) * 0.08;
       const sx = smoothed.current.x;
       const sy = smoothed.current.y;
-      for (let i = 0; i < layerRefs.current.length; i++) {
-        const layer = layerRefs.current[i];
-        if (!layer) continue;
-        const d = depths[i] || 0.02;
-        const tx = sx * maxShift * (d / 0.04);
-        const ty = sy * maxShift * (d / 0.04);
-        layer.style.transform = `translate3d(${-tx}px, ${-ty}px, 0)`;
+
+      // Parallax CSS layers
+      if (bgRef.current) {
+        bgRef.current.style.transform = `translate3d(${-sx * 20}px, ${-sy * 20}px, 0)`;
+      }
+      if (vigRef.current) {
+        vigRef.current.style.transform = `translate3d(${-sx * 70}px, ${-sy * 70}px, 0)`;
       }
 
-      // Clamp pan — tight at max zoom-out, expansive when zoomed in
-      // At min zoom (0.3): boundary is ~0.35 viewport (brand stays reachable)
-      // As you zoom in the boundary scales up so you can explore the full system
-      const vw = mouse.current.w || window.innerWidth;
-      const vh = mouse.current.h || window.innerHeight;
-      const curZoom = zoomTarget.current;
-      const minZoom = 0.3;
-      const boundScale = curZoom / minZoom; // 1x at min zoom, ~3.3x at zoom 1, ~8.3x at zoom 2.5
-      const maxPanX = vw * 0.35 * boundScale;
-      const maxPanY = vh * 0.35 * boundScale;
-      panTarget.current.x = Math.max(-maxPanX, Math.min(maxPanX, panTarget.current.x));
-      panTarget.current.y = Math.max(-maxPanY, Math.min(maxPanY, panTarget.current.y));
+      // Pan clamp
+      const vw = mouse.current.w || cw;
+      const vh = mouse.current.h || ch;
+      const bScale = zoomTarget.current / 0.3;
+      const maxPX = vw * 0.35 * bScale;
+      const maxPY = vh * 0.35 * bScale;
+      panTarget.current.x = Math.max(-maxPX, Math.min(maxPX, panTarget.current.x));
+      panTarget.current.y = Math.max(-maxPY, Math.min(maxPY, panTarget.current.y));
 
-      // Smooth pan + zoom
+      // Smooth zoom/pan
       panCurrent.current.x += (panTarget.current.x - panCurrent.current.x) * 0.1;
       panCurrent.current.y += (panTarget.current.y - panCurrent.current.y) * 0.1;
       zoomCurrent.current += (zoomTarget.current - zoomCurrent.current) * 0.08;
-      const z = zoomCurrent.current;
+      const zoom = zoomCurrent.current;
       const fpx = panCurrent.current.x;
       const fpy = panCurrent.current.y;
-      if (fieldRef.current) {
-        fieldRef.current.style.transform = `translate(${fpx}px, ${fpy}px) scale(${z})`;
+
+      // Update angles
+      for (let i = 0; i < nodes.length; i++) {
+        orbitAngles.current[i] = (orbitAngles.current[i] + (360 / nodes[i].speed) * dt) % 360;
+      }
+      for (let m = 0; m < allMoons.length; m++) {
+        moonAnglesRef.current[m] = (moonAnglesRef.current[m] + (360 / allMoons[m].speed) * dt) % 360;
       }
 
-      // Orbit each node around the sun
+      // Grid rotation
+      const gr = gridRot.current;
+      gr.circles = (gr.circles + dt * 0.5) % 360;
+      gr.radials = (gr.radials - dt * 0.7) % 360;
+      gr.ticks = (gr.ticks + dt * 1.2) % 360;
+
+      // ─── DRAW ───
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      ctx.clearRect(0, 0, cw, ch);
+
+      // ── Stars (L1 parallax) ──
+      const starOx = sx * 40;
+      const starOy = sy * 40;
+      for (const s of starsData.current) {
+        const x = s.x * cw - starOx;
+        const y = s.y * ch - starOy;
+        const twinkle = 0.5 + 0.5 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
+        ctx.globalAlpha = a * s.opacity * twinkle;
+        ctx.fillStyle = s.color;
+        ctx.beginPath();
+        ctx.arc(x, y, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // ── Field transform (L2 parallax + zoom/pan) ──
+      const fOx = sx * 15;
+      const fOy = sy * 15;
+      const cx = cw / 2 - fOx + fpx;
+      const cy = ch / 2 - fOy + fpy;
+
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.scale(zoom, zoom);
+
+      // ── Rectangular grid ──
+      ctx.strokeStyle = P.cyan;
+      ctx.lineWidth = 0.5;
+      ctx.globalAlpha = a * 0.14;
+      ctx.beginPath();
+      for (let i = 0; i < 25; i++) {
+        const pos = i * 86 - 1080;
+        ctx.moveTo(-1460, pos); ctx.lineTo(1460, pos);
+        ctx.moveTo(pos, -1040); ctx.lineTo(pos, 1040);
+      }
+      ctx.stroke();
+
+      // ── Concentric circles (rotating) ──
+      ctx.save();
+      ctx.rotate(gr.circles * Math.PI / 180);
+      ctx.strokeStyle = P.cyan;
+      const circleR = [80, 160, 260, 380, 520, 680, 860, 1080, 1350, 1700, 2100];
+      for (let i = 0; i < circleR.length; i++) {
+        ctx.lineWidth = i < 3 ? 1 : i < 6 ? 0.7 : 0.5;
+        ctx.globalAlpha = a * (0.32 - i * 0.02);
+        ctx.setLineDash(i % 3 === 2 ? [6, 12] : []);
+        ctx.beginPath();
+        ctx.arc(0, 0, circleR[i], 0, Math.PI * 2);
+        ctx.stroke();
+      }
+      ctx.setLineDash([]);
+      ctx.restore();
+
+      // ── Radial lines (rotating) ──
+      ctx.save();
+      ctx.rotate(gr.radials * Math.PI / 180);
+      ctx.strokeStyle = P.cyan;
+      // Major radials
+      ctx.lineWidth = 0.8;
+      ctx.globalAlpha = a * 0.21;
+      ctx.beginPath();
+      for (let i = 0; i < 24; i += 6) {
+        const ang = (i / 24) * Math.PI * 2;
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(ang) * 3000, Math.sin(ang) * 3000);
+      }
+      ctx.stroke();
+      // Minor radials
+      ctx.lineWidth = 0.4;
+      ctx.globalAlpha = a * 0.105;
+      ctx.beginPath();
+      for (let i = 0; i < 24; i++) {
+        if (i % 6 === 0) continue;
+        const ang = (i / 24) * Math.PI * 2;
+        ctx.moveTo(0, 0);
+        ctx.lineTo(Math.cos(ang) * 3000, Math.sin(ang) * 3000);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // ── Tick ring (rotating) ──
+      ctx.save();
+      ctx.rotate(gr.ticks * Math.PI / 180);
+      ctx.strokeStyle = P.cyan;
+      ctx.globalAlpha = a * 0.25;
+      // Major ticks
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      for (let i = 0; i < 72; i += 6) {
+        const ang = (i / 72) * Math.PI * 2;
+        ctx.moveTo(Math.cos(ang) * 480, Math.sin(ang) * 480);
+        ctx.lineTo(Math.cos(ang) * 510, Math.sin(ang) * 510);
+      }
+      ctx.stroke();
+      // Medium ticks
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      for (let i = 0; i < 72; i += 3) {
+        if (i % 6 === 0) continue;
+        const ang = (i / 72) * Math.PI * 2;
+        ctx.moveTo(Math.cos(ang) * 480, Math.sin(ang) * 480);
+        ctx.lineTo(Math.cos(ang) * 498, Math.sin(ang) * 498);
+      }
+      ctx.stroke();
+      // Minor ticks
+      ctx.lineWidth = 0.4;
+      ctx.beginPath();
+      for (let i = 0; i < 72; i++) {
+        if (i % 3 === 0) continue;
+        const ang = (i / 72) * Math.PI * 2;
+        ctx.moveTo(Math.cos(ang) * 480, Math.sin(ang) * 480);
+        ctx.lineTo(Math.cos(ang) * 492, Math.sin(ang) * 492);
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // ── Moon image ──
+      if (moonImg.current) {
+        const moonSize = Math.min(Math.max(350, cw * 0.45), 580);
+        const r = moonSize / 2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.globalAlpha = a;
+        // Apply brightness/contrast via composite — draw image then overlay
+        ctx.drawImage(moonImg.current, -r, -r, moonSize, moonSize);
+        // Desaturate overlay
+        ctx.globalCompositeOperation = "saturation";
+        ctx.fillStyle = "hsl(0, 5%, 50%)";
+        ctx.fillRect(-r, -r, moonSize, moonSize);
+        ctx.globalCompositeOperation = "source-over";
+        // Edge fade
+        const grad = ctx.createRadialGradient(0, -r * 0.1, r * 0.55, 0, 0, r);
+        grad.addColorStop(0, "transparent");
+        grad.addColorStop(0.78, "rgba(6,6,12,0.13)");
+        grad.addColorStop(1, "rgba(6,6,12,0.53)");
+        ctx.fillStyle = grad;
+        ctx.fillRect(-r, -r, moonSize, moonSize);
+        ctx.restore();
+        // Outer glow
+        ctx.globalAlpha = a * 0.06;
+        const glow = ctx.createRadialGradient(0, 0, r, 0, 0, r * 1.4);
+        glow.addColorStop(0, P.cyan);
+        glow.addColorStop(1, "transparent");
+        ctx.fillStyle = glow;
+        ctx.beginPath();
+        ctx.arc(0, 0, r * 1.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // ── Orbit tracks ──
+      for (let i = 0; i < nodes.length; i++) {
+        ctx.strokeStyle = nodes[i].color;
+        ctx.lineWidth = 0.5;
+        ctx.globalAlpha = a * 0.06;
+        ctx.beginPath();
+        ctx.arc(0, 0, nodes[i].orbitRadius, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+
+      // ── Nodes + Sub-moons ──
+      let newHovered = -1;
+      nodeScreenPos.current = [];
+      const t = timestamp * 0.001;
+
       for (let i = 0; i < nodes.length; i++) {
         const node = nodes[i];
-        const el = nodeRefs.current[i];
-        if (!el) continue;
-        const degreesPerSec = 360 / node.speed;
-        orbitAngles.current[i] = (orbitAngles.current[i] + degreesPerSec * dt) % 360;
-        const rad = (orbitAngles.current[i] * Math.PI) / 180;
-        const ox = Math.cos(rad) * node.orbitRadius;
-        const oy = Math.sin(rad) * node.orbitRadius;
-        el.style.transform = `translate(${ox}px, ${oy}px)`;
+        const rad = orbitAngles.current[i] * Math.PI / 180;
+        const nx = Math.cos(rad) * node.orbitRadius;
+        const ny = Math.sin(rad) * node.orbitRadius;
+
+        // Screen position (for hit detection — accounts for all transforms)
+        const screenX = nx * zoom + cx;
+        const screenY = ny * zoom + cy;
+        const hitR = node.radius * zoom;
+        nodeScreenPos.current[i] = { x: screenX, y: screenY, r: hitR };
+
+        // Hit test against current mouse
+        const mpx = mouse.current.px;
+        const mpy = mouse.current.py;
+        if (mpx && mpy && Math.hypot(mpx - screenX, mpy - screenY) < hitR) {
+          newHovered = i;
+        }
+
+        const isH = hoveredRef.current === i;
+
+        // Outer rings with pulse
+        ctx.strokeStyle = node.color;
+        for (let ri = 0; ri < node.ringCount; ri++) {
+          const rr = node.radius + ri * 10 + 5;
+          const pulse = 1 + 0.04 * Math.sin(t * 1.0 + ri * 0.5 + i * 0.3);
+          ctx.lineWidth = ri === 0 ? 1.5 : 0.5;
+          ctx.globalAlpha = a * (isH ? 0.5 - ri * 0.12 : 0.18 - ri * 0.05);
+          ctx.beginPath();
+          ctx.arc(nx, ny, rr * pulse, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+
+        // Hover glow (single shadow pass, not per-ring)
+        if (isH) {
+          ctx.save();
+          ctx.shadowColor = node.color;
+          ctx.shadowBlur = 24;
+          ctx.strokeStyle = node.color;
+          ctx.lineWidth = 1;
+          ctx.globalAlpha = a * 0.3;
+          ctx.beginPath();
+          ctx.arc(nx, ny, node.radius + 5, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+        }
+
+        // Dashed spinning ring
+        const dashR = node.radius - 4;
+        const spinAngle = t * (0.1 + i * 0.02) * (i % 2 === 0 ? 1 : -1);
+        ctx.save();
+        ctx.translate(nx, ny);
+        ctx.rotate(spinAngle);
+        ctx.setLineDash([4, 6]);
+        ctx.strokeStyle = node.color;
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = a * (isH ? 0.4 : 0.1);
+        ctx.beginPath();
+        ctx.arc(0, 0, dashR, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.restore();
+
+        // Glow disc
+        const glowGrad = ctx.createRadialGradient(nx, ny, 0, nx, ny, node.radius);
+        glowGrad.addColorStop(0, node.color + (isH ? "18" : "08"));
+        glowGrad.addColorStop(1, "transparent");
+        ctx.fillStyle = glowGrad;
+        ctx.globalAlpha = a;
+        ctx.beginPath();
+        ctx.arc(nx, ny, node.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Label
+        ctx.font = "bold 10px 'Courier New', monospace";
+        ctx.textAlign = "center";
+        ctx.textBaseline = "middle";
+        ctx.letterSpacing = "4px";
+        ctx.fillStyle = node.color;
+        ctx.globalAlpha = a * (isH ? 1 : 0.7);
+        if (isH) {
+          ctx.shadowColor = node.color;
+          ctx.shadowBlur = 12;
+        }
+        ctx.fillText(node.label.toUpperCase(), nx, ny);
+        ctx.shadowBlur = 0;
+
+        // Description (hover only)
+        if (isH) {
+          ctx.font = "italic 9px Georgia, serif";
+          ctx.fillStyle = P.bone;
+          ctx.globalAlpha = a * 0.5;
+          ctx.fillText(node.desc, nx, ny + 14);
+        }
+
+        // Tick marks (batched by weight)
+        ctx.strokeStyle = node.color;
+        ctx.globalAlpha = a * (isH ? 0.5 : 0.12);
+        // Major ticks
+        ctx.lineWidth = 1.2;
+        ctx.beginPath();
+        for (let ti = 0; ti < 12; ti += 3) {
+          const ang = (ti / 12) * Math.PI * 2;
+          ctx.moveTo(nx + Math.cos(ang) * (node.radius + 2), ny + Math.sin(ang) * (node.radius + 2));
+          ctx.lineTo(nx + Math.cos(ang) * (node.radius + 10), ny + Math.sin(ang) * (node.radius + 10));
+        }
+        ctx.stroke();
+        // Minor ticks
+        ctx.lineWidth = 0.5;
+        ctx.beginPath();
+        for (let ti = 0; ti < 12; ti++) {
+          if (ti % 3 === 0) continue;
+          const ang = (ti / 12) * Math.PI * 2;
+          ctx.moveTo(nx + Math.cos(ang) * (node.radius + 2), ny + Math.sin(ang) * (node.radius + 2));
+          ctx.lineTo(nx + Math.cos(ang) * (node.radius + 5), ny + Math.sin(ang) * (node.radius + 5));
+        }
+        ctx.stroke();
+
+        // ── Sub-moons ──
+        if (node.moons) {
+          for (let mi = 0; mi < node.moons.length; mi++) {
+            const moon = node.moons[mi];
+            const flatIdx = allMoons.findIndex(m => m.nodeIndex === i && m.moonIndex === mi);
+            const mrad = moonAnglesRef.current[flatIdx] * Math.PI / 180;
+            const mx = nx + Math.cos(mrad) * moon.orbitRadius;
+            const my = ny + Math.sin(mrad) * moon.orbitRadius;
+
+            // Moon orbit track
+            ctx.setLineDash([2, 4]);
+            ctx.strokeStyle = node.color;
+            ctx.lineWidth = 0.5;
+            ctx.globalAlpha = a * 0.08;
+            ctx.beginPath();
+            ctx.arc(nx, ny, moon.orbitRadius, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Moon border circle
+            ctx.strokeStyle = node.color;
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = a * 0.7;
+            ctx.beginPath();
+            ctx.arc(mx, my, moon.size / 2, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Moon glow fill
+            const moonGrad = ctx.createRadialGradient(mx, my, 0, mx, my, moon.size / 2);
+            moonGrad.addColorStop(0, node.color + "15");
+            moonGrad.addColorStop(1, "transparent");
+            ctx.fillStyle = moonGrad;
+            ctx.globalAlpha = a * 0.7;
+            ctx.beginPath();
+            ctx.arc(mx, my, moon.size / 2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Inner bright dot
+            ctx.fillStyle = node.color;
+            ctx.globalAlpha = a * 0.5;
+            ctx.beginPath();
+            ctx.arc(mx, my, moon.size * 0.2, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Moon label
+            ctx.font = "7px 'Courier New', monospace";
+            ctx.textAlign = "center";
+            ctx.textBaseline = "top";
+            ctx.fillStyle = node.color;
+            ctx.globalAlpha = a * 0.5;
+            ctx.fillText(moon.label.toUpperCase(), mx, my + moon.size / 2 + 4);
+          }
+        }
       }
 
-      // Rotate grid layers around the moon axis (960,540 in SVG coords)
-      const gr = gridRotation.current;
-      gr.circles = (gr.circles + dt * 0.5) % 360;      // ~1 revolution per 12 min
-      gr.radials = (gr.radials - dt * 0.7) % 360;       // counter-clockwise, slightly faster
-      gr.ticks = (gr.ticks + dt * 1.2) % 360;           // tick ring spins fastest
-      if (circlesRef.current) circlesRef.current.setAttribute("transform", `rotate(${gr.circles} 960 540)`);
-      if (radialsRef.current) radialsRef.current.setAttribute("transform", `rotate(${gr.radials} 960 540)`);
-      if (ticksRef.current) ticksRef.current.setAttribute("transform", `rotate(${gr.ticks} 960 540)`);
+      ctx.restore(); // field transform
 
-      // Orbit each sub-moon around its parent node
-      for (let m = 0; m < allMoons.length; m++) {
-        const moon = allMoons[m];
-        const el = moonRefs.current[m];
-        if (!el) continue;
-        const degreesPerSec = 360 / moon.speed;
-        moonAngles.current[m] = (moonAngles.current[m] + degreesPerSec * dt) % 360;
-        const rad = (moonAngles.current[m] * Math.PI) / 180;
-        const mx = Math.cos(rad) * moon.orbitRadius;
-        const my = Math.sin(rad) * moon.orbitRadius;
-        el.style.transform = `translate(${mx}px, ${my}px)`;
+      // Update hover ref (no setState — avoids re-render)
+      hoveredRef.current = newHovered;
+
+      // Cursor
+      if (canvasRef.current) {
+        canvasRef.current.style.cursor = newHovered >= 0 ? "pointer" : (isDragging.current ? "grabbing" : "default");
+      }
+
+      // Sync DOM overlay with canvas transform
+      if (overlayRef.current) {
+        overlayRef.current.style.transform = `translate(-50%, -50%) translate(${fpx - fOx}px, ${fpy - fOy}px) scale(${zoom})`;
+        overlayRef.current.style.opacity = a;
       }
 
       raf.current = requestAnimationFrame(tick);
     };
+
     raf.current = requestAnimationFrame(tick);
-    return () => { if (raf.current) cancelAnimationFrame(raf.current); };
+    return () => {
+      cancelAnimationFrame(raf.current);
+      window.removeEventListener("resize", resize);
+    };
   }, []);
-
-  const [stars] = useState(() =>
-    Array.from({ length: 40 }, (_, i) => ({
-      id: i, x: Math.random() * 100, y: Math.random() * 100,
-      size: Math.random() * 1.8 + 0.3,
-      opacity: Math.random() * 0.5 + 0.1,
-      color: [P.ghost, P.cyan, P.magenta][Math.floor(Math.random() * 3)],
-      delay: Math.random() * 6,
-    }))
-  );
-
-  const setLayerRef = (i) => (el) => { layerRefs.current[i] = el; };
-  const layerBase = { position: "absolute", inset: -60, pointerEvents: "none", willChange: "transform" };
 
   return (
     <div ref={containerRef} style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", position: "relative", overflow: "hidden" }}>
 
-      {/* L0: Deep cosmos background */}
-      <div ref={setLayerRef(0)} style={{ ...layerBase, zIndex: 0 }}>
+      {/* L0: Cosmos background (CSS, parallax via ref) */}
+      <div ref={bgRef} style={{ position: "absolute", inset: -60, pointerEvents: "none", willChange: "transform", zIndex: 0 }}>
         <div style={{
           position: "absolute", inset: 0,
           background: `
@@ -1598,329 +1985,56 @@ const Hero = ({ setSection }) => {
         }} />
       </div>
 
-      {/* L1: Stars field */}
-      <div ref={setLayerRef(1)} style={{ ...layerBase, zIndex: 1 }}>
-        {stars.map(s => (
-          <div key={s.id} style={{
-            position: "absolute", left: `${s.x}%`, top: `${s.y}%`,
-            width: s.size, height: s.size, borderRadius: "50%", background: s.color,
-            opacity: vis ? s.opacity : 0,
-            transition: `opacity 2.5s ease ${0.5 + s.delay * 0.15}s`,
-            animation: `twinkle ${3 + s.delay}s ease-in-out ${s.delay}s infinite`,
-            willChange: "opacity",
+      {/* Canvas — all dynamic elements in one render pass */}
+      <canvas ref={canvasRef} style={{ position: "absolute", inset: 0, zIndex: 10 }} />
+
+      {/* DOM overlay: title cluster (tracks canvas zoom/pan) */}
+      <div ref={overlayRef} style={{
+        position: "absolute", left: "50%", top: "50%",
+        transform: "translate(-50%, -50%)",
+        display: "flex", flexDirection: "column", alignItems: "center",
+        pointerEvents: "none", zIndex: 20, opacity: 0,
+      }}>
+        <div style={{ marginBottom: 16 }}>
+          <img src={LOGO_IMG} alt="RareGh0st" style={{
+            width: "clamp(33px, 5vw, 53px)", height: "clamp(33px, 5vw, 53px)",
+            filter: `brightness(1.1) drop-shadow(0 0 24px ${P.cyan}40) drop-shadow(0 0 48px ${P.magenta}20)`,
+            animation: "breathe 4s ease-in-out infinite, logoHueShift 18s linear infinite",
           }} />
-        ))}
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <div style={{
+            fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8,
+            color: P.bone, textTransform: "uppercase",
+            background: `${P.abyss}cc`, backdropFilter: "blur(8px)",
+            padding: "6px 18px", borderRadius: 20,
+            border: `1px solid ${P.steel}30`,
+            marginBottom: 22,
+          }}><MorphText speed={80}>The Art of</MorphText></div>
+          <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(48px, 10vw, 110px)", fontWeight: 400, margin: 0, lineHeight: 0.9, letterSpacing: -2 }}>
+            <span style={{ color: P.cyan }}><MorphText speed={90}>Rare</MorphText></span>
+            <span style={{ color: P.magenta }}><MorphText speed={90}>Gh</MorphText></span>
+            <span style={{ color: P.steel, opacity: 0.45 }}><MorphText speed={90}>0</MorphText></span>
+            <span style={{ color: P.magenta }}><MorphText speed={90}>st</MorphText></span>
+          </h1>
+          <div style={{
+            fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 6,
+            color: P.bone, textTransform: "uppercase",
+            background: `${P.abyss}cc`, backdropFilter: "blur(8px)",
+            padding: "6px 18px", borderRadius: 20,
+            border: `1px solid ${P.steel}30`,
+            marginTop: 28, opacity: 0.8,
+          }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
+        </div>
       </div>
 
-      {/* L2: Zoom field — the entire solar system (grid + moon + title + orbiting nodes) */}
-      <div ref={setLayerRef(2)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
-        <div ref={fieldRef} style={{ position: "absolute", inset: 0, willChange: "transform", transformOrigin: "50% 50%" }}>
-        {/* HUD grid — Destiny-style pronounced grid, centered on the moon */}
-        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, overflow: "visible", opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s", pointerEvents: "none" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
-          {/* Rectangular grid — bright, Destiny-style cartographic lines */}
-          <g opacity="0.35">
-            {Array.from({ length: 25 }, (_, i) => (
-              <line key={`gh-${i}`} x1="-500" y1={i * 86 - 500} x2="2420" y2={i * 86 - 500} stroke={P.cyan} strokeWidth="0.5" opacity="0.4" />
-            ))}
-            {Array.from({ length: 25 }, (_, i) => (
-              <line key={`gv-${i}`} x1={i * 86 - 500} y1="-500" x2={i * 86 - 500} y2="1580" stroke={P.cyan} strokeWidth="0.5" opacity="0.4" />
-            ))}
-          </g>
-          {/* Concentric circles — rotating clockwise via RAF */}
-          <g ref={circlesRef} opacity="0.4">
-            {[80, 160, 260, 380, 520, 680, 860, 1080, 1350, 1700, 2100].map((r, i) => (
-              <circle key={`cc-${i}`} cx="960" cy="540" r={r} fill="none" stroke={P.cyan}
-                strokeWidth={i < 3 ? "1" : i < 6 ? "0.7" : "0.5"}
-                opacity={0.8 - i * 0.05}
-                strokeDasharray={i % 3 === 2 ? "6 12" : "none"} />
-            ))}
-          </g>
-          {/* Radial lines — rotating counter-clockwise via RAF */}
-          <g ref={radialsRef} opacity="0.3">
-            {Array.from({ length: 24 }, (_, i) => {
-              const angle = (i / 24) * Math.PI * 2;
-              const x2 = 960 + Math.cos(angle) * 3000;
-              const y2 = 540 + Math.sin(angle) * 3000;
-              return <line key={`rl-${i}`} x1="960" y1="540" x2={x2} y2={y2}
-                stroke={P.cyan} strokeWidth={i % 6 === 0 ? "0.8" : "0.4"}
-                opacity={i % 6 === 0 ? 0.7 : 0.35} />;
-            })}
-          </g>
-          {/* Outer tick ring — spinning via RAF */}
-          <g ref={ticksRef} opacity="0.25">
-            {Array.from({ length: 72 }, (_, i) => {
-              const angle = (i / 72) * Math.PI * 2;
-              const inner = 480;
-              const outer = i % 6 === 0 ? 510 : i % 3 === 0 ? 498 : 492;
-              return <line key={`tick-${i}`}
-                x1={960 + Math.cos(angle) * inner} y1={540 + Math.sin(angle) * inner}
-                x2={960 + Math.cos(angle) * outer} y2={540 + Math.sin(angle) * outer}
-                stroke={P.cyan} strokeWidth={i % 6 === 0 ? "1.5" : i % 3 === 0 ? "0.8" : "0.4"} />;
-            })}
-          </g>
-        </svg>
-        {/* ── Moon — gravitational center, anchored to the brand identity ── */}
-        <div style={{
-          position: "absolute", left: "50%", top: "50%",
-          transform: "translate(-50%, -50%)",
-          width: "clamp(350px, 45vw, 580px)", height: "clamp(350px, 45vw, 580px)",
-          borderRadius: "50%",
-          overflow: "hidden",
-          boxShadow: `0 0 120px 40px ${P.abyss}, 0 0 200px 60px ${P.cyan}08`,
-          opacity: vis ? 1 : 0,
-          transition: "opacity 2.5s cubic-bezier(0.16,1,0.3,1)",
-          zIndex: 1,
-        }}>
-          <img src="/images/moon.png" alt="" style={{
-            width: "100%", height: "100%", objectFit: "cover",
-            filter: "brightness(1.1) contrast(1.05) saturate(0.1)",
-          }} />
-          {/* Subtle edge fade so the moon blends into the background at its rim */}
-          <div style={{
-            position: "absolute", inset: 0, borderRadius: "50%",
-            background: `radial-gradient(circle at 50% 45%, transparent 55%, ${P.abyss}20 78%, ${P.abyss}88 100%)`,
-          }} />
-        </div>
-        {/* ── Center hub: logo + title (sits on the moon) ── */}
-        <div style={{
-          position: "absolute", left: "50%", top: "50%",
-          transform: "translate(-50%, -50%)",
-          display: "flex", flexDirection: "column", alignItems: "center",
-          pointerEvents: "auto", zIndex: 20,
-        }}>
-          {/* Logo — 33% of original size */}
-          <div style={{ opacity: vis ? 1 : 0, transition: "opacity 2s cubic-bezier(0.16,1,0.3,1) 0.3s", marginBottom: 16 }}>
-            <img src={LOGO_IMG} alt="RareGh0st" style={{
-              width: "clamp(33px, 5vw, 53px)", height: "clamp(33px, 5vw, 53px)",
-              filter: `brightness(1.1) drop-shadow(0 0 24px ${P.cyan}40) drop-shadow(0 0 48px ${P.magenta}20)`,
-              animation: "breathe 4s ease-in-out infinite, logoHueShift 18s linear infinite",
-            }} />
-          </div>
-          {/* Title — original full size */}
-          <div style={{ textAlign: "center", opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(28px)", transition: "all 1.5s cubic-bezier(0.16,1,0.3,1)" }}>
-            <div style={{
-              fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8,
-              color: P.bone, textTransform: "uppercase",
-              background: `${P.abyss}cc`, backdropFilter: "blur(8px)",
-              padding: "6px 18px", borderRadius: 20,
-              border: `1px solid ${P.steel}30`,
-              marginBottom: 22,
-            }}><MorphText speed={80}>The Art of</MorphText></div>
-            <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(48px, 10vw, 110px)", fontWeight: 400, margin: 0, lineHeight: 0.9, letterSpacing: -2 }}>
-              <span style={{ color: P.cyan }}><MorphText speed={90}>Rare</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>Gh</MorphText></span><span style={{ color: P.steel, opacity: 0.45 }}><MorphText speed={90}>0</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>st</MorphText></span>
-            </h1>
-            <div style={{
-              fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 6,
-              color: P.bone, textTransform: "uppercase",
-              background: `${P.abyss}cc`, backdropFilter: "blur(8px)",
-              padding: "6px 18px", borderRadius: 20,
-              border: `1px solid ${P.steel}30`,
-              marginTop: 28, opacity: 0.8,
-            }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
-          </div>
-        </div>
-
-        {/* ── Orbit tracks (visible rings showing each orbit path) ── */}
-        {nodes.map((node, i) => (
-          <div key={`orbit-track-${i}`} style={{
-            position: "absolute",
-            left: "50%", top: "50%",
-            width: node.orbitRadius * 2,
-            height: node.orbitRadius * 2,
-            marginLeft: -node.orbitRadius,
-            marginTop: -node.orbitRadius,
-            borderRadius: "50%",
-            border: `0.5px solid ${node.color}`,
-            opacity: vis ? 0.06 : 0,
-            transition: `opacity 2s ease ${1 + i * 0.2}s`,
-            pointerEvents: "none",
-          }} />
-        ))}
-
-        {/* ── Orbiting navigation nodes (JS-driven via RAF) ── */}
-        {nodes.map((node, i) => {
-          const isHovered = hoveredNode === i;
-          return (
-            <div key={node.dest}
-              ref={(el) => { nodeRefs.current[i] = el; }}
-              style={{
-                position: "absolute",
-                left: "50%", top: "50%",
-                marginLeft: -node.radius,
-                marginTop: -node.radius,
-                pointerEvents: "auto",
-                cursor: "pointer",
-                zIndex: 15,
-                willChange: "transform",
-              }}
-              onClick={() => setSection(node.dest)}
-              onMouseEnter={() => setHoveredNode(i)}
-              onMouseLeave={() => setHoveredNode(null)}
-            >
-              {/* Outer rings */}
-              {Array.from({ length: node.ringCount }, (_, ri) => (
-                <div key={ri} style={{
-                  position: "absolute",
-                  left: "50%", top: "50%",
-                  width: node.radius * 2 + ri * 20 + 10,
-                  height: node.radius * 2 + ri * 20 + 10,
-                  marginLeft: -(node.radius + ri * 10 + 5),
-                  marginTop: -(node.radius + ri * 10 + 5),
-                  borderRadius: "50%",
-                  border: `${ri === 0 ? 1.5 : 0.5}px solid ${node.color}`,
-                  opacity: vis ? (isHovered ? 0.5 - ri * 0.12 : 0.18 - ri * 0.05) : 0,
-                  transition: "opacity 0.5s ease, box-shadow 0.5s ease",
-                  boxShadow: isHovered ? `0 0 ${16 + ri * 4}px ${node.color}30, inset 0 0 ${8 + ri * 2}px ${node.color}15` : "none",
-                  animation: `fractalPulse ${6 + ri * 2}s ease-in-out ${ri * 0.5 + i * 0.3}s infinite`,
-                }} />
-              ))}
-              {/* Dotted ring */}
-              <div style={{
-                position: "absolute",
-                left: "50%", top: "50%",
-                width: node.radius * 2 - 8,
-                height: node.radius * 2 - 8,
-                marginLeft: -(node.radius - 4),
-                marginTop: -(node.radius - 4),
-                borderRadius: "50%",
-                border: `1px dashed ${node.color}`,
-                opacity: vis ? (isHovered ? 0.4 : 0.1) : 0,
-                transition: "opacity 0.5s ease",
-                animation: `spin ${30 + i * 10}s linear infinite ${i % 2 === 0 ? "" : "reverse"}`,
-              }} />
-              {/* Inner glow disc + labels */}
-              <div style={{
-                width: node.radius * 2,
-                height: node.radius * 2,
-                borderRadius: "50%",
-                background: `radial-gradient(circle, ${node.color}${isHovered ? "18" : "08"} 0%, transparent 70%)`,
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                transition: "background 0.5s ease",
-              }}>
-                <div style={{
-                  fontFamily: "'Courier New', monospace",
-                  fontSize: 10, letterSpacing: 4, color: node.color,
-                  textTransform: "uppercase",
-                  opacity: vis ? (isHovered ? 1 : 0.7) : 0,
-                  transition: "opacity 0.4s ease",
-                  textShadow: isHovered ? `0 0 12px ${node.color}` : "none",
-                  textAlign: "center", lineHeight: 1.4,
-                }}>
-                  <HoverMorphText>{node.label}</HoverMorphText>
-                </div>
-                <div style={{
-                  fontFamily: "'Georgia', serif", fontSize: 9, color: P.bone,
-                  opacity: isHovered ? 0.5 : 0,
-                  transition: "opacity 0.4s ease 0.1s",
-                  marginTop: 4, textAlign: "center", letterSpacing: 1,
-                }}>
-                  {node.desc}
-                </div>
-              </div>
-              {/* Tick marks */}
-              <svg style={{
-                position: "absolute", left: "50%", top: "50%",
-                width: node.radius * 2 + 30, height: node.radius * 2 + 30,
-                marginLeft: -(node.radius + 15), marginTop: -(node.radius + 15),
-                opacity: vis ? (isHovered ? 0.5 : 0.12) : 0,
-                transition: "opacity 0.5s ease", pointerEvents: "none",
-              }} viewBox={`0 0 ${node.radius * 2 + 30} ${node.radius * 2 + 30}`}>
-                {Array.from({ length: 12 }, (_, ti) => {
-                  const angle = (ti / 12) * Math.PI * 2;
-                  const cx = node.radius + 15;
-                  const cy = node.radius + 15;
-                  const inner = node.radius + 2;
-                  const outer = node.radius + (ti % 3 === 0 ? 10 : 5);
-                  return <line key={ti}
-                    x1={cx + Math.cos(angle) * inner} y1={cy + Math.sin(angle) * inner}
-                    x2={cx + Math.cos(angle) * outer} y2={cy + Math.sin(angle) * outer}
-                    stroke={node.color} strokeWidth={ti % 3 === 0 ? "1.2" : "0.5"} />;
-                })}
-              </svg>
-              {/* ── Sub-moons orbiting this node ── */}
-              {node.moons && node.moons.map((moon, mi) => {
-                // Find the flat index in allMoons
-                const flatIdx = allMoons.findIndex(m => m.nodeIndex === i && m.moonIndex === mi);
-                return (
-                  <div key={`moon-${mi}`} style={{ contents: "initial", display: "contents" }}>
-                    {/* Moon orbit track */}
-                    <div style={{
-                      position: "absolute",
-                      left: "50%", top: "50%",
-                      width: moon.orbitRadius * 2, height: moon.orbitRadius * 2,
-                      marginLeft: -moon.orbitRadius, marginTop: -moon.orbitRadius,
-                      borderRadius: "50%",
-                      border: `0.5px dashed ${node.color}`,
-                      opacity: vis ? 0.08 : 0,
-                      transition: "opacity 2s ease",
-                      pointerEvents: "none",
-                    }} />
-                    {/* Moon body */}
-                    <div
-                      ref={(el) => { moonRefs.current[flatIdx] = el; }}
-                      style={{
-                        position: "absolute",
-                        left: "50%", top: "50%",
-                        marginLeft: -(moon.size / 2),
-                        marginTop: -(moon.size / 2),
-                        width: moon.size, height: moon.size,
-                        willChange: "transform",
-                        pointerEvents: "auto",
-                        cursor: "pointer",
-                      }}
-                    >
-                      {/* Moon glow disc */}
-                      <div style={{
-                        width: moon.size, height: moon.size,
-                        borderRadius: "50%",
-                        border: `1px solid ${node.color}`,
-                        background: `radial-gradient(circle, ${node.color}15 0%, transparent 70%)`,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        opacity: vis ? 0.7 : 0,
-                        transition: "opacity 0.4s ease",
-                        boxShadow: `0 0 8px ${node.color}20`,
-                      }}>
-                        <div style={{
-                          width: moon.size * 0.4, height: moon.size * 0.4,
-                          borderRadius: "50%",
-                          background: node.color,
-                          opacity: 0.5,
-                        }} />
-                      </div>
-                      {/* Moon label */}
-                      <div style={{
-                        position: "absolute",
-                        top: moon.size + 4,
-                        left: "50%",
-                        transform: "translateX(-50%)",
-                        fontFamily: "'Courier New', monospace",
-                        fontSize: 7, letterSpacing: 2,
-                        color: node.color,
-                        textTransform: "uppercase",
-                        whiteSpace: "nowrap",
-                        opacity: vis ? 0.5 : 0,
-                        textAlign: "center",
-                      }}>
-                        {moon.label}
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
-        </div>{/* end zoom field */}
-      </div>{/* end L2 */}
-
-      {/* L3: Vignette — softened so grid lines show through more */}
-      <div ref={setLayerRef(3)} style={{ ...layerBase, zIndex: 20, pointerEvents: "none" }}>
+      {/* L3: Vignette + CRT scanlines (CSS, parallax via ref) */}
+      <div ref={vigRef} style={{ position: "absolute", inset: -60, zIndex: 25, pointerEvents: "none", willChange: "transform" }}>
         <div style={{
           position: "absolute", inset: 0,
           background: `radial-gradient(ellipse 100% 95% at 50% 50%, transparent 35%, ${P.abyss}44 60%, ${P.abyss}88 80%, ${P.abyss}cc 95%)`,
           opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s",
         }} />
-        {/* CRT scanlines — scrolling upward */}
         <div style={{
           position: "absolute", inset: 0,
           backgroundImage: "repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px)",
@@ -1931,37 +2045,20 @@ const Hero = ({ setSection }) => {
         }} />
       </div>
 
-      {/* Home button — resets pan/zoom to center */}
+      {/* Home button — resets pan/zoom */}
       <button
-        onClick={() => {
-          panTarget.current = { x: 0, y: 0 };
-          zoomTarget.current = 1;
-        }}
+        onClick={() => { panTarget.current = { x: 0, y: 0 }; zoomTarget.current = 1; }}
         style={{
-          position: "absolute",
-          bottom: 24, left: 24,
-          zIndex: 30,
-          width: 40, height: 40,
-          borderRadius: "50%",
-          border: `1px solid ${P.cyan}40`,
-          background: `${P.abyss}cc`,
-          color: P.cyan,
-          cursor: "pointer",
+          position: "absolute", bottom: 24, left: 24, zIndex: 30,
+          width: 40, height: 40, borderRadius: "50%",
+          border: `1px solid ${P.cyan}40`, background: `${P.abyss}cc`,
+          color: P.cyan, cursor: "pointer",
           display: "flex", alignItems: "center", justifyContent: "center",
-          opacity: vis ? 0.7 : 0,
-          transition: "opacity 0.4s ease, border-color 0.3s ease, box-shadow 0.3s ease",
+          opacity: vis ? 0.7 : 0, transition: "opacity 0.4s ease, border-color 0.3s ease",
           backdropFilter: "blur(8px)",
         }}
-        onMouseEnter={(e) => {
-          e.currentTarget.style.opacity = "1";
-          e.currentTarget.style.borderColor = P.cyan;
-          e.currentTarget.style.boxShadow = `0 0 12px ${P.cyan}40`;
-        }}
-        onMouseLeave={(e) => {
-          e.currentTarget.style.opacity = "0.7";
-          e.currentTarget.style.borderColor = `${P.cyan}40`;
-          e.currentTarget.style.boxShadow = "none";
-        }}
+        onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.borderColor = P.cyan; }}
+        onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.7"; e.currentTarget.style.borderColor = `${P.cyan}40`; }}
         aria-label="Return to center"
       >
         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
@@ -1972,6 +2069,7 @@ const Hero = ({ setSection }) => {
     </div>
   );
 };
+
 
 // ─── CONTACT + NEWSLETTER ────────────────────────────────
 const Contact = () => {
