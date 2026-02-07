@@ -1355,8 +1355,8 @@ const Hero = ({ setSection }) => {
   const zoomTarget = useRef(1);
   const zoomCurrent = useRef(1);
 
-  // L0:cosmos L1:stars L2:grid L3:moon L4:field(nodes+center) L5:vignette
-  const depths = [0.02, 0.04, 0.05, 0.03, 0.015, 0.07];
+  // L0:cosmos L1:stars L2:grid L3:field(moon+center+nodes) L4:vignette
+  const depths = [0.02, 0.04, 0.05, 0.015, 0.07];
   const maxShift = 40;
 
   // ── Navigation nodes — orbiting the central moon ──
@@ -1525,23 +1525,22 @@ const Hero = ({ setSection }) => {
         </svg>
       </div>
 
-      {/* L3: Moon — central celestial body behind text */}
-      <div ref={setLayerRef(3)} style={{ ...layerBase, zIndex: 3, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {/* L3: Zoom field — the entire solar system (moon + title + orbiting nodes) */}
+      <div ref={setLayerRef(3)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
+        <div ref={fieldRef} style={{ position: "absolute", inset: 0, willChange: "transform", transformOrigin: "50% 50%" }}>
+        {/* ── Moon — gravitational center, anchored to the brand identity ── */}
         <div style={{
-          width: "clamp(350px, 45vw, 580px)", height: "clamp(350px, 45vw, 580px)",
+          position: "absolute", left: "50%", top: "50%",
+          transform: "translate(-50%, -50%)",
+          width: 280, height: 280,
           borderRadius: "50%",
           background: `radial-gradient(circle at 50% 40%, #1e1e2e 0%, #141420 45%, #0c0c16 70%, ${P.abyss} 100%)`,
-          boxShadow: `0 0 120px 40px ${P.abyss}, inset 0 0 80px rgba(0,0,0,0.4), 0 0 200px 60px ${P.cyan}08`,
+          boxShadow: `0 0 80px 30px ${P.abyss}, inset 0 0 60px rgba(0,0,0,0.4), 0 0 160px 50px ${P.cyan}06`,
           opacity: vis ? 1 : 0,
           transition: "opacity 2.5s cubic-bezier(0.16,1,0.3,1)",
+          zIndex: 1,
         }} />
-      </div>
-
-      {/* L4: Center hub + orbiting navigation nodes */}
-      <div ref={setLayerRef(4)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
-        {/* Zoom field — scroll wheel scales this entire container */}
-        <div ref={fieldRef} style={{ position: "absolute", inset: 0, willChange: "transform", transformOrigin: "50% 50%" }}>
-        {/* ── Center hub: logo + title ── */}
+        {/* ── Center hub: logo + title (sits on the moon) ── */}
         <div style={{
           position: "absolute", left: "50%", top: "50%",
           transform: "translate(-50%, -50%)",
@@ -1687,10 +1686,10 @@ const Hero = ({ setSection }) => {
           );
         })}
         </div>{/* end zoom field */}
-      </div>
+      </div>{/* end L3 */}
 
-      {/* L5: Vignette — softened so grid lines show through more */}
-      <div ref={setLayerRef(5)} style={{ ...layerBase, zIndex: 20, pointerEvents: "none" }}>
+      {/* L4: Vignette — softened so grid lines show through more */}
+      <div ref={setLayerRef(4)} style={{ ...layerBase, zIndex: 20, pointerEvents: "none" }}>
         <div style={{
           position: "absolute", inset: 0,
           background: `radial-gradient(ellipse 100% 95% at 50% 50%, transparent 35%, ${P.abyss}44 60%, ${P.abyss}88 80%, ${P.abyss}cc 95%)`,
