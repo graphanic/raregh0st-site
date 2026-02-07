@@ -1337,57 +1337,222 @@ const Cart = ({ cart, removeFromCart }) => {
 };
 
 // ─── HERO (v4: Moon + Logo + Parallax) ──────────────────
+// ─── PARALLAX HERO (mouse-driven depth layers) ─────────
+// Each layer moves at a different rate based on cursor position.
+// Placeholder layers — swap with real Photoshop PNGs later.
+// Layer spec for artwork: export each as transparent PNG at 1920x1080.
+//   L0: deep cosmos bg  (depth 0.02)
+//   L1: stars           (depth 0.04)
+//   L2: orbital rings   (depth 0.06)
+//   L3: moon            (depth 0.03)
+//   L4: content/text    (depth 0.01)
+//   L5: foreground dust (depth 0.08)
 const Hero = ({ setSection }) => {
   const [vis, setVis] = useState(false);
   const [logoGlow, setLogoGlow] = useState(0);
+  const containerRef = useRef(null);
+  const layerRefs = useRef([]);
+  const mouse = useRef({ x: 0, y: 0 });
+  const smoothed = useRef({ x: 0, y: 0 });
+  const raf = useRef(null);
+
+  // Depth multipliers for each layer (higher = moves more)
+  const depths = [0.02, 0.04, 0.06, 0.03, 0.01, 0.08];
+  const maxShift = 40; // px
+
   useEffect(() => { setTimeout(() => setVis(true), 100); }, []);
   useEffect(() => {
     const interval = setInterval(() => setLogoGlow(g => (g + 1) % 360), 50);
     return () => clearInterval(interval);
   }, []);
 
+  // Mouse tracking — normalized -1 to 1 from center
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onMove = (e) => {
+      const rect = el.getBoundingClientRect();
+      mouse.current.x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+      mouse.current.y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+    };
+    el.addEventListener("mousemove", onMove);
+    return () => el.removeEventListener("mousemove", onMove);
+  }, []);
+
+  // Animation loop — smooth lerp + apply transforms
+  useEffect(() => {
+    const ease = 0.08;
+    const tick = () => {
+      smoothed.current.x += (mouse.current.x - smoothed.current.x) * ease;
+      smoothed.current.y += (mouse.current.y - smoothed.current.y) * ease;
+      const sx = smoothed.current.x;
+      const sy = smoothed.current.y;
+      for (let i = 0; i < layerRefs.current.length; i++) {
+        const layer = layerRefs.current[i];
+        if (!layer) continue;
+        const d = depths[i] || 0.02;
+        const tx = sx * maxShift * (d / 0.04);
+        const ty = sy * maxShift * (d / 0.04);
+        layer.style.transform = `translate3d(${-tx}px, ${-ty}px, 0)`;
+      }
+      raf.current = requestAnimationFrame(tick);
+    };
+    raf.current = requestAnimationFrame(tick);
+    return () => { if (raf.current) cancelAnimationFrame(raf.current); };
+  }, []);
+
+  // Generate stable stars once
+  const [stars] = useState(() =>
+    Array.from({ length: 60 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      y: Math.random() * 100,
+      size: Math.random() * 1.8 + 0.3,
+      opacity: Math.random() * 0.5 + 0.1,
+      color: [P.ghost, P.cyan, P.magenta][Math.floor(Math.random() * 3)],
+      delay: Math.random() * 6,
+    }))
+  );
+
+  const setLayerRef = (i) => (el) => { layerRefs.current[i] = el; };
+
+  // Shared layer base style (covers viewport with overflow for parallax shift)
+  const layerBase = {
+    position: "absolute",
+    inset: -60,
+    pointerEvents: "none",
+    willChange: "transform",
+  };
+
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", position: "relative", overflow: "hidden" }}>
-      {/* Moon - dark radial, future True3D parallax canvas */}
-      <div style={{
-        position: "absolute",
-        width: "clamp(400px, 50vw, 650px)", height: "clamp(400px, 50vw, 650px)",
-        borderRadius: "50%",
-        background: `radial-gradient(circle at 50% 40%, #1e1e2e 0%, #141420 45%, #0c0c16 70%, ${P.abyss} 100%)`,
-        boxShadow: `0 0 120px 40px ${P.abyss}, inset 0 0 80px rgba(0,0,0,0.4)`,
-        opacity: vis ? 1 : 0,
-        transition: "opacity 2.5s cubic-bezier(0.16,1,0.3,1)",
-        zIndex: 0,
-      }} />
-      {/* Logo - above title, in flow */}
-      <div style={{
-        opacity: vis ? 1 : 0,
-        transition: "opacity 2s cubic-bezier(0.16,1,0.3,1) 0.3s",
-        zIndex: 2,
-        marginBottom: 24,
-      }}>
-        <img src={LOGO_IMG} alt="RareGh0st" style={{
-          width: "clamp(100px, 15vw, 160px)", height: "clamp(100px, 15vw, 160px)",
-          filter: `brightness(1.1) drop-shadow(0 0 24px hsl(${logoGlow}, 100%, 50%, 0.25)) drop-shadow(0 0 48px hsl(${(logoGlow + 180) % 360}, 100%, 50%, 0.12))`,
-          animation: "breathe 4s ease-in-out infinite",
+    <div
+      ref={containerRef}
+      style={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "center",
+        alignItems: "center",
+        position: "relative",
+        overflow: "hidden",
+      }}
+    >
+      {/* L0: Deep cosmos background */}
+      <div ref={setLayerRef(0)} style={{ ...layerBase, zIndex: 0 }}>
+        <div style={{
+          position: "absolute", inset: 0,
+          background: `
+            radial-gradient(ellipse 80% 60% at 50% 45%, #12121e 0%, ${P.abyss} 70%),
+            radial-gradient(circle at 25% 30%, ${P.cyan}08 0%, transparent 50%),
+            radial-gradient(circle at 75% 65%, ${P.magenta}06 0%, transparent 50%)
+          `,
+          opacity: vis ? 1 : 0,
+          transition: "opacity 3s cubic-bezier(0.16,1,0.3,1)",
         }} />
       </div>
-      {/* Title - below logo */}
-      <div style={{ textAlign: "center", opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(28px)", transition: "all 1.5s cubic-bezier(0.16,1,0.3,1)", zIndex: 2 }}>
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 8, color: P.cyan, marginBottom: 22, textTransform: "uppercase", opacity: 0.85, textShadow: `0 0 20px ${P.cyan}25` }}><MorphText speed={80}>The Art of</MorphText></div>
-        <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(48px, 10vw, 110px)", fontWeight: 400, color: P.ghost, margin: 0, lineHeight: 0.9, letterSpacing: -2 }}>
-          <span style={{ color: P.cyan }}><MorphText speed={90}>Rare</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>Gh</MorphText></span><span style={{ color: P.steel, opacity: 0.45 }}><MorphText speed={90}>0</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>st</MorphText></span>
-        </h1>
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.bone, marginTop: 28, opacity: 0.6, textTransform: "uppercase", textShadow: `0 0 16px ${P.abyss}` }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
-      </div>
-      {/* CTAs */}
-      <div style={{ display: "flex", gap: 14, marginTop: 36, zIndex: 2, flexWrap: "wrap", justifyContent: "center" }}>
-        {[{ label: "Portfolio", dest: "portfolio", color: P.cyan }, { label: "Shop", dest: "shop", color: P.gold }, { label: "Media", dest: "media", color: P.magenta }, { label: "The Work", dest: "the-work", color: P.purple }, { label: "Now", dest: "now", color: P.green }].map(({ label, dest, color }) => (
-          <button key={dest} onClick={() => setSection(dest)} style={{ background: `${color}18`, border: `1px solid ${color}35`, color, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 5, padding: "12px 26px", cursor: "pointer", textTransform: "uppercase", opacity: vis ? 1 : 0, transition: "all 1.5s ease, background 0.3s, border-color 0.3s, box-shadow 0.3s" }}
-            onMouseEnter={(e) => { e.target.style.background = `${color}28`; e.target.style.borderColor = `${color}55`; e.target.style.boxShadow = `0 0 18px ${color}15`; }}
-            onMouseLeave={(e) => { e.target.style.background = `${color}18`; e.target.style.borderColor = `${color}35`; e.target.style.boxShadow = "none"; }}
-          ><HoverMorphText>{label}</HoverMorphText></button>
+
+      {/* L1: Stars field */}
+      <div ref={setLayerRef(1)} style={{ ...layerBase, zIndex: 1 }}>
+        {stars.map(s => (
+          <div key={s.id} style={{
+            position: "absolute",
+            left: `${s.x}%`, top: `${s.y}%`,
+            width: s.size, height: s.size,
+            borderRadius: "50%",
+            background: s.color,
+            opacity: vis ? s.opacity : 0,
+            boxShadow: `0 0 ${s.size * 3}px ${s.color}`,
+            transition: `opacity 2.5s ease ${0.5 + s.delay * 0.15}s`,
+            animation: `twinkle ${3 + s.delay}s ease-in-out ${s.delay}s infinite`,
+          }} />
         ))}
+      </div>
+
+      {/* L2: Orbital rings */}
+      <div ref={setLayerRef(2)} style={{ ...layerBase, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {[280, 360, 460].map((size, i) => (
+          <div key={i} style={{
+            position: "absolute",
+            width: `clamp(${size * 0.6}px, ${size / 10}vw, ${size}px)`,
+            height: `clamp(${size * 0.6}px, ${size / 10}vw, ${size}px)`,
+            borderRadius: "50%",
+            border: `1px solid ${[P.cyan, P.magenta, P.steel][i]}${["0a", "08", "06"][i]}`,
+            opacity: vis ? 1 : 0,
+            transition: `opacity 2s ease ${1 + i * 0.3}s`,
+            animation: `spin ${40 + i * 20}s linear infinite ${i % 2 === 0 ? "" : "reverse"}`,
+            left: "50%", top: "50%",
+            marginLeft: `clamp(-${size * 0.3}px, -${size / 20}vw, -${size / 2}px)`,
+            marginTop: `clamp(-${size * 0.3}px, -${size / 20}vw, -${size / 2}px)`,
+          }} />
+        ))}
+      </div>
+
+      {/* L3: Moon */}
+      <div ref={setLayerRef(3)} style={{ ...layerBase, zIndex: 3, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{
+          width: "clamp(400px, 50vw, 650px)", height: "clamp(400px, 50vw, 650px)",
+          borderRadius: "50%",
+          background: `radial-gradient(circle at 50% 40%, #1e1e2e 0%, #141420 45%, #0c0c16 70%, ${P.abyss} 100%)`,
+          boxShadow: `0 0 120px 40px ${P.abyss}, inset 0 0 80px rgba(0,0,0,0.4), 0 0 200px 60px ${P.cyan}05`,
+          opacity: vis ? 1 : 0,
+          transition: "opacity 2.5s cubic-bezier(0.16,1,0.3,1)",
+        }} />
+      </div>
+
+      {/* L4: Content — logo, title, CTAs */}
+      <div
+        ref={setLayerRef(4)}
+        style={{
+          position: "relative",
+          zIndex: 10,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          pointerEvents: "auto",
+          willChange: "transform",
+        }}
+      >
+        {/* Logo */}
+        <div style={{
+          opacity: vis ? 1 : 0,
+          transition: "opacity 2s cubic-bezier(0.16,1,0.3,1) 0.3s",
+          marginBottom: 24,
+        }}>
+          <img src={LOGO_IMG} alt="RareGh0st" style={{
+            width: "clamp(100px, 15vw, 160px)", height: "clamp(100px, 15vw, 160px)",
+            filter: `brightness(1.1) drop-shadow(0 0 24px hsl(${logoGlow}, 100%, 50%, 0.25)) drop-shadow(0 0 48px hsl(${(logoGlow + 180) % 360}, 100%, 50%, 0.12))`,
+            animation: "breathe 4s ease-in-out infinite",
+          }} />
+        </div>
+        {/* Title */}
+        <div style={{ textAlign: "center", opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(28px)", transition: "all 1.5s cubic-bezier(0.16,1,0.3,1)" }}>
+          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 8, color: P.cyan, marginBottom: 22, textTransform: "uppercase", opacity: 0.85, textShadow: `0 0 20px ${P.cyan}25` }}><MorphText speed={80}>The Art of</MorphText></div>
+          <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(48px, 10vw, 110px)", fontWeight: 400, color: P.ghost, margin: 0, lineHeight: 0.9, letterSpacing: -2 }}>
+            <span style={{ color: P.cyan }}><MorphText speed={90}>Rare</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>Gh</MorphText></span><span style={{ color: P.steel, opacity: 0.45 }}><MorphText speed={90}>0</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>st</MorphText></span>
+          </h1>
+          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.bone, marginTop: 28, opacity: 0.6, textTransform: "uppercase", textShadow: `0 0 16px ${P.abyss}` }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
+        </div>
+        {/* CTAs */}
+        <div style={{ display: "flex", gap: 14, marginTop: 36, flexWrap: "wrap", justifyContent: "center" }}>
+          {[{ label: "Portfolio", dest: "portfolio", color: P.cyan }, { label: "Shop", dest: "shop", color: P.gold }, { label: "Media", dest: "media", color: P.magenta }, { label: "The Work", dest: "the-work", color: P.purple }, { label: "Now", dest: "now", color: P.green }].map(({ label, dest, color }) => (
+            <button key={dest} onClick={() => setSection(dest)} style={{ background: `${color}18`, border: `1px solid ${color}35`, color, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 5, padding: "12px 26px", cursor: "pointer", textTransform: "uppercase", opacity: vis ? 1 : 0, transition: "all 1.5s ease, background 0.3s, border-color 0.3s, box-shadow 0.3s" }}
+              onMouseEnter={(e) => { e.target.style.background = `${color}28`; e.target.style.borderColor = `${color}55`; e.target.style.boxShadow = `0 0 18px ${color}15`; }}
+              onMouseLeave={(e) => { e.target.style.background = `${color}18`; e.target.style.borderColor = `${color}35`; e.target.style.boxShadow = "none"; }}
+            ><HoverMorphText>{label}</HoverMorphText></button>
+          ))}
+        </div>
+      </div>
+
+      {/* L5: Foreground dust / vignette */}
+      <div ref={setLayerRef(5)} style={{ ...layerBase, zIndex: 11, pointerEvents: "none" }}>
+        <div style={{
+          position: "absolute", inset: 0,
+          background: `
+            radial-gradient(ellipse 100% 100% at 50% 50%, transparent 40%, ${P.abyss}88 80%, ${P.abyss} 100%)
+          `,
+          opacity: vis ? 1 : 0,
+          transition: "opacity 3s ease 0.5s",
+        }} />
       </div>
     </div>
   );
@@ -1932,7 +2097,7 @@ export default function App() {
   return (
     <CalmContext.Provider value={calm}>
     <div style={{ minHeight: "100vh", background: P.abyss, color: P.ghost, position: "relative" }}>
-      <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Sans';src:url('/fonts/Geist-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}@font-face{font-family:'Geist Mono';src:url('/fonts/GeistMono-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}:root{--pf1:'Geist Pixel Square',monospace;--pf2:'Geist Pixel Grid',monospace;--pf3:'Geist Pixel Circle',monospace;--pf4:'Geist Pixel Triangle',monospace;--pf5:'Geist Pixel Line',monospace;--ss1:normal;--ss2:normal;--ss3:normal;--ss4:normal;--ss5:normal}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0;font-family:'Geist Pixel Square',monospace}body:not([data-calm]) *:nth-child(5n+1):not([data-morph]){font-family:var(--pf1)!important;font-feature-settings:var(--ss1)}body:not([data-calm]) *:nth-child(5n+2):not([data-morph]){font-family:var(--pf2)!important;font-feature-settings:var(--ss2)}body:not([data-calm]) *:nth-child(5n+3):not([data-morph]){font-family:var(--pf3)!important;font-feature-settings:var(--ss3)}body:not([data-calm]) *:nth-child(5n+4):not([data-morph]){font-family:var(--pf4)!important;font-feature-settings:var(--ss4)}body:not([data-calm]) *:nth-child(5n):not([data-morph]){font-family:var(--pf5)!important;font-feature-settings:var(--ss5)}body[data-calm]{font-family:'Geist Sans',sans-serif!important}body[data-calm] *:not([data-morph]){font-family:inherit!important;animation:none!important;transition:none!important}body[data-calm] [style*="Courier"],body[data-calm] [style*="monospace"]{font-family:'Geist Mono',monospace!important}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(0.82)}}@keyframes morphBreathStrong{0%,100%{filter:brightness(1)}50%{filter:brightness(0.7)}}@keyframes morphBreathSoft{0%,100%{filter:brightness(1)}50%{filter:brightness(0.85)}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}}`}</style>
+      <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Sans';src:url('/fonts/Geist-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}@font-face{font-family:'Geist Mono';src:url('/fonts/GeistMono-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}:root{--pf1:'Geist Pixel Square',monospace;--pf2:'Geist Pixel Grid',monospace;--pf3:'Geist Pixel Circle',monospace;--pf4:'Geist Pixel Triangle',monospace;--pf5:'Geist Pixel Line',monospace;--ss1:normal;--ss2:normal;--ss3:normal;--ss4:normal;--ss5:normal}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0;font-family:'Geist Pixel Square',monospace}body:not([data-calm]) *:nth-child(5n+1):not([data-morph]){font-family:var(--pf1)!important;font-feature-settings:var(--ss1)}body:not([data-calm]) *:nth-child(5n+2):not([data-morph]){font-family:var(--pf2)!important;font-feature-settings:var(--ss2)}body:not([data-calm]) *:nth-child(5n+3):not([data-morph]){font-family:var(--pf3)!important;font-feature-settings:var(--ss3)}body:not([data-calm]) *:nth-child(5n+4):not([data-morph]){font-family:var(--pf4)!important;font-feature-settings:var(--ss4)}body:not([data-calm]) *:nth-child(5n):not([data-morph]){font-family:var(--pf5)!important;font-feature-settings:var(--ss5)}body[data-calm]{font-family:'Geist Sans',sans-serif!important}body[data-calm] *:not([data-morph]){font-family:inherit!important;animation:none!important;transition:none!important}body[data-calm] [style*="Courier"],body[data-calm] [style*="monospace"]{font-family:'Geist Mono',monospace!important}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(0.82)}}@keyframes morphBreathStrong{0%,100%{filter:brightness(1)}50%{filter:brightness(0.7)}}@keyframes morphBreathSoft{0%,100%{filter:brightness(1)}50%{filter:brightness(0.85)}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}@keyframes twinkle{0%,100%{opacity:inherit}50%{opacity:0.02}}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}`}</style>
       {loading && <Preloader onComplete={() => setLoading(false)} />}
       <Particles />
       <Nav section={section} setSection={setSection} cartCount={cart.length} />
