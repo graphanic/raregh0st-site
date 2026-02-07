@@ -128,7 +128,7 @@ const K5 = [
 // ─── PARTICLES ──────────────────────────────────────────
 const Particles = () => {
   const ps = Array.from({ length: 22 }, (_, i) => ({ id: i, x: Math.random() * 100, y: Math.random() * 100, size: Math.random() * 1.6 + 0.4, dur: Math.random() * 18 + 14, delay: Math.random() * -18, color: [P.cyan, P.magenta, P.purple][Math.floor(Math.random() * 3)], opacity: Math.random() * 0.18 + 0.04 }));
-  return <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1 }}>{ps.map(p => <div key={p.id} style={{ position: "absolute", left: `${p.x}%`, top: `${p.y}%`, width: p.size, height: p.size, borderRadius: "50%", background: p.color, opacity: p.opacity, boxShadow: `0 0 ${p.size * 3}px ${p.color}`, animation: `floatP ${p.dur}s ease-in-out ${p.delay}s infinite` }} />)}</div>;
+  return <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 1 }}>{ps.map(p => <div key={p.id} style={{ position: "absolute", left: `${p.x}%`, top: `${p.y}%`, width: p.size * 3, height: p.size * 3, borderRadius: "50%", background: `radial-gradient(circle, ${p.color} 30%, transparent 70%)`, opacity: p.opacity, animation: `floatP ${p.dur}s ease-in-out ${p.delay}s infinite`, willChange: "transform" }} />)}</div>;
 };
 
 
@@ -144,24 +144,30 @@ const MORPH_VARIANTS = [
   { fontFamily: "'Geist Pixel Line', monospace", opacity: 0.80 },                            // most abstract
 ];
 
-// Hero entrance — scramble then cycle
+// Hero entrance — scramble then cycle (DOM-direct, bypasses React reconciliation)
 const MorphText = ({ children, speed = 45 }) => {
   const calm = useContext(CalmContext);
   const text = String(children);
   const chars = text.split("");
-  const [variants, setVariants] = useState(() => chars.map(() => Math.floor(Math.random() * 5)));
+  const spanRefs = useRef([]);
   useEffect(() => {
     if (calm) return;
     const id = setInterval(() => {
-      setVariants(prev => prev.map(() => Math.floor(Math.random() * 5)));
-    }, speed);
+      for (let i = 0; i < spanRefs.current.length; i++) {
+        const el = spanRefs.current[i];
+        if (!el) continue;
+        const v = MORPH_VARIANTS[Math.floor(Math.random() * 5)];
+        el.style.fontFamily = v.fontFamily;
+        el.style.opacity = v.opacity;
+      }
+    }, Math.max(speed, 80)); // floor at 80ms (~12fps) — still looks alive, half the work
     return () => clearInterval(id);
   }, [text, speed, calm]);
   if (calm) return <span aria-label={text}>{text}</span>;
   return (<span aria-label={text} style={{ display: "inline" }}>{chars.map((c, i) => {
     if (c === " ") return <span key={i}>&nbsp;</span>;
-    const v = MORPH_VARIANTS[variants[i]] || MORPH_VARIANTS[0];
-    return <span key={i} data-morph style={{ display: "inline-block", fontFamily: v.fontFamily, opacity: v.opacity, willChange: "opacity" }}>{c}</span>;
+    const v = MORPH_VARIANTS[Math.floor(Math.random() * 5)];
+    return <span key={i} ref={el => { spanRefs.current[i] = el; }} data-morph style={{ display: "inline-block", fontFamily: v.fontFamily, opacity: v.opacity }}>{c}</span>;
   })}</span>);
 };
 
@@ -181,23 +187,40 @@ const ScrollMorphText = ({ children, speed = 45, threshold = 0.3 }) => {
   </span>);
 };
 
-// Hover interaction morph
+// Hover interaction morph (DOM-direct)
 const HoverMorphText = ({ children, speed = 45 }) => {
   const calm = useContext(CalmContext);
   const text = typeof children === "string" ? children : String(children);
   const chars = text.split("");
   const [hovered, setHovered] = useState(false);
-  const [variants, setVariants] = useState(() => chars.map(() => 0));
+  const spanRefs = useRef([]);
   useEffect(() => {
-    if (calm || !hovered) { setVariants(chars.map(() => 0)); return; }
-    const id = setInterval(() => { setVariants(chars.map(() => Math.floor(Math.random() * 5))); }, speed);
+    if (calm || !hovered) {
+      // Reset to base variant
+      for (let i = 0; i < spanRefs.current.length; i++) {
+        const el = spanRefs.current[i];
+        if (!el) continue;
+        el.style.fontFamily = MORPH_VARIANTS[0].fontFamily;
+        el.style.opacity = MORPH_VARIANTS[0].opacity;
+      }
+      return;
+    }
+    const id = setInterval(() => {
+      for (let i = 0; i < spanRefs.current.length; i++) {
+        const el = spanRefs.current[i];
+        if (!el) continue;
+        const v = MORPH_VARIANTS[Math.floor(Math.random() * 5)];
+        el.style.fontFamily = v.fontFamily;
+        el.style.opacity = v.opacity;
+      }
+    }, Math.max(speed, 80));
     return () => clearInterval(id);
   }, [hovered, text, speed, calm]);
   return (<span onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ cursor: "inherit", display: "inline" }}>
     {chars.map((c, i) => {
       if (c === " ") return <span key={i}>&nbsp;</span>;
-      const v = MORPH_VARIANTS[variants[i]] || MORPH_VARIANTS[0];
-      return <span key={i} data-morph style={{ display: "inline-block", fontFamily: v.fontFamily, opacity: v.opacity, transition: `opacity ${speed}ms ease` }}>{c}</span>;
+      const v = MORPH_VARIANTS[0];
+      return <span key={i} ref={el => { spanRefs.current[i] = el; }} data-morph style={{ display: "inline-block", fontFamily: v.fontFamily, opacity: v.opacity, transition: `opacity ${speed}ms ease` }}>{c}</span>;
     })}
   </span>);
 };
@@ -1342,7 +1365,6 @@ const Cart = ({ cart, removeFromCart }) => {
 // layered with parallax depth. Mouse-driven "window" effect.
 const Hero = ({ setSection }) => {
   const [vis, setVis] = useState(false);
-  const [logoGlow, setLogoGlow] = useState(0);
   const [hoveredNode, setHoveredNode] = useState(null);
   const containerRef = useRef(null);
   const layerRefs = useRef([]);
@@ -1397,10 +1419,6 @@ const Hero = ({ setSection }) => {
   const moonRefs = useRef([]);
 
   useEffect(() => { setTimeout(() => setVis(true), 100); }, []);
-  useEffect(() => {
-    const interval = setInterval(() => setLogoGlow(g => (g + 1) % 360), 50);
-    return () => clearInterval(interval);
-  }, []);
 
   useEffect(() => {
     const el = containerRef.current;
@@ -1552,7 +1570,7 @@ const Hero = ({ setSection }) => {
   }, []);
 
   const [stars] = useState(() =>
-    Array.from({ length: 80 }, (_, i) => ({
+    Array.from({ length: 40 }, (_, i) => ({
       id: i, x: Math.random() * 100, y: Math.random() * 100,
       size: Math.random() * 1.8 + 0.3,
       opacity: Math.random() * 0.5 + 0.1,
@@ -1587,9 +1605,9 @@ const Hero = ({ setSection }) => {
             position: "absolute", left: `${s.x}%`, top: `${s.y}%`,
             width: s.size, height: s.size, borderRadius: "50%", background: s.color,
             opacity: vis ? s.opacity : 0,
-            boxShadow: `0 0 ${s.size * 3}px ${s.color}`,
             transition: `opacity 2.5s ease ${0.5 + s.delay * 0.15}s`,
             animation: `twinkle ${3 + s.delay}s ease-in-out ${s.delay}s infinite`,
+            willChange: "opacity",
           }} />
         ))}
       </div>
@@ -1601,11 +1619,11 @@ const Hero = ({ setSection }) => {
         <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, overflow: "visible", opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s", pointerEvents: "none" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
           {/* Rectangular grid — bright, Destiny-style cartographic lines */}
           <g opacity="0.35">
-            {Array.from({ length: 50 }, (_, i) => (
-              <line key={`gh-${i}`} x1="-500" y1={i * 54 - 500} x2="2420" y2={i * 54 - 500} stroke={P.cyan} strokeWidth="0.5" opacity="0.4" />
+            {Array.from({ length: 25 }, (_, i) => (
+              <line key={`gh-${i}`} x1="-500" y1={i * 86 - 500} x2="2420" y2={i * 86 - 500} stroke={P.cyan} strokeWidth="0.5" opacity="0.4" />
             ))}
-            {Array.from({ length: 50 }, (_, i) => (
-              <line key={`gv-${i}`} x1={i * 54 - 500} y1="-500" x2={i * 54 - 500} y2="1580" stroke={P.cyan} strokeWidth="0.5" opacity="0.4" />
+            {Array.from({ length: 25 }, (_, i) => (
+              <line key={`gv-${i}`} x1={i * 86 - 500} y1="-500" x2={i * 86 - 500} y2="1580" stroke={P.cyan} strokeWidth="0.5" opacity="0.4" />
             ))}
           </g>
           {/* Concentric circles — rotating clockwise via RAF */}
@@ -1674,8 +1692,8 @@ const Hero = ({ setSection }) => {
           <div style={{ opacity: vis ? 1 : 0, transition: "opacity 2s cubic-bezier(0.16,1,0.3,1) 0.3s", marginBottom: 16 }}>
             <img src={LOGO_IMG} alt="RareGh0st" style={{
               width: "clamp(33px, 5vw, 53px)", height: "clamp(33px, 5vw, 53px)",
-              filter: `brightness(1.1) drop-shadow(0 0 24px hsl(${logoGlow}, 100%, 50%, 0.25)) drop-shadow(0 0 48px hsl(${(logoGlow + 180) % 360}, 100%, 50%, 0.12))`,
-              animation: "breathe 4s ease-in-out infinite",
+              filter: `brightness(1.1) drop-shadow(0 0 24px ${P.cyan}40) drop-shadow(0 0 48px ${P.magenta}20)`,
+              animation: "breathe 4s ease-in-out infinite, logoHueShift 18s linear infinite",
             }} />
           </div>
           {/* Title — original full size */}
@@ -2606,7 +2624,7 @@ export default function App() {
         root.style.setProperty(`--pf${g}`, PIXEL_FONTS[Math.floor(Math.random() * 5)]);
         root.style.setProperty(`--ss${g}`, SS_OPTIONS[Math.floor(Math.random() * 8)]);
       }
-    }, 100);
+    }, 200);
     return () => { clearInterval(river); for (let g = 1; g <= 5; g++) { root.style.removeProperty(`--pf${g}`); root.style.removeProperty(`--ss${g}`); } };
   }, [calm]);
 
@@ -2619,7 +2637,7 @@ export default function App() {
   return (
     <CalmContext.Provider value={calm}>
     <div style={{ minHeight: "100vh", background: P.abyss, color: P.ghost, position: "relative" }}>
-      <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Sans';src:url('/fonts/Geist-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}@font-face{font-family:'Geist Mono';src:url('/fonts/GeistMono-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}:root{--pf1:'Geist Pixel Square',monospace;--pf2:'Geist Pixel Grid',monospace;--pf3:'Geist Pixel Circle',monospace;--pf4:'Geist Pixel Triangle',monospace;--pf5:'Geist Pixel Line',monospace;--ss1:normal;--ss2:normal;--ss3:normal;--ss4:normal;--ss5:normal}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0;font-family:'Geist Pixel Square',monospace}body:not([data-calm]) *:nth-child(5n+1):not([data-morph]){font-family:var(--pf1)!important;font-feature-settings:var(--ss1)}body:not([data-calm]) *:nth-child(5n+2):not([data-morph]){font-family:var(--pf2)!important;font-feature-settings:var(--ss2)}body:not([data-calm]) *:nth-child(5n+3):not([data-morph]){font-family:var(--pf3)!important;font-feature-settings:var(--ss3)}body:not([data-calm]) *:nth-child(5n+4):not([data-morph]){font-family:var(--pf4)!important;font-feature-settings:var(--ss4)}body:not([data-calm]) *:nth-child(5n):not([data-morph]){font-family:var(--pf5)!important;font-feature-settings:var(--ss5)}body[data-calm]{font-family:'Geist Sans',sans-serif!important}body[data-calm] *:not([data-morph]){font-family:inherit!important;animation:none!important;transition:none!important}body[data-calm] [style*="Courier"],body[data-calm] [style*="monospace"]{font-family:'Geist Mono',monospace!important}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(0.82)}}@keyframes morphBreathStrong{0%,100%{filter:brightness(1)}50%{filter:brightness(0.7)}}@keyframes morphBreathSoft{0%,100%{filter:brightness(1)}50%{filter:brightness(0.85)}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}@keyframes twinkle{0%,100%{opacity:inherit}50%{opacity:0.02}}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}@keyframes fractalPulse{0%,100%{transform:scale(1);opacity:inherit}50%{transform:scale(1.04);opacity:0.6}}@keyframes fractalFloat{0%,100%{transform:translateY(0) rotate(0deg)}25%{transform:translateY(-8px) rotate(2deg)}50%{transform:translateY(0) rotate(0deg)}75%{transform:translateY(8px) rotate(-2deg)}}`}</style>
+      <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Sans';src:url('/fonts/Geist-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}@font-face{font-family:'Geist Mono';src:url('/fonts/GeistMono-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}:root{--pf1:'Geist Pixel Square',monospace;--pf2:'Geist Pixel Grid',monospace;--pf3:'Geist Pixel Circle',monospace;--pf4:'Geist Pixel Triangle',monospace;--pf5:'Geist Pixel Line',monospace;--ss1:normal;--ss2:normal;--ss3:normal;--ss4:normal;--ss5:normal}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0;font-family:'Geist Pixel Square',monospace}body:not([data-calm]) *:nth-child(5n+1):not([data-morph]){font-family:var(--pf1)!important;font-feature-settings:var(--ss1)}body:not([data-calm]) *:nth-child(5n+2):not([data-morph]){font-family:var(--pf2)!important;font-feature-settings:var(--ss2)}body:not([data-calm]) *:nth-child(5n+3):not([data-morph]){font-family:var(--pf3)!important;font-feature-settings:var(--ss3)}body:not([data-calm]) *:nth-child(5n+4):not([data-morph]){font-family:var(--pf4)!important;font-feature-settings:var(--ss4)}body:not([data-calm]) *:nth-child(5n):not([data-morph]){font-family:var(--pf5)!important;font-feature-settings:var(--ss5)}body[data-calm]{font-family:'Geist Sans',sans-serif!important}body[data-calm] *:not([data-morph]){font-family:inherit!important;animation:none!important;transition:none!important}body[data-calm] [style*="Courier"],body[data-calm] [style*="monospace"]{font-family:'Geist Mono',monospace!important}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes logoHueShift{0%{filter:brightness(1.1) hue-rotate(0deg)}50%{filter:brightness(1.1) hue-rotate(180deg)}100%{filter:brightness(1.1) hue-rotate(360deg)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{opacity:1}50%{opacity:0.85}}@keyframes morphBreathStrong{0%,100%{opacity:1}50%{opacity:0.75}}@keyframes morphBreathSoft{0%,100%{opacity:1}50%{opacity:0.88}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}@keyframes twinkle{0%,100%{opacity:inherit}50%{opacity:0.02}}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}@keyframes fractalPulse{0%,100%{transform:scale(1);opacity:inherit}50%{transform:scale(1.04);opacity:0.6}}@keyframes fractalFloat{0%,100%{transform:translateY(0) rotate(0deg)}25%{transform:translateY(-8px) rotate(2deg)}50%{transform:translateY(0) rotate(0deg)}75%{transform:translateY(8px) rotate(-2deg)}}`}</style>
       <style>{`@keyframes crtScan{from{background-position:0 0}to{background-position:0 -200px}}`}</style>
       {loading && <Preloader onComplete={() => setLoading(false)} />}
       {!isMobile && <Particles />}
@@ -2660,7 +2678,7 @@ export default function App() {
           </div>
         </nav>
       )}
-      <div style={{ position: "relative", zIndex: 2, animation: isMobile ? "none" : "morphBreath 1.5s ease-in-out infinite", willChange: isMobile ? "auto" : "filter" }} data-protected>
+      <div style={{ position: "relative", zIndex: 2, animation: isMobile ? "none" : "morphBreath 1.5s ease-in-out infinite", willChange: isMobile ? "auto" : "opacity" }} data-protected>
         {is404 && <NotFound setSection={setSection} />}
         {section === "hero" && (isMobile
           ? <MobileHub setSection={setSection} cartCount={cart.length} />
