@@ -1556,23 +1556,10 @@ const Hero = ({ setSection }) => {
           display: "flex", flexDirection: "column", alignItems: "center",
           pointerEvents: "auto",
         }}>
-          {/* Concentric rings around center */}
-          {[90, 120, 160].map((size, i) => (
-            <div key={`hub-ring-${i}`} style={{
-              position: "absolute",
-              width: size, height: size,
-              borderRadius: "50%",
-              border: `1px solid ${P.cyan}`,
-              opacity: vis ? [0.2, 0.12, 0.07][i] : 0,
-              transition: `opacity 2s ease ${1 + i * 0.2}s`,
-              animation: `fractalPulse ${8 + i * 2}s ease-in-out ${i * 0.3}s infinite`,
-              boxShadow: `0 0 12px ${P.cyan}15, inset 0 0 8px ${P.cyan}08`,
-            }} />
-          ))}
-          {/* Logo */}
+          {/* Logo — 33% of original size */}
           <div style={{ opacity: vis ? 1 : 0, transition: "opacity 2s cubic-bezier(0.16,1,0.3,1) 0.3s", marginBottom: 16 }}>
             <img src={LOGO_IMG} alt="RareGh0st" style={{
-              width: "clamp(100px, 15vw, 160px)", height: "clamp(100px, 15vw, 160px)",
+              width: "clamp(33px, 5vw, 53px)", height: "clamp(33px, 5vw, 53px)",
               filter: `brightness(1.1) drop-shadow(0 0 24px hsl(${logoGlow}, 100%, 50%, 0.25)) drop-shadow(0 0 48px hsl(${(logoGlow + 180) % 360}, 100%, 50%, 0.12))`,
               animation: "breathe 4s ease-in-out infinite",
             }} />
