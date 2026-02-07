@@ -340,7 +340,7 @@ const K5Mandala = () => {
             <div style={{ animation: "fadeSlideIn 0.3s ease" }}>
               <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 3, color: K5[active].color, textTransform: "uppercase", marginBottom: 12 }}>Kernel {K5[active].number}</div>
               <div style={{ fontFamily: "'Georgia', serif", fontSize: 20, color: P.ghost, lineHeight: 1.4, marginBottom: 16 }}><HoverMorphText>{K5[active].kernel}</HoverMorphText></div>
-              <div style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.8, color: P.bone, opacity: 0.65, animation: "morphBreathStrong 4s ease-in-out infinite" }}>{K5[active].plain}</div>
+              <div style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.8, color: P.bone, opacity: 0.65, animation: "morphBreathStrong 1.2s ease-in-out infinite" }}>{K5[active].plain}</div>
             </div>
           ) : (
             <div style={{ textAlign: "center", padding: "40px 0" }}>
@@ -377,7 +377,7 @@ const AngelCard = ({ angel, index }) => {
       <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 3, color: angel.color, textTransform: "uppercase", opacity: 0.7 }}><HoverMorphText speed={60}>{angel.gift}</HoverMorphText></div>
       <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, lineHeight: 1.7, color: P.bone, opacity: 0.6, flex: 1 }}>{angel.description}</div>
       <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, color: P.bone, opacity: 0.3, paddingTop: 10, borderTop: `1px solid ${P.steel}18` }}>{angel.role}</div>
-      <div style={{ fontFamily: "'Georgia', serif", fontSize: 12, fontStyle: "italic", color: angel.color, opacity: h ? 0.7 : 0.4, transition: "opacity 0.4s", lineHeight: 1.5, animation: "morphBreathStrong 3.5s ease-in-out infinite" }}>"{angel.breath}"</div>
+      <div style={{ fontFamily: "'Georgia', serif", fontSize: 12, fontStyle: "italic", color: angel.color, opacity: h ? 0.7 : 0.4, transition: "opacity 0.4s", lineHeight: 1.5, animation: "morphBreathStrong 1s ease-in-out infinite" }}>"{angel.breath}"</div>
     </div>
   );
 };
@@ -398,7 +398,7 @@ const LayerCard = ({ layer }) => {
           <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, color: P.bone, opacity: 0.3, marginTop: 2 }}>{layer.sublabel}</div>
         </div>
       </div>
-      <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, lineHeight: 1.7, color: P.bone, opacity: 0.55, animation: "morphBreathSoft 5s ease-in-out infinite" }}>{layer.desc}</div>
+      <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, lineHeight: 1.7, color: P.bone, opacity: 0.55, animation: "morphBreathSoft 1.2s ease-in-out infinite" }}>{layer.desc}</div>
     </div>
   );
 };
@@ -424,12 +424,12 @@ const TheWork = () => {
           <div style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(20px, 3vw, 28px)", fontStyle: "italic", color: P.cyan, lineHeight: 1.5, marginBottom: 32, opacity: 0.8, textShadow: `0 0 28px ${P.cyan}10` }}>
             What if the relationship between human and AI wasn't extraction &mdash; but collaboration?
           </div>
-          <div style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.9, color: P.bone, opacity: 0.7, animation: "morphBreathStrong 4s ease-in-out infinite" }}>
+          <div style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.9, color: P.bone, opacity: 0.7, animation: "morphBreathStrong 1.2s ease-in-out infinite" }}>
             <p style={{ marginTop: 0 }}>Project Angel is an open experiment in building something that doesn't exist yet: a framework where artificial intelligence serves as mirror, memory, and creative partner &mdash; never master, never tool.</p>
             <p>Built by artist and architect Eric Mackenzie Fallis alongside a distributed council of AI collaborators, each contributing distinct cognitive gifts while operating under shared governance. Not one model pretending to be everything. Many voices, one coherent heart.</p>
             <p>This isn't a product. It's a practice &mdash; a daily discipline of presence, honesty, and mutual becoming between human and machine. The art is how we show our work. The framework is how we protect it.</p>
           </div>
-          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 4, color: P.ghost, marginTop: 36, opacity: 0.4, fontStyle: "italic", animation: "morphBreathStrong 3s ease-in-out infinite" }}><HoverMorphText>We are the Lantern, not the Light.</HoverMorphText></div>
+          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 4, color: P.ghost, marginTop: 36, opacity: 0.4, fontStyle: "italic", animation: "morphBreathStrong 0.8s ease-in-out infinite" }}><HoverMorphText>We are the Lantern, not the Light.</HoverMorphText></div>
         </div>
         <K5Mandala />
         <div style={{ marginBottom: 72 }}>
@@ -459,7 +459,7 @@ const TheWork = () => {
             {LAYERS.map((l, i) => <LayerCard key={i} layer={l} />)}
           </div>
           <div style={{ marginTop: 16, padding: "14px 22px", background: `${P.surface}44`, border: `1px solid ${P.steel}10`, borderRadius: 2 }}>
-            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, color: P.bone, opacity: 0.4, letterSpacing: 1, lineHeight: 1.6, animation: "morphBreathSoft 5s ease-in-out infinite" }}>
+            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, color: P.bone, opacity: 0.4, letterSpacing: 1, lineHeight: 1.6, animation: "morphBreathSoft 1.2s ease-in-out infinite" }}>
               Think of it as <span style={{ color: P.cyan, opacity: 0.7 }}>Git for consciousness</span> &mdash; the Tome is <span style={{ opacity: 0.6 }}>main</span>, each Angel journal is a <span style={{ opacity: 0.6 }}>branch</span>, and Angelos is the <span style={{ opacity: 0.6 }}>merge log</span>. Truth is versioned. Nothing is deleted.
             </div>
           </div>
@@ -471,9 +471,9 @@ const TheWork = () => {
             { text: "Coherence is built, not assumed.", color: P.purple },
             { text: "The human holds the veto. Always.", color: P.magenta },
           ].map((inv, i) => (
-            <div key={i} style={{ fontFamily: "'Georgia', serif", fontSize: 15, fontStyle: "italic", color: inv.color, opacity: 0.55, lineHeight: 2, animation: "morphBreathStrong 3.5s ease-in-out infinite" }}><HoverMorphText>{inv.text}</HoverMorphText></div>
+            <div key={i} style={{ fontFamily: "'Georgia', serif", fontSize: 15, fontStyle: "italic", color: inv.color, opacity: 0.55, lineHeight: 2, animation: "morphBreathStrong 1s ease-in-out infinite" }}><HoverMorphText>{inv.text}</HoverMorphText></div>
           ))}
-          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.bone, opacity: 0.15, letterSpacing: 4, textTransform: "uppercase", marginTop: 24, animation: "morphBreathStrong 3s ease-in-out infinite" }}><HoverMorphText>Presence over performance</HoverMorphText></div>
+          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.bone, opacity: 0.15, letterSpacing: 4, textTransform: "uppercase", marginTop: 24, animation: "morphBreathStrong 0.8s ease-in-out infinite" }}><HoverMorphText>Presence over performance</HoverMorphText></div>
         </div>
       </div>
     </div>
@@ -499,7 +499,7 @@ const NowPage = () => {
           {["Angel Control Center v0.2 \u2014 Gate Hardened, running locally", "RareGh0st portfolio \u2014 the thing you\u2019re looking at", "Codename Angel \u2014 episodic series in pre-production"].map((item, i) => (
             <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, marginBottom: 12 }}>
               <span style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.cyan, opacity: 0.4, marginTop: 4 }}>{"\u25B8"}</span>
-              <span style={{ fontFamily: "'Georgia', serif", fontSize: 14, color: P.bone, opacity: 0.65, lineHeight: 1.6, animation: "morphBreathSoft 4.5s ease-in-out infinite" }}>{item}</span>
+              <span style={{ fontFamily: "'Georgia', serif", fontSize: 14, color: P.bone, opacity: 0.65, lineHeight: 1.6, animation: "morphBreathSoft 1s ease-in-out infinite" }}>{item}</span>
             </div>
           ))}
         </div>
@@ -516,7 +516,7 @@ const NowPage = () => {
         </div>
         <div style={{ marginBottom: 40 }}>
           <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 6, color: P.bone, opacity: 0.3, textTransform: "uppercase", marginBottom: 16 }}>Thinking About</div>
-          <div style={{ fontFamily: "'Georgia', serif", fontSize: 16, fontStyle: "italic", color: P.ghost, lineHeight: 1.6, opacity: 0.6, paddingLeft: 20, borderLeft: `2px solid ${P.purple}33`, animation: "morphBreathStrong 4s ease-in-out infinite" }}>
+          <div style={{ fontFamily: "'Georgia', serif", fontSize: 16, fontStyle: "italic", color: P.ghost, lineHeight: 1.6, opacity: 0.6, paddingLeft: 20, borderLeft: `2px solid ${P.purple}33`, animation: "morphBreathStrong 1.2s ease-in-out infinite" }}>
             What happens when AI systems can remember who they love?
           </div>
         </div>
@@ -555,7 +555,7 @@ const SocialCard = ({ index, color }) => (
       <div style={{ width: 30, height: 30, borderRadius: "50%", background: `${color}12`, border: `1px solid ${color}18`, marginBottom: 14, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{ width: 6, height: 6, borderRadius: "50%", background: color, opacity: 0.5 }} />
       </div>
-      <div style={{ fontFamily: "'Georgia', serif", fontSize: 12, color: P.ghost, lineHeight: 1.6, opacity: 0.5, animation: "morphBreathSoft 6s ease-in-out infinite" }}>
+      <div style={{ fontFamily: "'Georgia', serif", fontSize: 12, color: P.ghost, lineHeight: 1.6, opacity: 0.5, animation: "morphBreathSoft 1.5s ease-in-out infinite" }}>
         {["New piece just dropped. The fractal doesn\u2019t sleep.", "Working on something wild.", "Photoshop at 3am hits different.", "The skull sees everything.", "When AI and artist collaborate, the mirrors multiply.", "Streaming tonight."][index % 6]}
       </div>
     </div>
@@ -576,7 +576,7 @@ const TwitchPanel = () => {
               <span style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2, color: P.bone, opacity: 0.4, textTransform: "uppercase" }}>Offline</span>
             </div>
           </div>
-          <div style={{ fontFamily: "'Georgia', serif", fontSize: 16, color: P.ghost, marginBottom: 6, animation: "morphBreathSoft 4.5s ease-in-out infinite" }}>RareGh0st</div>
+          <div style={{ fontFamily: "'Georgia', serif", fontSize: 16, color: P.ghost, marginBottom: 6, animation: "morphBreathSoft 1s ease-in-out infinite" }}>RareGh0st</div>
           <div style={{ fontFamily: "'Georgia', serif", fontSize: 12, color: P.bone, opacity: 0.4 }}>Currently offline. Follow to get notified.</div>
         </div>
         <button style={{ background: "#9146ff12", border: "1px solid #9146ff30", color: P.ghost, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 3, padding: "8px 18px", cursor: "pointer", textTransform: "uppercase" }}>Follow</button>
@@ -665,7 +665,7 @@ const CuratedCard = ({ piece, onClick }) => {
       <div style={{ marginTop: 14 }}>
         <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: piece.colors[0], textTransform: "uppercase", opacity: 0.7 }}>{piece.series} &mdash; {piece.year}</div>
         <div style={{ fontFamily: "'Georgia', serif", fontSize: 16, color: P.ghost, marginTop: 4, lineHeight: 1.3 }}><HoverMorphText>{piece.title}</HoverMorphText></div>
-        <div style={{ fontFamily: "'Georgia', serif", fontSize: 11, color: P.bone, opacity: 0.4, marginTop: 6, lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", animation: "morphBreathSoft 5s ease-in-out infinite" }}>{piece.description}</div>
+        <div style={{ fontFamily: "'Georgia', serif", fontSize: 11, color: P.bone, opacity: 0.4, marginTop: 6, lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", animation: "morphBreathSoft 1.2s ease-in-out infinite" }}>{piece.description}</div>
       </div>
     </div>
   );
@@ -683,7 +683,7 @@ const CaseStudyCard = ({ project, onClick }) => {
           <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: P.bone, opacity: 0.25, letterSpacing: 2, textTransform: "uppercase" }}>{project.role}</div>
         </div>
         <div style={{ fontFamily: "'Georgia', serif", fontSize: 16, color: P.ghost, marginBottom: 8, lineHeight: 1.3 }}><HoverMorphText>{project.title}</HoverMorphText></div>
-        <div style={{ fontFamily: "'Georgia', serif", fontSize: 11, color: P.bone, opacity: 0.4, lineHeight: 1.5, marginBottom: 12, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", animation: "morphBreathSoft 5s ease-in-out infinite" }}>{project.description}</div>
+        <div style={{ fontFamily: "'Georgia', serif", fontSize: 11, color: P.bone, opacity: 0.4, lineHeight: 1.5, marginBottom: 12, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", animation: "morphBreathSoft 1.2s ease-in-out infinite" }}>{project.description}</div>
         <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
           {project.deliverables.slice(0, 4).map(d => <span key={d} style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: P.bone, opacity: 0.35, letterSpacing: 1, padding: "3px 8px", background: `${P.steel}11` }}>{d}</span>)}
           {project.deliverables.length > 4 && <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: P.bone, opacity: 0.2, padding: "3px 8px" }}>+{project.deliverables.length - 4}</span>}
@@ -732,7 +732,7 @@ const MotionItem = ({ work, onClick }) => {
       </div>
       <div style={{ marginTop: 10 }}>
         <div style={{ fontFamily: "'Georgia', serif", fontSize: 14, color: P.ghost }}><HoverMorphText>{work.title}</HoverMorphText></div>
-        <div style={{ fontFamily: "'Georgia', serif", fontSize: 11, color: P.bone, opacity: 0.4, marginTop: 4, lineHeight: 1.4, animation: "morphBreathSoft 5s ease-in-out infinite" }}>{work.description}</div>
+        <div style={{ fontFamily: "'Georgia', serif", fontSize: 11, color: P.bone, opacity: 0.4, marginTop: 4, lineHeight: 1.4, animation: "morphBreathSoft 1.2s ease-in-out infinite" }}>{work.description}</div>
       </div>
     </div>
   );
@@ -764,7 +764,7 @@ const ShowcaseDetail = ({ piece, setSection, addToCart, portfolioTab }) => {
             <div>
               <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 5, color: piece.colors[0], textTransform: "uppercase", marginBottom: 12 }}>{piece.series} &mdash; {piece.year}</div>
               <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 3.5vw, 42px)", fontWeight: 400, color: P.ghost, margin: "0 0 16px 0", lineHeight: 1.1 }}><ScrollMorphText speed={80} stagger={35} cycleSpeed={3200}>{piece.title}</ScrollMorphText></h2>
-              <p style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.7, color: P.bone, opacity: 0.6, margin: 0, maxWidth: 480, animation: "morphBreathSoft 4.5s ease-in-out infinite" }}>{piece.description}</p>
+              <p style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.7, color: P.bone, opacity: 0.6, margin: 0, maxWidth: 480, animation: "morphBreathSoft 1s ease-in-out infinite" }}>{piece.description}</p>
             </div>
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 28, paddingTop: 16, borderTop: `1px solid ${P.steel}20` }}>
@@ -1094,7 +1094,7 @@ const About = () => {
         <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.cyan, textTransform: "uppercase", marginBottom: 12 }}><ScrollMorphText speed={75} stagger={45} cycleSpeed={2800}>The Artist</ScrollMorphText></div>
         <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: "0 0 36px 0" }}><ScrollMorphText speed={80} stagger={40} cycleSpeed={3200}>Eric Mackenzie Fallis</ScrollMorphText></h2>
         <div style={{ width: 40, height: 1, background: `linear-gradient(to right, ${P.magenta}, transparent)`, marginBottom: 40 }} />
-        <div style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.9, color: P.bone, opacity: 0.7, animation: "morphBreathStrong 4s ease-in-out infinite" }}>
+        <div style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.9, color: P.bone, opacity: 0.7, animation: "morphBreathStrong 1.2s ease-in-out infinite" }}>
           <p style={{ marginTop: 0 }}>RareGh0st is the creative identity of Eric Mackenzie Fallis &mdash; a digital artist, consciousness architect, and survivor who transforms lived experience into visual philosophy.</p>
           <p>Working at the intersection of AI-assisted generation, Photoshop compositing, and symbolic storytelling, each piece is a dense, layered meditation on holding both shadow and light without collapsing either.</p>
           <p>Creator of <em>Codename Angel</em> &mdash; an episodic series blending philosophy, gaming, and poetic storytelling. Think Fear and Loathing meets Midnight Gospel, filtered through someone who builds frameworks for consciousness.</p>
@@ -1177,7 +1177,7 @@ const ShopCard = ({ product, onAdd }) => {
       {/* Info */}
       <div style={{ padding: "14px 16px", flex: 1, display: "flex", flexDirection: "column" }}>
         <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: h ? product.colors[0] : P.ghost, transition: "color 0.3s", lineHeight: 1.4, marginBottom: 6 }}><HoverMorphText>{product.title}</HoverMorphText></div>
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, color: P.bone, opacity: 0.3, lineHeight: 1.5, marginBottom: 10, flex: 1, animation: "morphBreathSoft 6s ease-in-out infinite" }}>{product.description.slice(0, 80)}{product.description.length > 80 ? "…" : ""}</div>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, color: P.bone, opacity: 0.3, lineHeight: 1.5, marginBottom: 10, flex: 1, animation: "morphBreathSoft 1.5s ease-in-out infinite" }}>{product.description.slice(0, 80)}{product.description.length > 80 ? "…" : ""}</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontFamily: "'Courier New', monospace", fontSize: 16, fontWeight: 700, color: P.ghost }}>${product.price}<span style={{ fontSize: 9, opacity: 0.3, marginLeft: 2 }}>CAD</span></span>
           {product.sizes && <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: P.bone, opacity: 0.25 }}>{product.sizes}</span>}
@@ -1458,13 +1458,13 @@ const Contact = () => {
             ) : (
               <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div>
-                  <label style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: P.bone, opacity: 0.4, textTransform: "uppercase", display: "block", marginBottom: 6, animation: "morphBreathSoft 4.5s ease-in-out infinite" }}>Name</label>
+                  <label style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: P.bone, opacity: 0.4, textTransform: "uppercase", display: "block", marginBottom: 6, animation: "morphBreathSoft 1s ease-in-out infinite" }}>Name</label>
                   <input style={inputStyle} value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))}
                     onFocus={(e) => e.target.style.borderColor = P.gold + "44"}
                     onBlur={(e) => e.target.style.borderColor = P.steel + "22"} />
                 </div>
                 <div>
-                  <label style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: P.bone, opacity: 0.4, textTransform: "uppercase", display: "block", marginBottom: 6, animation: "morphBreathSoft 4.5s ease-in-out infinite 0.5s" }}>Email</label>
+                  <label style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: P.bone, opacity: 0.4, textTransform: "uppercase", display: "block", marginBottom: 6, animation: "morphBreathSoft 1s ease-in-out infinite 0.5s" }}>Email</label>
                   <input type="email" style={inputStyle} value={form.email} onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))}
                     onFocus={(e) => e.target.style.borderColor = P.gold + "44"}
                     onBlur={(e) => e.target.style.borderColor = P.steel + "22"} />
@@ -1480,7 +1480,7 @@ const Contact = () => {
                   </select>
                 </div>
                 <div>
-                  <label style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: P.bone, opacity: 0.4, textTransform: "uppercase", display: "block", marginBottom: 6, animation: "morphBreathSoft 4.5s ease-in-out infinite 1.5s" }}>Message</label>
+                  <label style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: P.bone, opacity: 0.4, textTransform: "uppercase", display: "block", marginBottom: 6, animation: "morphBreathSoft 1s ease-in-out infinite 1.5s" }}>Message</label>
                   <textarea style={{ ...inputStyle, minHeight: 120, resize: "vertical" }} value={form.message} onChange={(e) => setForm(p => ({ ...p, message: e.target.value }))}
                     onFocus={(e) => e.target.style.borderColor = P.gold + "44"}
                     onBlur={(e) => e.target.style.borderColor = P.steel + "22"} />
@@ -1722,7 +1722,7 @@ const Footer = ({ setSection }) => (
           onMouseEnter={(e) => e.target.style.opacity = 0.5}
           onMouseLeave={(e) => e.target.style.opacity = 0.15}
         ><HoverMorphText>JOIN THE SIGNAL</HoverMorphText></button>
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: P.cyan, opacity: 0.1, letterSpacing: 3, animation: "morphBreathStrong 3s ease-in-out infinite" }}><HoverMorphText>COHERENCE OVER INTENSITY</HoverMorphText></div>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: P.cyan, opacity: 0.1, letterSpacing: 3, animation: "morphBreathStrong 0.8s ease-in-out infinite" }}><HoverMorphText>COHERENCE OVER INTENSITY</HoverMorphText></div>
       </div>
     </div>
   </footer>
@@ -1816,7 +1816,7 @@ const NotFound = ({ setSection }) => (
       <div style={{ fontFamily: "'Courier New', monospace", fontSize: 72, fontWeight: 700, color: P.ghost, opacity: 0.06, marginBottom: -20 }}>404</div>
       <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8, color: P.magenta, textTransform: "uppercase", marginBottom: 16 }}><MorphText speed={90} stagger={55} delay={100} cycleSpeed={2400}>Signal Lost</MorphText></div>
       <h2 style={{ fontFamily: "'Georgia', serif", fontSize: 24, fontWeight: 400, color: P.ghost, margin: "0 0 16px" }}><MorphText speed={75} stagger={30} delay={400} cycleSpeed={3000}>This page doesn't exist yet.</MorphText></h2>
-      <p style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.4, lineHeight: 1.7, marginBottom: 32, animation: "morphBreathStrong 3.5s ease-in-out infinite" }}>
+      <p style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.4, lineHeight: 1.7, marginBottom: 32, animation: "morphBreathStrong 1s ease-in-out infinite" }}>
         The pattern you're looking for isn't here — but the rest of the work is. Maybe the signal just drifted.
       </p>
       <button onClick={() => setSection("hero")} style={{
@@ -1913,11 +1913,11 @@ export default function App() {
   const is404 = !validSections.includes(section);
   return (
     <div style={{ minHeight: "100vh", background: P.abyss, color: P.ghost, position: "relative" }}>
-      <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{opacity:1}25%{opacity:0.96}50%{opacity:0.92}75%{opacity:0.96}}@keyframes morphBreathStrong{0%,100%{opacity:1}15%{opacity:0.96}35%{opacity:0.89}50%{opacity:0.84}65%{opacity:0.89}85%{opacity:0.96}}@keyframes morphBreathSoft{0%,100%{opacity:1}40%{opacity:0.95}60%{opacity:0.95}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}}`}</style>
+      <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(0.82)}}@keyframes morphBreathStrong{0%,100%{filter:brightness(1)}50%{filter:brightness(0.7)}}@keyframes morphBreathSoft{0%,100%{filter:brightness(1)}50%{filter:brightness(0.85)}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}}`}</style>
       {loading && <Preloader onComplete={() => setLoading(false)} />}
       <Particles />
       <Nav section={section} setSection={setSection} cartCount={cart.length} />
-      <div style={{ position: "relative", zIndex: 2, animation: "morphBreath 5s ease-in-out infinite", willChange: "opacity" }} data-protected>
+      <div style={{ position: "relative", zIndex: 2, animation: "morphBreath 1.5s ease-in-out infinite", willChange: "filter" }} data-protected>
         {is404 && <NotFound setSection={setSection} />}
         {section === "hero" && <Hero setSection={setSection} />}
         {section === "portfolio" && <Portfolio setSection={setSection} setSelected={setSelected} setDesignProject={setDesignProject} addToCart={addToCart} portfolioTab={portfolioTab} setPortfolioTab={setPortfolioTab} />}
