@@ -1139,7 +1139,7 @@ const SHOP_PRODUCTS = [
 // All unique tags across products
 const ALL_ITEM_TAGS = [...new Set(SHOP_PRODUCTS.flatMap(p => [p.subcategory]))];
 
-// ─── SHOP COMPONENTS ────────────────────────────────────
+// ─── SHOP COMPONENTS ─────────────────────────────���──────
 const ShopCard = ({ product, onAdd }) => {
   const [h, setH] = useState(false);
   const cat = SHOP_CATEGORIES.find(c => c.id === product.category);
@@ -1641,13 +1641,12 @@ const Hero = ({ setSection }) => {
         }}>
           <img src="/images/moon.png" alt="" style={{
             width: "100%", height: "100%", objectFit: "cover",
-            filter: "brightness(0.45) contrast(1.1) saturate(0.3)",
-            mixBlendMode: "luminosity",
+            filter: "brightness(0.85) contrast(1.05) saturate(0.15)",
           }} />
-          {/* Dark overlay to blend moon into the abyss */}
+          {/* Subtle edge fade so the moon blends into the background at its rim */}
           <div style={{
             position: "absolute", inset: 0, borderRadius: "50%",
-            background: `radial-gradient(circle at 50% 40%, ${P.abyss}40 0%, ${P.abyss}90 60%, ${P.abyss}cc 100%)`,
+            background: `radial-gradient(circle at 50% 45%, transparent 50%, ${P.abyss}30 75%, ${P.abyss}aa 100%)`,
           }} />
         </div>
         {/* ── Center hub: logo + title (sits on the moon) ── */}
