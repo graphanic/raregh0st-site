@@ -1357,6 +1357,11 @@ const Hero = ({ setSection }) => {
   // Panning state
   const panTarget = useRef({ x: 0, y: 0 });
   const panCurrent = useRef({ x: 0, y: 0 });
+  // Grid rotation refs (SVG <g> elements driven by RAF, not CSS animation)
+  const circlesRef = useRef(null);
+  const radialsRef = useRef(null);
+  const ticksRef = useRef(null);
+  const gridRotation = useRef({ circles: 0, radials: 0, ticks: 0 });
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const dragPanStart = useRef({ x: 0, y: 0 });
@@ -1518,6 +1523,15 @@ const Hero = ({ setSection }) => {
         el.style.transform = `translate(${ox}px, ${oy}px)`;
       }
 
+      // Rotate grid layers around the moon axis (960,540 in SVG coords)
+      const gr = gridRotation.current;
+      gr.circles = (gr.circles + dt * 0.06) % 360;     // ~6 deg/100s = 1 revolution per 100 min
+      gr.radials = (gr.radials - dt * 0.075) % 360;     // counter-clockwise, slightly faster
+      gr.ticks = (gr.ticks + dt * 0.15) % 360;          // tick ring spins faster
+      if (circlesRef.current) circlesRef.current.setAttribute("transform", `rotate(${gr.circles} 960 540)`);
+      if (radialsRef.current) radialsRef.current.setAttribute("transform", `rotate(${gr.radials} 960 540)`);
+      if (ticksRef.current) ticksRef.current.setAttribute("transform", `rotate(${gr.ticks} 960 540)`);
+
       // Orbit each sub-moon around its parent node
       for (let m = 0; m < allMoons.length; m++) {
         const moon = allMoons[m];
@@ -1594,8 +1608,8 @@ const Hero = ({ setSection }) => {
               <line key={`gv-${i}`} x1={i * 54 - 500} y1="-500" x2={i * 54 - 500} y2="1580" stroke={P.cyan} strokeWidth="0.5" opacity="0.4" />
             ))}
           </g>
-          {/* Concentric circles — slowly rotating clockwise */}
-          <g opacity="0.4" style={{ transformOrigin: "960px 540px", animation: "spin 600s linear infinite" }}>
+          {/* Concentric circles — rotating clockwise via RAF */}
+          <g ref={circlesRef} opacity="0.4">
             {[80, 160, 260, 380, 520, 680, 860, 1080, 1350, 1700, 2100].map((r, i) => (
               <circle key={`cc-${i}`} cx="960" cy="540" r={r} fill="none" stroke={P.cyan}
                 strokeWidth={i < 3 ? "1" : i < 6 ? "0.7" : "0.5"}
@@ -1603,8 +1617,8 @@ const Hero = ({ setSection }) => {
                 strokeDasharray={i % 3 === 2 ? "6 12" : "none"} />
             ))}
           </g>
-          {/* Radial lines — slowly rotating counter-clockwise */}
-          <g opacity="0.3" style={{ transformOrigin: "960px 540px", animation: "spin 480s linear infinite reverse" }}>
+          {/* Radial lines — rotating counter-clockwise via RAF */}
+          <g ref={radialsRef} opacity="0.3">
             {Array.from({ length: 24 }, (_, i) => {
               const angle = (i / 24) * Math.PI * 2;
               const x2 = 960 + Math.cos(angle) * 3000;
@@ -1614,8 +1628,8 @@ const Hero = ({ setSection }) => {
                 opacity={i % 6 === 0 ? 0.7 : 0.35} />;
             })}
           </g>
-          {/* Slowly spinning outer tick ring */}
-          <g opacity="0.25" style={{ transformOrigin: "960px 540px", animation: "spin 240s linear infinite" }}>
+          {/* Outer tick ring — spinning via RAF */}
+          <g ref={ticksRef} opacity="0.25">
             {Array.from({ length: 72 }, (_, i) => {
               const angle = (i / 72) * Math.PI * 2;
               const inner = 480;
