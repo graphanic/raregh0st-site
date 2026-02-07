@@ -1888,6 +1888,13 @@ const Hero = ({ setSection }) => {
           background: `radial-gradient(ellipse 100% 95% at 50% 50%, transparent 35%, ${P.abyss}44 60%, ${P.abyss}88 80%, ${P.abyss}cc 95%)`,
           opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s",
         }} />
+        {/* CRT scanlines */}
+        <div style={{
+          position: "absolute", inset: 0,
+          background: "repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px)",
+          opacity: vis ? 0.6 : 0,
+          transition: "opacity 3s ease 0.5s",
+        }} />
       </div>
 
       {/* Home button — resets pan/zoom to center */}
