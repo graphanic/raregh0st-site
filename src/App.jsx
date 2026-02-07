@@ -1783,7 +1783,7 @@ const Hero = ({ setSection }) => {
                 // Find the flat index in allMoons
                 const flatIdx = allMoons.findIndex(m => m.nodeIndex === i && m.moonIndex === mi);
                 return (
-                  <React.Fragment key={`moon-${mi}`}>
+                  <div key={`moon-${mi}`} style={{ contents: "initial", display: "contents" }}>
                     {/* Moon orbit track */}
                     <div style={{
                       position: "absolute",
@@ -1845,7 +1845,7 @@ const Hero = ({ setSection }) => {
                         {moon.label}
                       </div>
                     </div>
-                  </React.Fragment>
+                  </div>
                 );
               })}
             </div>
