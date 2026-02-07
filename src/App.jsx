@@ -1357,7 +1357,8 @@ const Hero = ({ setSection }) => {
   const raf = useRef(null);
 
   // Depth multipliers for each layer (higher = moves more)
-  const depths = [0.02, 0.04, 0.06, 0.03, 0.01, 0.08];
+  // L0:cosmos L1:stars L2:deep fractals L3:moon L4:content L5:vignette L6:foreground fractals
+  const depths = [0.02, 0.04, 0.06, 0.03, 0.01, 0.08, 0.05];
   const maxShift = 40; // px
 
   useEffect(() => { setTimeout(() => setVis(true), 100); }, []);
@@ -1468,21 +1469,64 @@ const Hero = ({ setSection }) => {
         ))}
       </div>
 
-      {/* L2: Orbital rings */}
+      {/* L2: Deep fractal geometry — behind the moon */}
       <div ref={setLayerRef(2)} style={{ ...layerBase, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {[280, 360, 460].map((size, i) => (
-          <div key={i} style={{
+        {/* Sacred geometry: nested rotating polygons */}
+        {[
+          { sides: 3, size: 520, color: P.cyan,    alpha: "0c", speed: 60,  dir: 1,  delay: 0 },
+          { sides: 3, size: 440, color: P.magenta,  alpha: "0a", speed: 50,  dir: -1, delay: 0.2 },
+          { sides: 6, size: 380, color: P.cyan,    alpha: "0d", speed: 80,  dir: 1,  delay: 0.4 },
+          { sides: 6, size: 320, color: P.magenta,  alpha: "08", speed: 70,  dir: -1, delay: 0.6 },
+          { sides: 4, size: 260, color: P.steel,   alpha: "08", speed: 45,  dir: 1,  delay: 0.8 },
+          { sides: 4, size: 200, color: P.gold,    alpha: "06", speed: 55,  dir: -1, delay: 1.0 },
+          { sides: 8, size: 500, color: P.steel,   alpha: "06", speed: 100, dir: 1,  delay: 0.3 },
+          { sides: 12, size: 600, color: P.cyan,   alpha: "05", speed: 120, dir: -1, delay: 0.5 },
+        ].map(({ sides, size, color, alpha, speed, dir, delay }, i) => {
+          // Build SVG polygon points
+          const r = size / 2;
+          const points = Array.from({ length: sides }, (_, j) => {
+            const angle = (j / sides) * Math.PI * 2 - Math.PI / 2;
+            return `${r + Math.cos(angle) * r},${r + Math.sin(angle) * r}`;
+          }).join(" ");
+          const scaleFactor = `clamp(0.5, ${size / 600}, 1)`;
+          return (
+            <div key={`fractal-deep-${i}`} style={{
+              position: "absolute",
+              left: "50%", top: "50%",
+              width: size, height: size,
+              marginLeft: -size / 2,
+              marginTop: -size / 2,
+              opacity: vis ? 1 : 0,
+              transition: `opacity 2.5s ease ${1 + delay}s`,
+              animation: `spin ${speed}s linear infinite ${dir < 0 ? "reverse" : ""}`,
+              transform: `scale(${scaleFactor})`,
+            }}>
+              <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: "visible" }}>
+                <polygon
+                  points={points}
+                  fill="none"
+                  stroke={`${color}${alpha}`}
+                  strokeWidth="0.8"
+                  style={{ filter: `drop-shadow(0 0 6px ${color}${alpha})` }}
+                />
+              </svg>
+            </div>
+          );
+        })}
+        {/* Concentric glow rings */}
+        {[180, 280, 400, 550].map((size, i) => (
+          <div key={`ring-${i}`} style={{
             position: "absolute",
-            width: `clamp(${size * 0.6}px, ${size / 10}vw, ${size}px)`,
-            height: `clamp(${size * 0.6}px, ${size / 10}vw, ${size}px)`,
-            borderRadius: "50%",
-            border: `1px solid ${[P.cyan, P.magenta, P.steel][i]}${["0a", "08", "06"][i]}`,
-            opacity: vis ? 1 : 0,
-            transition: `opacity 2s ease ${1 + i * 0.3}s`,
-            animation: `spin ${40 + i * 20}s linear infinite ${i % 2 === 0 ? "" : "reverse"}`,
             left: "50%", top: "50%",
-            marginLeft: `clamp(-${size * 0.3}px, -${size / 20}vw, -${size / 2}px)`,
-            marginTop: `clamp(-${size * 0.3}px, -${size / 20}vw, -${size / 2}px)`,
+            width: size, height: size,
+            marginLeft: -size / 2,
+            marginTop: -size / 2,
+            borderRadius: "50%",
+            border: `1px solid ${[P.cyan, P.magenta, P.cyan, P.magenta][i]}${["0a", "08", "06", "04"][i]}`,
+            boxShadow: `0 0 ${12 + i * 4}px ${[P.cyan, P.magenta, P.cyan, P.magenta][i]}${["08", "06", "04", "03"][i]}, inset 0 0 ${8 + i * 3}px ${[P.cyan, P.magenta, P.cyan, P.magenta][i]}${["05", "04", "03", "02"][i]}`,
+            opacity: vis ? 1 : 0,
+            transition: `opacity 2s ease ${1.2 + i * 0.3}s`,
+            animation: `fractalPulse ${6 + i * 2}s ease-in-out ${i * 0.5}s infinite, spin ${60 + i * 30}s linear infinite ${i % 2 === 0 ? "" : "reverse"}`,
           }} />
         ))}
       </div>
@@ -1553,6 +1597,58 @@ const Hero = ({ setSection }) => {
           opacity: vis ? 1 : 0,
           transition: "opacity 3s ease 0.5s",
         }} />
+      </div>
+
+      {/* L6: Foreground fractal fragments — closest to viewer, most parallax */}
+      <div ref={setLayerRef(6)} style={{ ...layerBase, zIndex: 12, pointerEvents: "none" }}>
+        {/* Corner fractal shards */}
+        {[
+          { x: "8%",  y: "15%", size: 120, sides: 3, rot: 15,  color: P.cyan,    alpha: "12", speed: 35 },
+          { x: "88%", y: "20%", size: 90,  sides: 6, rot: -20, color: P.magenta,  alpha: "0e", speed: 45 },
+          { x: "12%", y: "75%", size: 80,  sides: 4, rot: 45,  color: P.magenta,  alpha: "0a", speed: 40 },
+          { x: "85%", y: "80%", size: 100, sides: 3, rot: -30, color: P.cyan,    alpha: "10", speed: 50 },
+          { x: "50%", y: "8%",  size: 70,  sides: 8, rot: 22,  color: P.steel,   alpha: "08", speed: 60 },
+          { x: "45%", y: "90%", size: 60,  sides: 6, rot: -15, color: P.gold,    alpha: "08", speed: 55 },
+        ].map(({ x, y, size, sides, rot, color, alpha, speed }, i) => {
+          const r = size / 2;
+          const points = Array.from({ length: sides }, (_, j) => {
+            const angle = (j / sides) * Math.PI * 2 - Math.PI / 2;
+            return `${r + Math.cos(angle) * r},${r + Math.sin(angle) * r}`;
+          }).join(" ");
+          return (
+            <div key={`fractal-fg-${i}`} style={{
+              position: "absolute",
+              left: x, top: y,
+              width: size, height: size,
+              marginLeft: -size / 2,
+              marginTop: -size / 2,
+              opacity: vis ? 1 : 0,
+              transition: `opacity 3s ease ${1.5 + i * 0.2}s`,
+              animation: `spin ${speed}s linear infinite ${i % 2 === 0 ? "" : "reverse"}, fractalFloat ${8 + i * 2}s ease-in-out ${i * 0.7}s infinite`,
+              transform: `rotate(${rot}deg)`,
+            }}>
+              <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: "visible" }}>
+                <polygon
+                  points={points}
+                  fill="none"
+                  stroke={`${color}${alpha}`}
+                  strokeWidth="0.6"
+                  style={{ filter: `drop-shadow(0 0 10px ${color}${alpha})` }}
+                />
+                {/* Inner nested shape at half scale */}
+                <g transform={`translate(${r},${r}) scale(0.5) translate(${-r},${-r})`}>
+                  <polygon
+                    points={points}
+                    fill="none"
+                    stroke={`${color}${alpha}`}
+                    strokeWidth="0.4"
+                    style={{ filter: `drop-shadow(0 0 6px ${color}${alpha})` }}
+                  />
+                </g>
+              </svg>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -2097,7 +2193,7 @@ export default function App() {
   return (
     <CalmContext.Provider value={calm}>
     <div style={{ minHeight: "100vh", background: P.abyss, color: P.ghost, position: "relative" }}>
-      <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Sans';src:url('/fonts/Geist-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}@font-face{font-family:'Geist Mono';src:url('/fonts/GeistMono-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}:root{--pf1:'Geist Pixel Square',monospace;--pf2:'Geist Pixel Grid',monospace;--pf3:'Geist Pixel Circle',monospace;--pf4:'Geist Pixel Triangle',monospace;--pf5:'Geist Pixel Line',monospace;--ss1:normal;--ss2:normal;--ss3:normal;--ss4:normal;--ss5:normal}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0;font-family:'Geist Pixel Square',monospace}body:not([data-calm]) *:nth-child(5n+1):not([data-morph]){font-family:var(--pf1)!important;font-feature-settings:var(--ss1)}body:not([data-calm]) *:nth-child(5n+2):not([data-morph]){font-family:var(--pf2)!important;font-feature-settings:var(--ss2)}body:not([data-calm]) *:nth-child(5n+3):not([data-morph]){font-family:var(--pf3)!important;font-feature-settings:var(--ss3)}body:not([data-calm]) *:nth-child(5n+4):not([data-morph]){font-family:var(--pf4)!important;font-feature-settings:var(--ss4)}body:not([data-calm]) *:nth-child(5n):not([data-morph]){font-family:var(--pf5)!important;font-feature-settings:var(--ss5)}body[data-calm]{font-family:'Geist Sans',sans-serif!important}body[data-calm] *:not([data-morph]){font-family:inherit!important;animation:none!important;transition:none!important}body[data-calm] [style*="Courier"],body[data-calm] [style*="monospace"]{font-family:'Geist Mono',monospace!important}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(0.82)}}@keyframes morphBreathStrong{0%,100%{filter:brightness(1)}50%{filter:brightness(0.7)}}@keyframes morphBreathSoft{0%,100%{filter:brightness(1)}50%{filter:brightness(0.85)}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}@keyframes twinkle{0%,100%{opacity:inherit}50%{opacity:0.02}}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}`}</style>
+      <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Sans';src:url('/fonts/Geist-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}@font-face{font-family:'Geist Mono';src:url('/fonts/GeistMono-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}:root{--pf1:'Geist Pixel Square',monospace;--pf2:'Geist Pixel Grid',monospace;--pf3:'Geist Pixel Circle',monospace;--pf4:'Geist Pixel Triangle',monospace;--pf5:'Geist Pixel Line',monospace;--ss1:normal;--ss2:normal;--ss3:normal;--ss4:normal;--ss5:normal}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0;font-family:'Geist Pixel Square',monospace}body:not([data-calm]) *:nth-child(5n+1):not([data-morph]){font-family:var(--pf1)!important;font-feature-settings:var(--ss1)}body:not([data-calm]) *:nth-child(5n+2):not([data-morph]){font-family:var(--pf2)!important;font-feature-settings:var(--ss2)}body:not([data-calm]) *:nth-child(5n+3):not([data-morph]){font-family:var(--pf3)!important;font-feature-settings:var(--ss3)}body:not([data-calm]) *:nth-child(5n+4):not([data-morph]){font-family:var(--pf4)!important;font-feature-settings:var(--ss4)}body:not([data-calm]) *:nth-child(5n):not([data-morph]){font-family:var(--pf5)!important;font-feature-settings:var(--ss5)}body[data-calm]{font-family:'Geist Sans',sans-serif!important}body[data-calm] *:not([data-morph]){font-family:inherit!important;animation:none!important;transition:none!important}body[data-calm] [style*="Courier"],body[data-calm] [style*="monospace"]{font-family:'Geist Mono',monospace!important}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(0.82)}}@keyframes morphBreathStrong{0%,100%{filter:brightness(1)}50%{filter:brightness(0.7)}}@keyframes morphBreathSoft{0%,100%{filter:brightness(1)}50%{filter:brightness(0.85)}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}@keyframes twinkle{0%,100%{opacity:inherit}50%{opacity:0.02}}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}@keyframes fractalPulse{0%,100%{transform:scale(1);opacity:inherit}50%{transform:scale(1.04);opacity:0.6}}@keyframes fractalFloat{0%,100%{transform:translateY(0) rotate(0deg)}25%{transform:translateY(-8px) rotate(2deg)}50%{transform:translateY(0) rotate(0deg)}75%{transform:translateY(8px) rotate(-2deg)}}`}</style>
       {loading && <Preloader onComplete={() => setLoading(false)} />}
       <Particles />
       <Nav section={section} setSection={setSection} cartCount={cart.length} />
