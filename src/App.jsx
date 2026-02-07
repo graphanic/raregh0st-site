@@ -1337,29 +1337,22 @@ const Cart = ({ cart, removeFromCart }) => {
 };
 
 // ─── HERO (v4: Moon + Logo + Parallax) ──────────────────
-// ─── PARALLAX HERO (mouse-driven depth layers) ─────────
-// Each layer moves at a different rate based on cursor position.
-// Placeholder layers — swap with real Photoshop PNGs later.
-// Layer spec for artwork: export each as transparent PNG at 1920x1080.
-//   L0: deep cosmos bg  (depth 0.02)
-//   L1: stars           (depth 0.04)
-//   L2: orbital rings   (depth 0.06)
-//   L3: moon            (depth 0.03)
-//   L4: content/text    (depth 0.01)
-//   L5: foreground dust (depth 0.08)
+// ─── PARALLAX HERO — Destiny-style Director HUD Map ─────────
+// Circular navigation nodes connected by geometric grid lines,
+// layered with parallax depth. Mouse-driven "window" effect.
 const Hero = ({ setSection }) => {
   const [vis, setVis] = useState(false);
   const [logoGlow, setLogoGlow] = useState(0);
+  const [hoveredNode, setHoveredNode] = useState(null);
   const containerRef = useRef(null);
   const layerRefs = useRef([]);
   const mouse = useRef({ x: 0, y: 0 });
   const smoothed = useRef({ x: 0, y: 0 });
   const raf = useRef(null);
 
-  // Depth multipliers for each layer (higher = moves more)
-  // L0:cosmos L1:stars L2:deep fractals L3:moon L4:content L5:vignette L6:foreground fractals
-  const depths = [0.02, 0.04, 0.06, 0.03, 0.01, 0.08, 0.05];
-  const maxShift = 40; // px
+  // L0:cosmos L1:stars L2:grid L3:connections L4:nodes+center L5:vignette
+  const depths = [0.02, 0.04, 0.05, 0.035, 0.015, 0.07];
+  const maxShift = 40;
 
   useEffect(() => { setTimeout(() => setVis(true), 100); }, []);
   useEffect(() => {
@@ -1367,7 +1360,6 @@ const Hero = ({ setSection }) => {
     return () => clearInterval(interval);
   }, []);
 
-  // Mouse tracking — normalized -1 to 1 from center
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -1380,7 +1372,6 @@ const Hero = ({ setSection }) => {
     return () => el.removeEventListener("mousemove", onMove);
   }, []);
 
-  // Animation loop — smooth lerp + apply transforms
   useEffect(() => {
     const ease = 0.08;
     const tick = () => {
@@ -1402,12 +1393,9 @@ const Hero = ({ setSection }) => {
     return () => { if (raf.current) cancelAnimationFrame(raf.current); };
   }, []);
 
-  // Generate stable stars once
   const [stars] = useState(() =>
-    Array.from({ length: 60 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      y: Math.random() * 100,
+    Array.from({ length: 80 }, (_, i) => ({
+      id: i, x: Math.random() * 100, y: Math.random() * 100,
       size: Math.random() * 1.8 + 0.3,
       opacity: Math.random() * 0.5 + 0.1,
       color: [P.ghost, P.cyan, P.magenta][Math.floor(Math.random() * 3)],
@@ -1416,28 +1404,21 @@ const Hero = ({ setSection }) => {
   );
 
   const setLayerRef = (i) => (el) => { layerRefs.current[i] = el; };
+  const layerBase = { position: "absolute", inset: -60, pointerEvents: "none", willChange: "transform" };
 
-  // Shared layer base style (covers viewport with overflow for parallax shift)
-  const layerBase = {
-    position: "absolute",
-    inset: -60,
-    pointerEvents: "none",
-    willChange: "transform",
-  };
+  // ── Navigation nodes — positioned like planets on a star chart ──
+  // x,y are percentages from center (0,0). Radius is the node circle size.
+  const nodes = [
+    { label: "Portfolio", dest: "portfolio", color: P.cyan,    x: -28, y: -22, radius: 52, ringCount: 3, desc: "Curated Works" },
+    { label: "Shop",      dest: "shop",      color: P.gold,    x: 30,  y: -18, radius: 44, ringCount: 2, desc: "Prints & Originals" },
+    { label: "Media",     dest: "media",     color: P.magenta, x: -32, y: 24,  radius: 40, ringCount: 2, desc: "Motion & Sound" },
+    { label: "The Work",  dest: "the-work",  color: P.purple,  x: 26,  y: 28,  radius: 46, ringCount: 3, desc: "Process & Philosophy" },
+    { label: "Now",       dest: "now",       color: P.green,   x: 0,   y: -36, radius: 34, ringCount: 2, desc: "Current Status" },
+  ];
 
   return (
-    <div
-      ref={containerRef}
-      style={{
-        minHeight: "100vh",
-        display: "flex",
-        flexDirection: "column",
-        justifyContent: "center",
-        alignItems: "center",
-        position: "relative",
-        overflow: "hidden",
-      }}
-    >
+    <div ref={containerRef} style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", position: "relative", overflow: "hidden" }}>
+
       {/* L0: Deep cosmos background */}
       <div ref={setLayerRef(0)} style={{ ...layerBase, zIndex: 0 }}>
         <div style={{
@@ -1447,8 +1428,7 @@ const Hero = ({ setSection }) => {
             radial-gradient(circle at 25% 30%, ${P.cyan}08 0%, transparent 50%),
             radial-gradient(circle at 75% 65%, ${P.magenta}06 0%, transparent 50%)
           `,
-          opacity: vis ? 1 : 0,
-          transition: "opacity 3s cubic-bezier(0.16,1,0.3,1)",
+          opacity: vis ? 1 : 0, transition: "opacity 3s cubic-bezier(0.16,1,0.3,1)",
         }} />
       </div>
 
@@ -1456,11 +1436,8 @@ const Hero = ({ setSection }) => {
       <div ref={setLayerRef(1)} style={{ ...layerBase, zIndex: 1 }}>
         {stars.map(s => (
           <div key={s.id} style={{
-            position: "absolute",
-            left: `${s.x}%`, top: `${s.y}%`,
-            width: s.size, height: s.size,
-            borderRadius: "50%",
-            background: s.color,
+            position: "absolute", left: `${s.x}%`, top: `${s.y}%`,
+            width: s.size, height: s.size, borderRadius: "50%", background: s.color,
             opacity: vis ? s.opacity : 0,
             boxShadow: `0 0 ${s.size * 3}px ${s.color}`,
             transition: `opacity 2.5s ease ${0.5 + s.delay * 0.15}s`,
@@ -1469,196 +1446,251 @@ const Hero = ({ setSection }) => {
         ))}
       </div>
 
-      {/* L2: Deep fractal geometry — behind the moon */}
-      <div ref={setLayerRef(2)} style={{ ...layerBase, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        {/* Sacred geometry: nested rotating polygons */}
-        {[
-          { sides: 3, size: 520, color: P.cyan,    opacity: 0.18, speed: 60,  dir: 1,  delay: 0,   glow: 12 },
-          { sides: 3, size: 440, color: P.magenta,  opacity: 0.15, speed: 50,  dir: -1, delay: 0.2, glow: 10 },
-          { sides: 6, size: 380, color: P.cyan,    opacity: 0.20, speed: 80,  dir: 1,  delay: 0.4, glow: 14 },
-          { sides: 6, size: 320, color: P.magenta,  opacity: 0.14, speed: 70,  dir: -1, delay: 0.6, glow: 10 },
-          { sides: 4, size: 260, color: P.steel,   opacity: 0.12, speed: 45,  dir: 1,  delay: 0.8, glow: 8  },
-          { sides: 4, size: 200, color: P.gold,    opacity: 0.10, speed: 55,  dir: -1, delay: 1.0, glow: 8  },
-          { sides: 8, size: 500, color: P.steel,   opacity: 0.10, speed: 100, dir: 1,  delay: 0.3, glow: 10 },
-          { sides: 12, size: 600, color: P.cyan,   opacity: 0.08, speed: 120, dir: -1, delay: 0.5, glow: 14 },
-        ].map(({ sides, size, color, opacity, speed, dir, delay, glow }, i) => {
-          const r = size / 2;
-          const points = Array.from({ length: sides }, (_, j) => {
-            const angle = (j / sides) * Math.PI * 2 - Math.PI / 2;
-            return `${r + Math.cos(angle) * r},${r + Math.sin(angle) * r}`;
-          }).join(" ");
-          return (
-            <div key={`fractal-deep-${i}`} style={{
-              position: "absolute",
-              left: "50%", top: "50%",
-              width: size, height: size,
-              marginLeft: -size / 2,
-              marginTop: -size / 2,
-              opacity: vis ? opacity : 0,
-              transition: `opacity 2.5s ease ${1 + delay}s`,
-              animation: `spin ${speed}s linear infinite ${dir < 0 ? "reverse" : ""}`,
-            }}>
-              <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: "visible" }}>
-                <polygon
-                  points={points}
-                  fill="none"
-                  stroke={color}
-                  strokeWidth="1.5"
-                  style={{ filter: `drop-shadow(0 0 ${glow}px ${color})` }}
+      {/* L2: HUD grid overlay — radiating lines + concentric circles from center */}
+      <div ref={setLayerRef(2)} style={{ ...layerBase, zIndex: 2 }}>
+        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
+          <defs>
+            <radialGradient id="gridFade" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="white" stopOpacity="1" />
+              <stop offset="70%" stopColor="white" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="white" stopOpacity="0" />
+            </radialGradient>
+          </defs>
+          <g mask="url(#gridMask)" opacity="0.12">
+            {/* Concentric circles from center */}
+            {[120, 200, 300, 420, 560, 720, 900].map((r, i) => (
+              <circle key={`cc-${i}`} cx="960" cy="540" r={r} fill="none" stroke={P.cyan} strokeWidth="0.5" opacity={0.6 - i * 0.06} strokeDasharray={i % 2 === 0 ? "none" : "4 8"} />
+            ))}
+            {/* Radial lines from center — every 15 degrees */}
+            {Array.from({ length: 24 }, (_, i) => {
+              const angle = (i / 24) * Math.PI * 2;
+              const x2 = 960 + Math.cos(angle) * 960;
+              const y2 = 540 + Math.sin(angle) * 960;
+              return <line key={`rl-${i}`} x1="960" y1="540" x2={x2} y2={y2} stroke={P.cyan} strokeWidth="0.4" opacity={i % 3 === 0 ? 0.5 : 0.2} />;
+            })}
+            {/* Subtle rectangular grid overlay */}
+            {Array.from({ length: 20 }, (_, i) => (
+              <line key={`gh-${i}`} x1="0" y1={i * 54} x2="1920" y2={i * 54} stroke={P.steel} strokeWidth="0.3" opacity="0.3" />
+            ))}
+            {Array.from({ length: 20 }, (_, i) => (
+              <line key={`gv-${i}`} x1={i * 96} y1="0" x2={i * 96} y2="1080" stroke={P.steel} strokeWidth="0.3" opacity="0.3" />
+            ))}
+          </g>
+          {/* Slowly spinning outer ring markers */}
+          <g opacity="0.08" style={{ transformOrigin: "960px 540px", animation: "spin 180s linear infinite" }}>
+            {Array.from({ length: 36 }, (_, i) => {
+              const angle = (i / 36) * Math.PI * 2;
+              const inner = 480;
+              const outer = 500;
+              return <line key={`tick-${i}`} x1={960 + Math.cos(angle) * inner} y1={540 + Math.sin(angle) * inner} x2={960 + Math.cos(angle) * outer} y2={540 + Math.sin(angle) * outer} stroke={P.cyan} strokeWidth={i % 3 === 0 ? "2" : "0.8"} />;
+            })}
+          </g>
+        </svg>
+      </div>
+
+      {/* L3: Connection lines between center and each node */}
+      <div ref={setLayerRef(3)} style={{ ...layerBase, zIndex: 3 }}>
+        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, opacity: vis ? 1 : 0, transition: "opacity 2.5s ease 1s" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
+          {nodes.map((node, i) => {
+            const nx = 960 + (node.x / 100) * 1920;
+            const ny = 540 + (node.y / 100) * 1080;
+            const isHovered = hoveredNode === i;
+            return (
+              <g key={`conn-${i}`}>
+                {/* Main connection line */}
+                <line x1="960" y1="540" x2={nx} y2={ny}
+                  stroke={node.color} strokeWidth={isHovered ? "1.2" : "0.6"}
+                  opacity={isHovered ? 0.5 : 0.15}
+                  style={{ transition: "all 0.5s ease", filter: isHovered ? `drop-shadow(0 0 6px ${node.color})` : "none" }}
                 />
-                {/* Inner nested duplicate rotated 15deg */}
-                <g transform={`translate(${r},${r}) rotate(${15 + i * 7.5}) scale(0.6) translate(${-r},${-r})`}>
-                  <polygon
-                    points={points}
-                    fill="none"
-                    stroke={color}
-                    strokeWidth="0.8"
-                    style={{ filter: `drop-shadow(0 0 ${glow * 0.6}px ${color})` }}
-                  />
+                {/* Mid-point diamond marker */}
+                <g transform={`translate(${(960 + nx) / 2},${(540 + ny) / 2}) rotate(45)`}>
+                  <rect x="-3" y="-3" width="6" height="6" fill="none" stroke={node.color} strokeWidth="0.5" opacity={isHovered ? 0.6 : 0.2} />
                 </g>
+                {/* Cross-connections between adjacent nodes */}
+                {i < nodes.length - 1 && (() => {
+                  const next = nodes[i + 1];
+                  const nnx = 960 + (next.x / 100) * 1920;
+                  const nny = 540 + (next.y / 100) * 1080;
+                  return <line x1={nx} y1={ny} x2={nnx} y2={nny} stroke={P.steel} strokeWidth="0.3" opacity="0.08" strokeDasharray="6 12" />;
+                })()}
+              </g>
+            );
+          })}
+          {/* Close the loop: last to first */}
+          {(() => {
+            const first = nodes[0];
+            const last = nodes[nodes.length - 1];
+            const fx = 960 + (first.x / 100) * 1920;
+            const fy = 540 + (first.y / 100) * 1080;
+            const lx = 960 + (last.x / 100) * 1920;
+            const ly = 540 + (last.y / 100) * 1080;
+            return <line x1={lx} y1={ly} x2={fx} y2={fy} stroke={P.steel} strokeWidth="0.3" opacity="0.08" strokeDasharray="6 12" />;
+          })()}
+        </svg>
+      </div>
+
+      {/* L4: Center hub + navigation nodes — interactive */}
+      <div ref={setLayerRef(4)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
+        {/* ── Center hub: logo + title ── */}
+        <div style={{
+          position: "absolute", left: "50%", top: "50%",
+          transform: "translate(-50%, -50%)",
+          display: "flex", flexDirection: "column", alignItems: "center",
+          pointerEvents: "auto",
+        }}>
+          {/* Concentric rings around center */}
+          {[90, 120, 160].map((size, i) => (
+            <div key={`hub-ring-${i}`} style={{
+              position: "absolute",
+              width: size, height: size,
+              borderRadius: "50%",
+              border: `1px solid ${P.cyan}`,
+              opacity: vis ? [0.2, 0.12, 0.07][i] : 0,
+              transition: `opacity 2s ease ${1 + i * 0.2}s`,
+              animation: `fractalPulse ${8 + i * 2}s ease-in-out ${i * 0.3}s infinite`,
+              boxShadow: `0 0 12px ${P.cyan}15, inset 0 0 8px ${P.cyan}08`,
+            }} />
+          ))}
+          {/* Logo */}
+          <div style={{ opacity: vis ? 1 : 0, transition: "opacity 2s cubic-bezier(0.16,1,0.3,1) 0.3s", marginBottom: 16 }}>
+            <img src={LOGO_IMG} alt="RareGh0st" style={{
+              width: "clamp(64px, 10vw, 100px)", height: "clamp(64px, 10vw, 100px)",
+              filter: `brightness(1.1) drop-shadow(0 0 24px hsl(${logoGlow}, 100%, 50%, 0.25)) drop-shadow(0 0 48px hsl(${(logoGlow + 180) % 360}, 100%, 50%, 0.12))`,
+              animation: "breathe 4s ease-in-out infinite",
+            }} />
+          </div>
+          {/* Title */}
+          <div style={{ textAlign: "center", opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(16px)", transition: "all 1.5s cubic-bezier(0.16,1,0.3,1)" }}>
+            <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 5vw, 56px)", fontWeight: 400, color: P.ghost, margin: 0, lineHeight: 0.9, letterSpacing: -1 }}>
+              <span style={{ color: P.cyan }}><MorphText speed={90}>Rare</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>Gh</MorphText></span><span style={{ color: P.steel, opacity: 0.45 }}><MorphText speed={90}>0</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>st</MorphText></span>
+            </h1>
+            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 5, color: P.bone, marginTop: 10, opacity: 0.5, textTransform: "uppercase" }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
+          </div>
+        </div>
+
+        {/* ── Navigation nodes — circular destinations ── */}
+        {nodes.map((node, i) => {
+          const isHovered = hoveredNode === i;
+          return (
+            <div key={node.dest} style={{
+              position: "absolute",
+              left: `${50 + node.x}%`,
+              top: `${50 + node.y}%`,
+              transform: "translate(-50%, -50%)",
+              pointerEvents: "auto",
+              cursor: "pointer",
+              zIndex: 15,
+            }}
+              onClick={() => setSection(node.dest)}
+              onMouseEnter={() => setHoveredNode(i)}
+              onMouseLeave={() => setHoveredNode(null)}
+            >
+              {/* Outer rings */}
+              {Array.from({ length: node.ringCount }, (_, ri) => (
+                <div key={ri} style={{
+                  position: "absolute",
+                  left: "50%", top: "50%",
+                  width: node.radius * 2 + ri * 20 + 10,
+                  height: node.radius * 2 + ri * 20 + 10,
+                  marginLeft: -(node.radius + ri * 10 + 5),
+                  marginTop: -(node.radius + ri * 10 + 5),
+                  borderRadius: "50%",
+                  border: `${ri === 0 ? 1.5 : 0.5}px solid ${node.color}`,
+                  opacity: vis ? (isHovered ? 0.5 - ri * 0.12 : 0.18 - ri * 0.05) : 0,
+                  transition: `opacity 0.5s ease, box-shadow 0.5s ease`,
+                  boxShadow: isHovered ? `0 0 ${16 + ri * 4}px ${node.color}30, inset 0 0 ${8 + ri * 2}px ${node.color}15` : "none",
+                  animation: `fractalPulse ${6 + ri * 2}s ease-in-out ${ri * 0.5 + i * 0.3}s infinite`,
+                }} />
+              ))}
+              {/* Dotted ring (innermost detail) */}
+              <div style={{
+                position: "absolute",
+                left: "50%", top: "50%",
+                width: node.radius * 2 - 8,
+                height: node.radius * 2 - 8,
+                marginLeft: -(node.radius - 4),
+                marginTop: -(node.radius - 4),
+                borderRadius: "50%",
+                border: `1px dashed ${node.color}`,
+                opacity: vis ? (isHovered ? 0.4 : 0.1) : 0,
+                transition: "opacity 0.5s ease",
+                animation: `spin ${30 + i * 10}s linear infinite ${i % 2 === 0 ? "" : "reverse"}`,
+              }} />
+              {/* Inner glow disc */}
+              <div style={{
+                width: node.radius * 2,
+                height: node.radius * 2,
+                borderRadius: "50%",
+                background: `radial-gradient(circle, ${node.color}${isHovered ? "18" : "08"} 0%, transparent 70%)`,
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                transition: "background 0.5s ease",
+              }}>
+                {/* Label */}
+                <div style={{
+                  fontFamily: "'Courier New', monospace",
+                  fontSize: 10,
+                  letterSpacing: 4,
+                  color: node.color,
+                  textTransform: "uppercase",
+                  opacity: vis ? (isHovered ? 1 : 0.7) : 0,
+                  transition: "opacity 0.4s ease",
+                  textShadow: isHovered ? `0 0 12px ${node.color}` : "none",
+                  textAlign: "center",
+                  lineHeight: 1.4,
+                }}>
+                  <HoverMorphText>{node.label}</HoverMorphText>
+                </div>
+                {/* Description — shows on hover */}
+                <div style={{
+                  fontFamily: "'Georgia', serif",
+                  fontSize: 9,
+                  color: P.bone,
+                  opacity: isHovered ? 0.5 : 0,
+                  transition: "opacity 0.4s ease 0.1s",
+                  marginTop: 4,
+                  textAlign: "center",
+                  letterSpacing: 1,
+                }}>
+                  {node.desc}
+                </div>
+              </div>
+              {/* Tick marks around node — like a compass */}
+              <svg style={{
+                position: "absolute",
+                left: "50%", top: "50%",
+                width: node.radius * 2 + 30,
+                height: node.radius * 2 + 30,
+                marginLeft: -(node.radius + 15),
+                marginTop: -(node.radius + 15),
+                opacity: vis ? (isHovered ? 0.5 : 0.12) : 0,
+                transition: "opacity 0.5s ease",
+                pointerEvents: "none",
+              }} viewBox={`0 0 ${node.radius * 2 + 30} ${node.radius * 2 + 30}`}>
+                {Array.from({ length: 12 }, (_, ti) => {
+                  const angle = (ti / 12) * Math.PI * 2;
+                  const cx = node.radius + 15;
+                  const cy = node.radius + 15;
+                  const inner = node.radius + 2;
+                  const outer = node.radius + (ti % 3 === 0 ? 10 : 5);
+                  return <line key={ti}
+                    x1={cx + Math.cos(angle) * inner} y1={cy + Math.sin(angle) * inner}
+                    x2={cx + Math.cos(angle) * outer} y2={cy + Math.sin(angle) * outer}
+                    stroke={node.color} strokeWidth={ti % 3 === 0 ? "1.2" : "0.5"} />;
+                })}
               </svg>
             </div>
           );
         })}
-        {/* Concentric glow rings */}
-        {[180, 280, 400, 550].map((size, i) => {
-          const ringColor = [P.cyan, P.magenta, P.cyan, P.magenta][i];
-          const ringOpacity = [0.16, 0.12, 0.09, 0.06][i];
-          return (
-            <div key={`ring-${i}`} style={{
-              position: "absolute",
-              left: "50%", top: "50%",
-              width: size, height: size,
-              marginLeft: -size / 2,
-              marginTop: -size / 2,
-              borderRadius: "50%",
-              border: `1px solid ${ringColor}`,
-              boxShadow: `0 0 ${16 + i * 6}px ${ringColor}, inset 0 0 ${10 + i * 4}px ${ringColor}`,
-              opacity: vis ? ringOpacity : 0,
-              transition: `opacity 2s ease ${1.2 + i * 0.3}s`,
-              animation: `fractalPulse ${6 + i * 2}s ease-in-out ${i * 0.5}s infinite, spin ${60 + i * 30}s linear infinite ${i % 2 === 0 ? "" : "reverse"}`,
-            }} />
-          );
-        })}
       </div>
 
-      {/* L3: Moon */}
-      <div ref={setLayerRef(3)} style={{ ...layerBase, zIndex: 3, display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <div style={{
-          width: "clamp(400px, 50vw, 650px)", height: "clamp(400px, 50vw, 650px)",
-          borderRadius: "50%",
-          background: `radial-gradient(circle at 50% 40%, #1e1e2e 0%, #141420 45%, #0c0c16 70%, ${P.abyss} 100%)`,
-          boxShadow: `0 0 120px 40px ${P.abyss}, inset 0 0 80px rgba(0,0,0,0.4), 0 0 200px 60px ${P.cyan}05`,
-          opacity: vis ? 1 : 0,
-          transition: "opacity 2.5s cubic-bezier(0.16,1,0.3,1)",
-        }} />
-      </div>
-
-      {/* L4: Content — logo, title, CTAs */}
-      <div
-        ref={setLayerRef(4)}
-        style={{
-          position: "relative",
-          zIndex: 10,
-          display: "flex",
-          flexDirection: "column",
-          alignItems: "center",
-          pointerEvents: "auto",
-          willChange: "transform",
-        }}
-      >
-        {/* Logo */}
-        <div style={{
-          opacity: vis ? 1 : 0,
-          transition: "opacity 2s cubic-bezier(0.16,1,0.3,1) 0.3s",
-          marginBottom: 24,
-        }}>
-          <img src={LOGO_IMG} alt="RareGh0st" style={{
-            width: "clamp(100px, 15vw, 160px)", height: "clamp(100px, 15vw, 160px)",
-            filter: `brightness(1.1) drop-shadow(0 0 24px hsl(${logoGlow}, 100%, 50%, 0.25)) drop-shadow(0 0 48px hsl(${(logoGlow + 180) % 360}, 100%, 50%, 0.12))`,
-            animation: "breathe 4s ease-in-out infinite",
-          }} />
-        </div>
-        {/* Title */}
-        <div style={{ textAlign: "center", opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(28px)", transition: "all 1.5s cubic-bezier(0.16,1,0.3,1)" }}>
-          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 8, color: P.cyan, marginBottom: 22, textTransform: "uppercase", opacity: 0.85, textShadow: `0 0 20px ${P.cyan}25` }}><MorphText speed={80}>The Art of</MorphText></div>
-          <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(48px, 10vw, 110px)", fontWeight: 400, color: P.ghost, margin: 0, lineHeight: 0.9, letterSpacing: -2 }}>
-            <span style={{ color: P.cyan }}><MorphText speed={90}>Rare</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>Gh</MorphText></span><span style={{ color: P.steel, opacity: 0.45 }}><MorphText speed={90}>0</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>st</MorphText></span>
-          </h1>
-          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.bone, marginTop: 28, opacity: 0.6, textTransform: "uppercase", textShadow: `0 0 16px ${P.abyss}` }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
-        </div>
-        {/* CTAs */}
-        <div style={{ display: "flex", gap: 14, marginTop: 36, flexWrap: "wrap", justifyContent: "center" }}>
-          {[{ label: "Portfolio", dest: "portfolio", color: P.cyan }, { label: "Shop", dest: "shop", color: P.gold }, { label: "Media", dest: "media", color: P.magenta }, { label: "The Work", dest: "the-work", color: P.purple }, { label: "Now", dest: "now", color: P.green }].map(({ label, dest, color }) => (
-            <button key={dest} onClick={() => setSection(dest)} style={{ background: `${color}18`, border: `1px solid ${color}35`, color, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 5, padding: "12px 26px", cursor: "pointer", textTransform: "uppercase", opacity: vis ? 1 : 0, transition: "all 1.5s ease, background 0.3s, border-color 0.3s, box-shadow 0.3s" }}
-              onMouseEnter={(e) => { e.target.style.background = `${color}28`; e.target.style.borderColor = `${color}55`; e.target.style.boxShadow = `0 0 18px ${color}15`; }}
-              onMouseLeave={(e) => { e.target.style.background = `${color}18`; e.target.style.borderColor = `${color}35`; e.target.style.boxShadow = "none"; }}
-            ><HoverMorphText>{label}</HoverMorphText></button>
-          ))}
-        </div>
-      </div>
-
-      {/* L5: Foreground dust / vignette */}
-      <div ref={setLayerRef(5)} style={{ ...layerBase, zIndex: 11, pointerEvents: "none" }}>
+      {/* L5: Vignette + edge glow */}
+      <div ref={setLayerRef(5)} style={{ ...layerBase, zIndex: 20, pointerEvents: "none" }}>
         <div style={{
           position: "absolute", inset: 0,
-          background: `
-            radial-gradient(ellipse 100% 100% at 50% 50%, transparent 40%, ${P.abyss}88 80%, ${P.abyss} 100%)
-          `,
-          opacity: vis ? 1 : 0,
-          transition: "opacity 3s ease 0.5s",
+          background: `radial-gradient(ellipse 90% 85% at 50% 50%, transparent 30%, ${P.abyss}66 65%, ${P.abyss}cc 85%, ${P.abyss} 100%)`,
+          opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s",
         }} />
-      </div>
-
-      {/* L6: Foreground fractal fragments — closest to viewer, most parallax */}
-      <div ref={setLayerRef(6)} style={{ ...layerBase, zIndex: 12, pointerEvents: "none" }}>
-        {/* Corner fractal shards */}
-        {[
-          { x: "8%",  y: "15%", size: 120, sides: 3, opacity: 0.22, color: P.cyan,    glow: 16, speed: 35 },
-          { x: "88%", y: "20%", size: 90,  sides: 6, opacity: 0.18, color: P.magenta,  glow: 14, speed: 45 },
-          { x: "12%", y: "75%", size: 80,  sides: 4, opacity: 0.15, color: P.magenta,  glow: 12, speed: 40 },
-          { x: "85%", y: "80%", size: 100, sides: 3, opacity: 0.20, color: P.cyan,    glow: 16, speed: 50 },
-          { x: "50%", y: "8%",  size: 70,  sides: 8, opacity: 0.12, color: P.steel,   glow: 10, speed: 60 },
-          { x: "45%", y: "90%", size: 60,  sides: 6, opacity: 0.10, color: P.gold,    glow: 10, speed: 55 },
-        ].map(({ x, y, size, sides, opacity, color, glow, speed }, i) => {
-          const r = size / 2;
-          const points = Array.from({ length: sides }, (_, j) => {
-            const angle = (j / sides) * Math.PI * 2 - Math.PI / 2;
-            return `${r + Math.cos(angle) * r},${r + Math.sin(angle) * r}`;
-          }).join(" ");
-          return (
-            <div key={`fractal-fg-${i}`} style={{
-              position: "absolute",
-              left: x, top: y,
-              width: size, height: size,
-              marginLeft: -size / 2,
-              marginTop: -size / 2,
-              opacity: vis ? opacity : 0,
-              transition: `opacity 3s ease ${1.5 + i * 0.2}s`,
-              animation: `spin ${speed}s linear infinite ${i % 2 === 0 ? "" : "reverse"}`,
-            }}>
-              <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: "visible" }}>
-                <polygon
-                  points={points}
-                  fill="none"
-                  stroke={color}
-                  strokeWidth="1.2"
-                  style={{ filter: `drop-shadow(0 0 ${glow}px ${color})` }}
-                />
-                {/* Inner nested shape at half scale, rotated */}
-                <g transform={`translate(${r},${r}) rotate(${30 + i * 10}) scale(0.5) translate(${-r},${-r})`}>
-                  <polygon
-                    points={points}
-                    fill="none"
-                    stroke={color}
-                    strokeWidth="0.7"
-                    style={{ filter: `drop-shadow(0 0 ${glow * 0.5}px ${color})` }}
-                  />
-                </g>
-              </svg>
-            </div>
-          );
-        })}
       </div>
     </div>
   );
