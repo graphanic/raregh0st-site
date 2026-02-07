@@ -1430,8 +1430,61 @@ const Hero = ({ setSection }) => {
   const orbitAngles = useRef(nodes.map(n => n.startAngle));
   const moonAnglesRef = useRef(allMoons.map(m => m.startAngle));
 
-  // ── Starfield image system (JWST deep field across 3 parallax layers) ──
-  const starsImg = useRef(null);
+  // ── Star sprite system (6 size tiers) ──
+  // Place in /images/stars/: star-tiny.png, star-small.png, star-medium.png, star-large.png, star-xlarge.png, star-xxlarge.png
+  const starSprites = useRef({});
+  const STAR_TIERS = ["tiny", "small", "medium", "large", "xlarge", "xxlarge"];
+
+  // Stars in polar coords (angle + distance from center) for natural rotation
+  // Layer 0: Deep dust (tiny + small)
+  const starsDust = useRef(Array.from({ length: 200 }, () => {
+    const tier = Math.random() < 0.7 ? "tiny" : "small";
+    return {
+      angle: Math.random() * Math.PI * 2,
+      dist: Math.random() * 2800 + 100,
+      size: tier === "tiny" ? Math.random() * 0.6 + 0.2 : Math.random() * 1.0 + 0.4,
+      spriteSize: tier === "tiny" ? Math.random() * 6 + 3 : Math.random() * 10 + 6,
+      opacity: Math.random() * 0.3 + 0.05,
+      color: ["#c8daff", "#a8c4ff", "#8eb0ff", "#d0e8ff"][Math.floor(Math.random() * 4)],
+      phase: Math.random() * Math.PI * 2,
+      twinkleSpeed: Math.random() * 0.3 + 0.1,
+      sprite: tier,
+    };
+  }));
+  // Layer 1: Mid-field (small + medium + large)
+  const starsMid = useRef(Array.from({ length: 60 }, () => {
+    const r = Math.random();
+    const tier = r < 0.5 ? "small" : r < 0.85 ? "medium" : "large";
+    return {
+      angle: Math.random() * Math.PI * 2,
+      dist: Math.random() * 2200 + 150,
+      size: tier === "small" ? Math.random() * 1.2 + 0.5 : tier === "medium" ? Math.random() * 2.0 + 1.0 : Math.random() * 3.0 + 2.0,
+      spriteSize: tier === "small" ? Math.random() * 12 + 8 : tier === "medium" ? Math.random() * 24 + 16 : Math.random() * 40 + 28,
+      haloSize: tier === "small" ? Math.random() * 6 + 3 : tier === "medium" ? Math.random() * 10 + 6 : Math.random() * 16 + 10,
+      opacity: tier === "large" ? Math.random() * 0.6 + 0.3 : Math.random() * 0.4 + 0.1,
+      color: ["#b8d0ff", "#90b8ff", P.cyan, "#c0d8ff", "#a0c0ff"][Math.floor(Math.random() * 5)],
+      phase: Math.random() * Math.PI * 2,
+      twinkleSpeed: Math.random() * 0.6 + 0.2,
+      sprite: tier,
+    };
+  }));
+  // Layer 2: Near field (large + xlarge + xxlarge — the big beautiful diffraction spike stars)
+  const starsFG = useRef(Array.from({ length: 18 }, () => {
+    const r = Math.random();
+    const tier = r < 0.45 ? "large" : r < 0.8 ? "xlarge" : "xxlarge";
+    return {
+      angle: Math.random() * Math.PI * 2,
+      dist: Math.random() * 1800 + 200,
+      size: tier === "large" ? Math.random() * 2.5 + 1.5 : tier === "xlarge" ? Math.random() * 3.5 + 2.5 : Math.random() * 5.0 + 3.5,
+      spriteSize: tier === "large" ? Math.random() * 48 + 32 : tier === "xlarge" ? Math.random() * 80 + 56 : Math.random() * 128 + 96,
+      spikeLen: tier === "large" ? Math.random() * 18 + 10 : tier === "xlarge" ? Math.random() * 30 + 18 : Math.random() * 50 + 30,
+      opacity: tier === "xxlarge" ? Math.random() * 0.4 + 0.4 : Math.random() * 0.5 + 0.3,
+      color: [P.cyan, "#c0e0ff", "#8eb8ff", "#a0d0ff"][Math.floor(Math.random() * 4)],
+      phase: Math.random() * Math.PI * 2,
+      twinkleSpeed: tier === "xxlarge" ? Math.random() * 0.6 + 0.2 : Math.random() * 1.2 + 0.5,
+      sprite: tier,
+    };
+  }));
 
   // ── Lens dust overlay (3 parallax layers, hue-reactive) ──
   // Place: /images/lens-dust.png (large, transparent dust/scratch overlay)
@@ -1443,16 +1496,19 @@ const Hero = ({ setSection }) => {
   const lensDustHueTarget = useRef(210);
   const lensDustLastHue = useRef(-1); // track when offscreen needs redraw
 
-  // Moon + starfield + lens dust preload
+  // Moon + star sprites + lens dust preload
   const moonImg = useRef(null);
   useEffect(() => {
     const img = new Image();
     img.src = "/images/moon.png";
     img.onload = () => { moonImg.current = img; };
-    // Load JWST starfield
-    const si = new Image();
-    si.src = "/images/stars.png";
-    si.onload = () => { starsImg.current = si; };
+    // Load star sprites (graceful — canvas fallback if missing)
+    STAR_TIERS.forEach(name => {
+      const si = new Image();
+      si.src = `/images/stars/star-${name}.png`;
+      si.onload = () => { starSprites.current[name] = si; };
+      si.onerror = () => {}; // graceful — canvas fallback
+    });
     // Load lens dust overlay
     const ld = new Image();
     ld.src = "/images/lens-dust.png";
@@ -1653,48 +1709,93 @@ const Hero = ({ setSection }) => {
       ctx.clearRect(0, 0, cw, ch);
 
       // ── Helper: draw star (sprite if loaded, canvas fallback with blue glow) ──
-      // ── Helper: draw tiled starfield image with parallax ──
-      const drawStarLayer = (panFactor, scale, alpha, rot) => {
-        if (!starsImg.current) return;
-        const si = starsImg.current;
-        const sw = si.naturalWidth * scale;
-        const sh = si.naturalHeight * scale;
-        // Pan offset for this layer
-        const px = panCurrent.current.x * panFactor;
-        const py = panCurrent.current.y * panFactor;
-        ctx.save();
-        ctx.translate(cw / 2, ch / 2);
-        ctx.rotate(rot);
-        ctx.globalAlpha = a * alpha;
-        ctx.globalCompositeOperation = "lighten";
-        // Tile to cover rotated viewport (diagonal extent)
-        const diag = Math.sqrt(cw * cw + ch * ch) / 2 + 200;
-        // Offset within tile (modular wrap so it never runs out)
-        const ox = ((px % sw) + sw) % sw;
-        const oy = ((py % sh) + sh) % sh;
-        // Draw 3×3 grid of tiles centered on viewport
-        for (let ty = -1; ty <= 1; ty++) {
-          for (let tx = -1; tx <= 1; tx++) {
-            const dx = tx * sw - ox - sw / 2;
-            const dy = ty * sh - oy - sh / 2;
-            // Only draw if tile overlaps visible area
-            if (dx + sw > -diag && dx < diag && dy + sh > -diag && dy < diag) {
-              ctx.drawImage(si, dx, dy, sw, sh);
-            }
+      const drawStar = (x, y, s, tw, opac) => {
+        const sprite = starSprites.current[s.sprite];
+        if (sprite) {
+          const sz = s.spriteSize * (0.7 + 0.3 * tw);
+          ctx.globalAlpha = opac;
+          ctx.drawImage(sprite, x - sz / 2, y - sz / 2, sz, sz);
+        } else {
+          // Outer glow halo
+          const glowR = (s.haloSize || s.spikeLen || s.size * 6) * (0.6 + 0.4 * tw);
+          if (glowR > 0.5) {
+            const glow = ctx.createRadialGradient(x, y, 0, x, y, glowR);
+            glow.addColorStop(0, s.color);
+            glow.addColorStop(0.15, s.color + "60");
+            glow.addColorStop(0.5, "#4488ff20");
+            glow.addColorStop(1, "transparent");
+            ctx.globalAlpha = opac * 0.5;
+            ctx.fillStyle = glow;
+            ctx.fillRect(x - glowR, y - glowR, glowR * 2, glowR * 2);
           }
+          // Diffraction spikes for bright stars
+          if (s.spikeLen) {
+            ctx.strokeStyle = s.color;
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = opac * 0.6;
+            const sl = s.spikeLen * tw;
+            ctx.beginPath();
+            ctx.moveTo(x - sl, y); ctx.lineTo(x + sl, y);
+            ctx.moveTo(x, y - sl); ctx.lineTo(x, y + sl);
+            ctx.stroke();
+            ctx.globalAlpha = opac * 0.2;
+            ctx.lineWidth = 0.5;
+            const sl2 = sl * 0.5;
+            ctx.beginPath();
+            ctx.moveTo(x - sl2, y - sl2); ctx.lineTo(x + sl2, y + sl2);
+            ctx.moveTo(x + sl2, y - sl2); ctx.lineTo(x - sl2, y + sl2);
+            ctx.stroke();
+          }
+          // White-hot core
+          ctx.globalAlpha = opac;
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(x, y, Math.max(s.size * tw, 0.1), 0, Math.PI * 2);
+          ctx.fill();
+          // Color halo ring
+          ctx.globalAlpha = opac * 0.5;
+          ctx.fillStyle = s.color;
+          ctx.beginPath();
+          ctx.arc(x, y, Math.max(s.size * tw * 1.8, 0.2), 0, Math.PI * 2);
+          ctx.fill();
         }
-        ctx.globalCompositeOperation = "source-over";
-        ctx.restore();
       };
 
-      // ── Starfield Layer 0: Deep field (small stars, slow drift) ──
-      drawStarLayer(0.05, 2.5, 0.35, faL * 0.15);
+      // ── Stars Layer 0: Deep dust (rotates left at 30% field speed) ──
+      ctx.save();
+      ctx.translate(cw / 2 - panCurrent.current.x * 0.08, ch / 2 - panCurrent.current.y * 0.08);
+      ctx.rotate(faL * 0.3);
+      for (const s of starsDust.current) {
+        const x = Math.cos(s.angle) * s.dist;
+        const y = Math.sin(s.angle) * s.dist;
+        const tw = 0.6 + 0.4 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
+        drawStar(x, y, s, tw, a * s.opacity * tw);
+      }
+      ctx.restore();
 
-      // ── Starfield Layer 1: Mid field (medium stars, moderate drift) ──
-      drawStarLayer(0.15, 1.5, 0.5, faL * 0.3);
+      // ── Stars Layer 1: Mid-field glow stars (rotates left at 60%) ──
+      ctx.save();
+      ctx.translate(cw / 2 - panCurrent.current.x * 0.25, ch / 2 - panCurrent.current.y * 0.25);
+      ctx.rotate(faL * 0.6);
+      for (const s of starsMid.current) {
+        const x = Math.cos(s.angle) * s.dist;
+        const y = Math.sin(s.angle) * s.dist;
+        const tw = 0.5 + 0.5 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
+        drawStar(x, y, s, tw, a * s.opacity * tw);
+      }
+      ctx.restore();
 
-      // ── Starfield Layer 2: Near field (big diffraction spikes, faster drift) ──
-      drawStarLayer(0.30, 0.9, 0.7, faR * 0.15);
+      // ── Stars Layer 2: Near bright stars (rotates right at 80%) ──
+      ctx.save();
+      ctx.translate(cw / 2 - panCurrent.current.x * 0.5, ch / 2 - panCurrent.current.y * 0.5);
+      ctx.rotate(faR * 0.8);
+      for (const s of starsFG.current) {
+        const x = Math.cos(s.angle) * s.dist;
+        const y = Math.sin(s.angle) * s.dist;
+        const tw = 0.5 + 0.5 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
+        drawStar(x, y, s, tw, a * s.opacity * tw);
+      }
+      ctx.restore();
 
       // ── Field transform (zoom/pan, no mouse drift) ──
       const cx = cw / 2 + fpx;
