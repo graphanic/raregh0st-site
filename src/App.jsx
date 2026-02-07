@@ -1406,21 +1406,16 @@ const Hero = ({ setSection }) => {
   const setLayerRef = (i) => (el) => { layerRefs.current[i] = el; };
   const layerBase = { position: "absolute", inset: -60, pointerEvents: "none", willChange: "transform" };
 
-  // ── Navigation nodes — snapped to radial grid lines ──
-  // Defined by angle (degrees, snapped to 15deg grid) + distance from center.
-  // The HUD grid in L2 has 24 radial lines at 0,15,30,...345 degrees.
-  // angle=0 is right, 90=down, 180=left, 270=up (screen coords).
-  const nodesDef = [
-    { label: "Portfolio", dest: "portfolio", color: P.cyan,    angle: 225, dist: 34, radius: 52, ringCount: 3, desc: "Curated Works" },
-    { label: "Shop",      dest: "shop",      color: P.gold,    angle: 330, dist: 34, radius: 44, ringCount: 2, desc: "Prints & Originals" },
-    { label: "Media",     dest: "media",     color: P.magenta, angle: 150, dist: 38, radius: 40, ringCount: 2, desc: "Motion & Sound" },
-    { label: "The Work",  dest: "the-work",  color: P.purple,  angle: 45,  dist: 36, radius: 46, ringCount: 3, desc: "Process & Philosophy" },
-    { label: "Now",       dest: "now",       color: P.green,   angle: 270, dist: 34, radius: 34, ringCount: 2, desc: "Current Status" },
+  // ── Navigation nodes — orbiting the central moon ──
+  // Each node orbits at its own radius and speed. Farther = slower.
+  // startAngle spreads them evenly around the circle initially.
+  const nodes = [
+    { label: "Portfolio", dest: "portfolio", color: P.cyan,    orbitRadius: 240, speed: 180, startAngle: 200, radius: 52, ringCount: 3, desc: "Curated Works" },
+    { label: "Shop",      dest: "shop",      color: P.gold,    orbitRadius: 300, speed: 240, startAngle: 340, radius: 44, ringCount: 2, desc: "Prints & Originals" },
+    { label: "Media",     dest: "media",     color: P.magenta, orbitRadius: 210, speed: 160, startAngle: 130, radius: 40, ringCount: 2, desc: "Motion & Sound" },
+    { label: "The Work",  dest: "the-work",  color: P.purple,  orbitRadius: 330, speed: 300, startAngle: 50,  radius: 46, ringCount: 3, desc: "Process & Philosophy" },
+    { label: "Now",       dest: "now",       color: P.green,   orbitRadius: 170, speed: 120, startAngle: 270, radius: 34, ringCount: 2, desc: "Current Status" },
   ];
-  const nodes = nodesDef.map(n => {
-    const rad = (n.angle * Math.PI) / 180;
-    return { ...n, x: Math.cos(rad) * n.dist, y: Math.sin(rad) * n.dist };
-  });
 
   return (
     <div ref={containerRef} style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", position: "relative", overflow: "hidden" }}>
@@ -1487,62 +1482,8 @@ const Hero = ({ setSection }) => {
         </svg>
       </div>
 
-      {/* L3: Connection lines — from center through nodes, extending off-screen */}
-      <div ref={setLayerRef(3)} style={{ ...layerBase, zIndex: 3 }}>
-        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, overflow: "visible", opacity: vis ? 1 : 0, transition: "opacity 2.5s ease 1s" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
-          {nodes.map((node, i) => {
-            const nx = 960 + (node.x / 100) * 1920;
-            const ny = 540 + (node.y / 100) * 1080;
-            const isHovered = hoveredNode === i;
-            // Extend line from center through node and far off-screen
-            const dx = nx - 960;
-            const dy = ny - 540;
-            const len = Math.sqrt(dx * dx + dy * dy) || 1;
-            const ex = 960 + (dx / len) * 2500;
-            const ey = 540 + (dy / len) * 2500;
-            return (
-              <g key={`conn-${i}`}>
-                {/* Extended connection line — through node to edge of space */}
-                <line x1="960" y1="540" x2={ex} y2={ey}
-                  stroke={node.color} strokeWidth={isHovered ? "1" : "0.5"}
-                  opacity={isHovered ? 0.4 : 0.12}
-                  style={{ transition: "all 0.5s ease", filter: isHovered ? `drop-shadow(0 0 6px ${node.color})` : "none" }}
-                />
-                {/* Brighter segment from center to node */}
-                <line x1="960" y1="540" x2={nx} y2={ny}
-                  stroke={node.color} strokeWidth={isHovered ? "1.4" : "0.7"}
-                  opacity={isHovered ? 0.6 : 0.2}
-                  style={{ transition: "all 0.5s ease" }}
-                />
-                {/* Mid-point diamond marker */}
-                <g transform={`translate(${(960 + nx) / 2},${(540 + ny) / 2}) rotate(45)`}>
-                  <rect x="-3" y="-3" width="6" height="6" fill="none" stroke={node.color} strokeWidth="0.6" opacity={isHovered ? 0.6 : 0.25} />
-                </g>
-                {/* Cross-connections between adjacent nodes */}
-                {i < nodes.length - 1 && (() => {
-                  const next = nodes[i + 1];
-                  const nnx = 960 + (next.x / 100) * 1920;
-                  const nny = 540 + (next.y / 100) * 1080;
-                  return <line x1={nx} y1={ny} x2={nnx} y2={nny} stroke={P.steel} strokeWidth="0.4" opacity="0.12" strokeDasharray="6 12" />;
-                })()}
-              </g>
-            );
-          })}
-          {/* Close the loop: last to first */}
-          {(() => {
-            const first = nodes[0];
-            const last = nodes[nodes.length - 1];
-            const fx = 960 + (first.x / 100) * 1920;
-            const fy = 540 + (first.y / 100) * 1080;
-            const lx = 960 + (last.x / 100) * 1920;
-            const ly = 540 + (last.y / 100) * 1080;
-            return <line x1={lx} y1={ly} x2={fx} y2={fy} stroke={P.steel} strokeWidth="0.4" opacity="0.12" strokeDasharray="6 12" />;
-          })()}
-        </svg>
-      </div>
-
-      {/* L4: Moon — central celestial body behind text */}
-      <div ref={setLayerRef(4)} style={{ ...layerBase, zIndex: 4, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {/* L3: Moon — central celestial body behind text */}
+      <div ref={setLayerRef(3)} style={{ ...layerBase, zIndex: 3, display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div style={{
           width: "clamp(350px, 45vw, 580px)", height: "clamp(350px, 45vw, 580px)",
           borderRadius: "50%",
@@ -1553,14 +1494,14 @@ const Hero = ({ setSection }) => {
         }} />
       </div>
 
-      {/* L5: Center hub + navigation nodes — interactive */}
-      <div ref={setLayerRef(5)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
+      {/* L4: Center hub + orbiting navigation nodes */}
+      <div ref={setLayerRef(4)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
         {/* ── Center hub: logo + title ── */}
         <div style={{
           position: "absolute", left: "50%", top: "50%",
           transform: "translate(-50%, -50%)",
           display: "flex", flexDirection: "column", alignItems: "center",
-          pointerEvents: "auto",
+          pointerEvents: "auto", zIndex: 20,
         }}>
           {/* Logo — 33% of original size */}
           <div style={{ opacity: vis ? 1 : 0, transition: "opacity 2s cubic-bezier(0.16,1,0.3,1) 0.3s", marginBottom: 16 }}>
@@ -1580,123 +1521,143 @@ const Hero = ({ setSection }) => {
           </div>
         </div>
 
-        {/* ── Navigation nodes — circular destinations ── */}
+        {/* ── Orbit tracks (visible rings showing each orbit path) ── */}
+        {nodes.map((node, i) => (
+          <div key={`orbit-track-${i}`} style={{
+            position: "absolute",
+            left: "50%", top: "50%",
+            width: node.orbitRadius * 2,
+            height: node.orbitRadius * 2,
+            marginLeft: -node.orbitRadius,
+            marginTop: -node.orbitRadius,
+            borderRadius: "50%",
+            border: `0.5px solid ${node.color}`,
+            opacity: vis ? 0.06 : 0,
+            transition: `opacity 2s ease ${1 + i * 0.2}s`,
+            pointerEvents: "none",
+          }} />
+        ))}
+
+        {/* ── Orbiting navigation nodes ── */}
         {nodes.map((node, i) => {
           const isHovered = hoveredNode === i;
+          // The orbit wrapper rotates around center. The node is offset by orbitRadius.
+          // The inner content counter-rotates to stay upright.
           return (
             <div key={node.dest} style={{
               position: "absolute",
-              left: `${50 + node.x}%`,
-              top: `${50 + node.y}%`,
-              transform: "translate(-50%, -50%)",
-              pointerEvents: "auto",
-              cursor: "pointer",
+              left: "50%", top: "50%",
+              width: 0, height: 0,
+              // Orbit: rotate around center point
+              animation: `spin ${node.speed}s linear infinite`,
+              animationDelay: `${-node.startAngle / 360 * node.speed}s`,
+              pointerEvents: "none",
               zIndex: 15,
-            }}
-              onClick={() => setSection(node.dest)}
-              onMouseEnter={() => setHoveredNode(i)}
-              onMouseLeave={() => setHoveredNode(null)}
-            >
-              {/* Outer rings */}
-              {Array.from({ length: node.ringCount }, (_, ri) => (
-                <div key={ri} style={{
+            }}>
+              {/* Offset the node along the orbit radius (to the right, then rotation carries it around) */}
+              <div style={{
+                position: "absolute",
+                left: node.orbitRadius,
+                top: 0,
+                transform: "translate(-50%, -50%)",
+                pointerEvents: "auto",
+                cursor: "pointer",
+                // Counter-rotate to keep text upright
+                animation: `spin ${node.speed}s linear infinite reverse`,
+                animationDelay: `${-node.startAngle / 360 * node.speed}s`,
+              }}
+                onClick={() => setSection(node.dest)}
+                onMouseEnter={() => setHoveredNode(i)}
+                onMouseLeave={() => setHoveredNode(null)}
+              >
+                {/* Outer rings */}
+                {Array.from({ length: node.ringCount }, (_, ri) => (
+                  <div key={ri} style={{
+                    position: "absolute",
+                    left: "50%", top: "50%",
+                    width: node.radius * 2 + ri * 20 + 10,
+                    height: node.radius * 2 + ri * 20 + 10,
+                    marginLeft: -(node.radius + ri * 10 + 5),
+                    marginTop: -(node.radius + ri * 10 + 5),
+                    borderRadius: "50%",
+                    border: `${ri === 0 ? 1.5 : 0.5}px solid ${node.color}`,
+                    opacity: vis ? (isHovered ? 0.5 - ri * 0.12 : 0.18 - ri * 0.05) : 0,
+                    transition: "opacity 0.5s ease, box-shadow 0.5s ease",
+                    boxShadow: isHovered ? `0 0 ${16 + ri * 4}px ${node.color}30, inset 0 0 ${8 + ri * 2}px ${node.color}15` : "none",
+                    animation: `fractalPulse ${6 + ri * 2}s ease-in-out ${ri * 0.5 + i * 0.3}s infinite`,
+                  }} />
+                ))}
+                {/* Dotted ring */}
+                <div style={{
                   position: "absolute",
                   left: "50%", top: "50%",
-                  width: node.radius * 2 + ri * 20 + 10,
-                  height: node.radius * 2 + ri * 20 + 10,
-                  marginLeft: -(node.radius + ri * 10 + 5),
-                  marginTop: -(node.radius + ri * 10 + 5),
+                  width: node.radius * 2 - 8,
+                  height: node.radius * 2 - 8,
+                  marginLeft: -(node.radius - 4),
+                  marginTop: -(node.radius - 4),
                   borderRadius: "50%",
-                  border: `${ri === 0 ? 1.5 : 0.5}px solid ${node.color}`,
-                  opacity: vis ? (isHovered ? 0.5 - ri * 0.12 : 0.18 - ri * 0.05) : 0,
-                  transition: `opacity 0.5s ease, box-shadow 0.5s ease`,
-                  boxShadow: isHovered ? `0 0 ${16 + ri * 4}px ${node.color}30, inset 0 0 ${8 + ri * 2}px ${node.color}15` : "none",
-                  animation: `fractalPulse ${6 + ri * 2}s ease-in-out ${ri * 0.5 + i * 0.3}s infinite`,
+                  border: `1px dashed ${node.color}`,
+                  opacity: vis ? (isHovered ? 0.4 : 0.1) : 0,
+                  transition: "opacity 0.5s ease",
+                  animation: `spin ${30 + i * 10}s linear infinite ${i % 2 === 0 ? "" : "reverse"}`,
                 }} />
-              ))}
-              {/* Dotted ring (innermost detail) */}
-              <div style={{
-                position: "absolute",
-                left: "50%", top: "50%",
-                width: node.radius * 2 - 8,
-                height: node.radius * 2 - 8,
-                marginLeft: -(node.radius - 4),
-                marginTop: -(node.radius - 4),
-                borderRadius: "50%",
-                border: `1px dashed ${node.color}`,
-                opacity: vis ? (isHovered ? 0.4 : 0.1) : 0,
-                transition: "opacity 0.5s ease",
-                animation: `spin ${30 + i * 10}s linear infinite ${i % 2 === 0 ? "" : "reverse"}`,
-              }} />
-              {/* Inner glow disc */}
-              <div style={{
-                width: node.radius * 2,
-                height: node.radius * 2,
-                borderRadius: "50%",
-                background: `radial-gradient(circle, ${node.color}${isHovered ? "18" : "08"} 0%, transparent 70%)`,
-                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-                transition: "background 0.5s ease",
-              }}>
-                {/* Label */}
+                {/* Inner glow disc + labels */}
                 <div style={{
-                  fontFamily: "'Courier New', monospace",
-                  fontSize: 10,
-                  letterSpacing: 4,
-                  color: node.color,
-                  textTransform: "uppercase",
-                  opacity: vis ? (isHovered ? 1 : 0.7) : 0,
-                  transition: "opacity 0.4s ease",
-                  textShadow: isHovered ? `0 0 12px ${node.color}` : "none",
-                  textAlign: "center",
-                  lineHeight: 1.4,
+                  width: node.radius * 2,
+                  height: node.radius * 2,
+                  borderRadius: "50%",
+                  background: `radial-gradient(circle, ${node.color}${isHovered ? "18" : "08"} 0%, transparent 70%)`,
+                  display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                  transition: "background 0.5s ease",
                 }}>
-                  <HoverMorphText>{node.label}</HoverMorphText>
+                  <div style={{
+                    fontFamily: "'Courier New', monospace",
+                    fontSize: 10, letterSpacing: 4, color: node.color,
+                    textTransform: "uppercase",
+                    opacity: vis ? (isHovered ? 1 : 0.7) : 0,
+                    transition: "opacity 0.4s ease",
+                    textShadow: isHovered ? `0 0 12px ${node.color}` : "none",
+                    textAlign: "center", lineHeight: 1.4,
+                  }}>
+                    <HoverMorphText>{node.label}</HoverMorphText>
+                  </div>
+                  <div style={{
+                    fontFamily: "'Georgia', serif", fontSize: 9, color: P.bone,
+                    opacity: isHovered ? 0.5 : 0,
+                    transition: "opacity 0.4s ease 0.1s",
+                    marginTop: 4, textAlign: "center", letterSpacing: 1,
+                  }}>
+                    {node.desc}
+                  </div>
                 </div>
-                {/* Description — shows on hover */}
-                <div style={{
-                  fontFamily: "'Georgia', serif",
-                  fontSize: 9,
-                  color: P.bone,
-                  opacity: isHovered ? 0.5 : 0,
-                  transition: "opacity 0.4s ease 0.1s",
-                  marginTop: 4,
-                  textAlign: "center",
-                  letterSpacing: 1,
-                }}>
-                  {node.desc}
-                </div>
+                {/* Tick marks */}
+                <svg style={{
+                  position: "absolute", left: "50%", top: "50%",
+                  width: node.radius * 2 + 30, height: node.radius * 2 + 30,
+                  marginLeft: -(node.radius + 15), marginTop: -(node.radius + 15),
+                  opacity: vis ? (isHovered ? 0.5 : 0.12) : 0,
+                  transition: "opacity 0.5s ease", pointerEvents: "none",
+                }} viewBox={`0 0 ${node.radius * 2 + 30} ${node.radius * 2 + 30}`}>
+                  {Array.from({ length: 12 }, (_, ti) => {
+                    const angle = (ti / 12) * Math.PI * 2;
+                    const cx = node.radius + 15;
+                    const cy = node.radius + 15;
+                    const inner = node.radius + 2;
+                    const outer = node.radius + (ti % 3 === 0 ? 10 : 5);
+                    return <line key={ti}
+                      x1={cx + Math.cos(angle) * inner} y1={cy + Math.sin(angle) * inner}
+                      x2={cx + Math.cos(angle) * outer} y2={cy + Math.sin(angle) * outer}
+                      stroke={node.color} strokeWidth={ti % 3 === 0 ? "1.2" : "0.5"} />;
+                  })}
+                </svg>
               </div>
-              {/* Tick marks around node — like a compass */}
-              <svg style={{
-                position: "absolute",
-                left: "50%", top: "50%",
-                width: node.radius * 2 + 30,
-                height: node.radius * 2 + 30,
-                marginLeft: -(node.radius + 15),
-                marginTop: -(node.radius + 15),
-                opacity: vis ? (isHovered ? 0.5 : 0.12) : 0,
-                transition: "opacity 0.5s ease",
-                pointerEvents: "none",
-              }} viewBox={`0 0 ${node.radius * 2 + 30} ${node.radius * 2 + 30}`}>
-                {Array.from({ length: 12 }, (_, ti) => {
-                  const angle = (ti / 12) * Math.PI * 2;
-                  const cx = node.radius + 15;
-                  const cy = node.radius + 15;
-                  const inner = node.radius + 2;
-                  const outer = node.radius + (ti % 3 === 0 ? 10 : 5);
-                  return <line key={ti}
-                    x1={cx + Math.cos(angle) * inner} y1={cy + Math.sin(angle) * inner}
-                    x2={cx + Math.cos(angle) * outer} y2={cy + Math.sin(angle) * outer}
-                    stroke={node.color} strokeWidth={ti % 3 === 0 ? "1.2" : "0.5"} />;
-                })}
-              </svg>
             </div>
           );
         })}
       </div>
 
-      {/* L6: Vignette — softened so grid lines show through more */}
-      <div ref={setLayerRef(6)} style={{ ...layerBase, zIndex: 20, pointerEvents: "none" }}>
+      {/* L5: Vignette — softened so grid lines show through more */}
+      <div ref={setLayerRef(5)} style={{ ...layerBase, zIndex: 20, pointerEvents: "none" }}>
         <div style={{
           position: "absolute", inset: 0,
           background: `radial-gradient(ellipse 100% 95% at 50% 50%, transparent 35%, ${P.abyss}44 60%, ${P.abyss}88 80%, ${P.abyss}cc 95%)`,
