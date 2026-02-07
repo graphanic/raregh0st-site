@@ -1435,6 +1435,14 @@ const Hero = ({ setSection }) => {
   const starSprites = useRef({ small: null, medium: null, large: null, bright: null });
   const spritesLoaded = useRef(false);
 
+  // ── Lens dust overlay ──
+  // Place: /images/lens-dust.png (large, ~10000x10000px, transparent overlay)
+  const lensDustImg = useRef(null);
+  const lensDustLoaded = useRef(false);
+  // Smooth hue target: blueish default (210°), shifts toward hovered node color
+  const lensDustHue = useRef(210);
+  const lensDustHueTarget = useRef(210);
+
   // Stars stored in polar coords (angle + distance from center) so they rotate naturally
   // Layer 0: Deep dust
   const starsDust = useRef(Array.from({ length: 200 }, () => ({
@@ -1443,7 +1451,7 @@ const Hero = ({ setSection }) => {
     size: Math.random() * 0.8 + 0.2,
     spriteSize: Math.random() * 8 + 4, // for sprite rendering
     opacity: Math.random() * 0.3 + 0.05,
-    color: ["#ffffff", "#e8e8ff", "#d0e8ff", P.ghost][Math.floor(Math.random() * 4)],
+    color: ["#c8daff", "#a8c4ff", "#8eb0ff", "#d0e8ff"][Math.floor(Math.random() * 4)],
     phase: Math.random() * Math.PI * 2,
     twinkleSpeed: Math.random() * 0.3 + 0.1,
     sprite: "small",
@@ -1458,7 +1466,7 @@ const Hero = ({ setSection }) => {
       spriteSize: bright < 0.1 ? Math.random() * 32 + 24 : Math.random() * 16 + 8,
       haloSize: bright < 0.1 ? Math.random() * 12 + 8 : Math.random() * 6 + 3,
       opacity: bright < 0.1 ? Math.random() * 0.6 + 0.3 : Math.random() * 0.4 + 0.1,
-      color: [P.ghost, "#e0f0ff", P.cyan, "#ffe8d0", "#ffd0e8"][Math.floor(Math.random() * 5)],
+      color: ["#b8d0ff", "#90b8ff", P.cyan, "#c0d8ff", "#a0c0ff"][Math.floor(Math.random() * 5)],
       phase: Math.random() * Math.PI * 2,
       twinkleSpeed: Math.random() * 0.6 + 0.2,
       sprite: bright < 0.1 ? "large" : "medium",
@@ -1472,7 +1480,7 @@ const Hero = ({ setSection }) => {
     spriteSize: Math.random() * 48 + 32,
     spikeLen: Math.random() * 18 + 10,
     opacity: Math.random() * 0.5 + 0.3,
-    color: [P.cyan, "#ffffff", "#e0f0ff", "#ff7eb3"][Math.floor(Math.random() * 4)],
+    color: [P.cyan, "#c0e0ff", "#8eb8ff", "#a0d0ff"][Math.floor(Math.random() * 4)],
     phase: Math.random() * Math.PI * 2,
     twinkleSpeed: Math.random() * 1.2 + 0.5,
     sprite: "bright",
@@ -1493,6 +1501,11 @@ const Hero = ({ setSection }) => {
       si.onload = () => { starSprites.current[name] = si; loaded++; if (loaded === 4) spritesLoaded.current = true; };
       si.onerror = () => { loaded++; }; // graceful — will use canvas fallback
     });
+    // Load lens dust overlay
+    const ld = new Image();
+    ld.src = "/images/lens-dust.png";
+    ld.onload = () => { lensDustImg.current = ld; lensDustLoaded.current = true; };
+    ld.onerror = () => {}; // graceful — skip if missing
     setTimeout(() => { setVis(true); visRef.current = true; }, 100);
   }, []);
 
@@ -1679,7 +1692,7 @@ const Hero = ({ setSection }) => {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cw, ch);
 
-      // ── Helper: draw star (sprite if loaded, canvas fallback) ──
+      // ── Helper: draw star (sprite if loaded, canvas fallback with blue glow) ──
       const drawStar = (x, y, s, tw, opac) => {
         const sprite = starSprites.current[s.sprite];
         if (sprite) {
@@ -1687,29 +1700,49 @@ const Hero = ({ setSection }) => {
           const sz = s.spriteSize * (0.7 + 0.3 * tw);
           ctx.globalAlpha = opac;
           ctx.drawImage(sprite, x - sz / 2, y - sz / 2, sz, sz);
-        } else if (s.sprite === "bright" || s.sprite === "large") {
-          // Canvas fallback — glow star
-          const hSize = (s.haloSize || s.spikeLen || 10) * tw;
-          if (hSize > 0) {
-            const halo = ctx.createRadialGradient(x, y, 0, x, y, hSize);
-            halo.addColorStop(0, s.color);
-            halo.addColorStop(0.3, s.color + "40");
-            halo.addColorStop(1, "transparent");
-            ctx.globalAlpha = opac * 0.4;
-            ctx.fillStyle = halo;
-            ctx.fillRect(x - hSize, y - hSize, hSize * 2, hSize * 2);
+        } else {
+          // Canvas fallback with blue glow
+          // Outer glow halo (always drawn)
+          const glowR = (s.haloSize || s.spikeLen || s.size * 6) * (0.6 + 0.4 * tw);
+          if (glowR > 0.5) {
+            const glow = ctx.createRadialGradient(x, y, 0, x, y, glowR);
+            glow.addColorStop(0, s.color);
+            glow.addColorStop(0.15, s.color + "60");
+            glow.addColorStop(0.5, "#4488ff20");
+            glow.addColorStop(1, "transparent");
+            ctx.globalAlpha = opac * 0.5;
+            ctx.fillStyle = glow;
+            ctx.fillRect(x - glowR, y - glowR, glowR * 2, glowR * 2);
           }
+          // Diffraction spikes for bright/large stars
+          if (s.spikeLen) {
+            ctx.strokeStyle = s.color;
+            ctx.lineWidth = 1;
+            ctx.globalAlpha = opac * 0.6;
+            const sl = s.spikeLen * tw;
+            ctx.beginPath();
+            ctx.moveTo(x - sl, y); ctx.lineTo(x + sl, y);
+            ctx.moveTo(x, y - sl); ctx.lineTo(x, y + sl);
+            ctx.stroke();
+            ctx.globalAlpha = opac * 0.2;
+            ctx.lineWidth = 0.5;
+            const sl2 = sl * 0.5;
+            ctx.beginPath();
+            ctx.moveTo(x - sl2, y - sl2); ctx.lineTo(x + sl2, y + sl2);
+            ctx.moveTo(x + sl2, y - sl2); ctx.lineTo(x - sl2, y + sl2);
+            ctx.stroke();
+          }
+          // White-hot core
           ctx.globalAlpha = opac;
-          ctx.fillStyle = s.color;
+          ctx.fillStyle = "#ffffff";
           ctx.beginPath();
           ctx.arc(x, y, Math.max(s.size * tw, 0.1), 0, Math.PI * 2);
           ctx.fill();
-        } else {
-          // Canvas fallback — simple dot
-          ctx.globalAlpha = opac;
+          // Color halo ring
+          ctx.globalAlpha = opac * 0.5;
           ctx.fillStyle = s.color;
           ctx.beginPath();
-          ctx.arc(x, y, Math.max(s.size, 0.1), 0, Math.PI * 2);
+          ctx.arc(x, y, Math.max(s.size * tw * 1.8, 0.2), 0, Math.PI * 2);
           ctx.fill();
         }
       };
@@ -1731,6 +1764,18 @@ const Hero = ({ setSection }) => {
       ctx.translate(cw / 2 - panCurrent.current.x * 0.25, ch / 2 - panCurrent.current.y * 0.25);
       ctx.rotate(faL * 0.6);
       for (const s of starsMid.current) {
+        const x = Math.cos(s.angle) * s.dist;
+        const y = Math.sin(s.angle) * s.dist;
+        const tw = 0.5 + 0.5 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
+        drawStar(x, y, s, tw, a * s.opacity * tw);
+      }
+      ctx.restore();
+
+      // ── Stars Layer 2: Bright stars (behind field, rotates at 80% field speed) ──
+      ctx.save();
+      ctx.translate(cw / 2 - panCurrent.current.x * 0.5, ch / 2 - panCurrent.current.y * 0.5);
+      ctx.rotate(faR * 0.8);
+      for (const s of starsFG.current) {
         const x = Math.cos(s.angle) * s.dist;
         const y = Math.sin(s.angle) * s.dist;
         const tw = 0.5 + 0.5 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
@@ -2084,64 +2129,46 @@ const Hero = ({ setSection }) => {
 
       ctx.restore(); // field transform
 
-      // ── Stars Layer 2: Foreground brilliant stars (rotates at 80% field speed) ──
-      ctx.save();
-      ctx.translate(cw / 2 - panCurrent.current.x * 0.5, ch / 2 - panCurrent.current.y * 0.5);
-      ctx.rotate(faR * 0.8);
-      for (const s of starsFG.current) {
-        const x = Math.cos(s.angle) * s.dist;
-        const y = Math.sin(s.angle) * s.dist;
-        const tw = 0.5 + 0.5 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
-        const opac = a * s.opacity * tw;
-        const sprite = starSprites.current[s.sprite];
-        if (sprite) {
-          // Sprite rendering
-          const sz = s.spriteSize * (0.7 + 0.3 * tw);
-          ctx.globalAlpha = opac;
-          ctx.drawImage(sprite, x - sz / 2, y - sz / 2, sz, sz);
-        } else {
-          // Canvas fallback — diffraction spikes
-          const bloomR = s.spikeLen * 0.8;
-          if (bloomR > 0) {
-            const bloom = ctx.createRadialGradient(x, y, 0, x, y, bloomR);
-            bloom.addColorStop(0, s.color + "30");
-            bloom.addColorStop(1, "transparent");
-            ctx.globalAlpha = opac * 0.5;
-            ctx.fillStyle = bloom;
-            ctx.beginPath();
-            ctx.arc(x, y, bloomR, 0, Math.PI * 2);
-            ctx.fill();
-          }
-          // Spikes (all aligned — no per-star rotation)
-          ctx.strokeStyle = s.color;
-          ctx.lineWidth = 1;
-          ctx.globalAlpha = opac * 0.7;
-          const sl = s.spikeLen * tw;
-          ctx.beginPath();
-          ctx.moveTo(x - sl, y); ctx.lineTo(x + sl, y);
-          ctx.moveTo(x, y - sl); ctx.lineTo(x, y + sl);
-          ctx.stroke();
-          ctx.globalAlpha = opac * 0.25;
-          ctx.lineWidth = 0.5;
-          const sl2 = sl * 0.5;
-          ctx.beginPath();
-          ctx.moveTo(x - sl2, y - sl2); ctx.lineTo(x + sl2, y + sl2);
-          ctx.moveTo(x + sl2, y - sl2); ctx.lineTo(x - sl2, y + sl2);
-          ctx.stroke();
-          // Cores
-          ctx.globalAlpha = opac;
-          ctx.fillStyle = "#ffffff";
-          ctx.beginPath();
-          ctx.arc(x, y, Math.max(s.size * tw, 0.1), 0, Math.PI * 2);
-          ctx.fill();
-          ctx.globalAlpha = opac * 0.6;
-          ctx.fillStyle = s.color;
-          ctx.beginPath();
-          ctx.arc(x, y, Math.max(s.size * tw * 1.5, 0.1), 0, Math.PI * 2);
-          ctx.fill();
+      // ── Lens dust overlay (screen-blended, hue-reactive) ──
+      // Set hue target based on hovered node color
+      if (newHovered >= 0) {
+        const nc = nodes[newHovered].color;
+        // Quick hex to approximate hue
+        const r = parseInt(nc.slice(1, 3), 16) / 255;
+        const g = parseInt(nc.slice(3, 5), 16) / 255;
+        const b = parseInt(nc.slice(5, 7), 16) / 255;
+        const mx2 = Math.max(r, g, b), mn = Math.min(r, g, b), d = mx2 - mn;
+        let h = 0;
+        if (d > 0) {
+          if (mx2 === r) h = ((g - b) / d + 6) % 6 * 60;
+          else if (mx2 === g) h = ((b - r) / d + 2) * 60;
+          else h = ((r - g) / d + 4) * 60;
         }
+        lensDustHueTarget.current = h;
+      } else {
+        lensDustHueTarget.current = 210; // default cool blue
       }
-      ctx.restore();
+      // Smooth hue transition
+      let hDiff = lensDustHueTarget.current - lensDustHue.current;
+      if (hDiff > 180) hDiff -= 360;
+      if (hDiff < -180) hDiff += 360;
+      lensDustHue.current = (lensDustHue.current + hDiff * 0.04 + 360) % 360;
+
+      if (lensDustImg.current) {
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        ctx.globalAlpha = a * 0.12;
+        // Hue rotation relative to base (the sprite is white/neutral)
+        ctx.filter = `hue-rotate(${Math.round(lensDustHue.current)}deg) saturate(1.5)`;
+        // Cover viewport, centered, slight parallax with pan
+        const dustSize = Math.max(cw, ch) * 1.4;
+        const ldx = cw / 2 - dustSize / 2 + fpx * 0.02;
+        const ldy = ch / 2 - dustSize / 2 + fpy * 0.02;
+        ctx.drawImage(lensDustImg.current, ldx, ldy, dustSize, dustSize);
+        ctx.filter = "none";
+        ctx.globalCompositeOperation = "source-over";
+        ctx.restore();
+      }
 
       // Update hover ref (no setState — avoids re-render)
       hoveredRef.current = newHovered;
