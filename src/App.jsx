@@ -1654,6 +1654,10 @@ const Hero = ({ setSection }) => {
       if (visRef.current && fadeIn.current < 1) fadeIn.current = Math.min(1, fadeIn.current + dt * 0.5);
       const a = fadeIn.current;
 
+      // Smooth mouse position (for lens dust cursor-opposite parallax)
+      smoothed.current.x += (mouse.current.x - smoothed.current.x) * 0.06;
+      smoothed.current.y += (mouse.current.y - smoothed.current.y) * 0.06;
+
       // Pan clamp
       const vw = mouse.current.w || cw;
       const vh = mouse.current.h || ch;
@@ -1816,13 +1820,13 @@ const Hero = ({ setSection }) => {
         ctx.clip();
         ctx.globalAlpha = a;
         ctx.drawImage(moonImg.current, -r, -r, moonSize, moonSize);
-        // Edge fade — matches background center color #12121e
+        // Edge fade — matches background center color #090912
         const grad = ctx.createRadialGradient(0, -r * 0.1, r * 0.35, 0, 0, r);
         grad.addColorStop(0, "transparent");
-        grad.addColorStop(0.6, "rgba(18,18,30,0.2)");
-        grad.addColorStop(0.78, "rgba(18,18,30,0.55)");
-        grad.addColorStop(0.9, "rgba(18,18,30,0.85)");
-        grad.addColorStop(1, "rgba(18,18,30,1)");
+        grad.addColorStop(0.6, "rgba(9,9,18,0.2)");
+        grad.addColorStop(0.78, "rgba(9,9,18,0.55)");
+        grad.addColorStop(0.9, "rgba(9,9,18,0.85)");
+        grad.addColorStop(1, "rgba(9,9,18,1)");
         ctx.fillStyle = grad;
         ctx.fillRect(-r, -r, moonSize, moonSize);
         ctx.restore();
@@ -2143,7 +2147,7 @@ const Hero = ({ setSection }) => {
 
       ctx.restore(); // field transform
 
-      // ── Lens dust overlay (3 parallax layers, hue-reactive via offscreen canvas) ──
+      // ── Lens dust overlay (single layer, ~5000px, cursor-opposite parallax) ──
       // Set hue target based on hovered node color
       if (newHovered >= 0) {
         const nc = nodes[newHovered].color;
@@ -2178,32 +2182,25 @@ const Hero = ({ setSection }) => {
           octx.globalCompositeOperation = "source-over";
           octx.globalAlpha = 1;
           octx.drawImage(lensDustImg.current, 0, 0, oc.width, oc.height);
-          // Apply hue tint (preserves luminance, shifts color)
           octx.globalCompositeOperation = "color";
           octx.fillStyle = `hsl(${roundedHue}, 70%, 50%)`;
           octx.fillRect(0, 0, oc.width, oc.height);
           octx.globalCompositeOperation = "source-over";
         }
 
-        // Draw 3 parallax layers from offscreen canvas
-        const drawDustLayer = (panFac, scale, alpha) => {
-          ctx.save();
-          ctx.globalCompositeOperation = "screen";
-          ctx.globalAlpha = a * alpha;
-          const sz = Math.max(cw, ch) * scale;
-          const dx = cw / 2 - sz / 2 + fpx * panFac;
-          const dy = ch / 2 - sz / 2 + fpy * panFac;
-          ctx.drawImage(oc, dx, dy, sz, sz);
-          ctx.globalCompositeOperation = "source-over";
-          ctx.restore();
-        };
-
-        // Layer 0: Far dust (barely moves, large scale, very subtle)
-        drawDustLayer(0.01, 1.8, 0.06);
-        // Layer 1: Mid dust (slight drift)
-        drawDustLayer(0.04, 1.3, 0.09);
-        // Layer 2: Near dust (more responsive to pan)
-        drawDustLayer(0.08, 1.0, 0.12);
+        // Single large overlay — moves OPPOSITE to cursor (lens simulation)
+        ctx.save();
+        ctx.globalCompositeOperation = "screen";
+        ctx.globalAlpha = a * 0.10;
+        const dustSz = 5000;
+        // Cursor-opposite: smoothed mouse is -1 to 1, invert it so dust drifts away from cursor
+        const dustDriftX = smoothed.current.x * -80;
+        const dustDriftY = smoothed.current.y * -80;
+        const dx = cw / 2 - dustSz / 2 + dustDriftX;
+        const dy = ch / 2 - dustSz / 2 + dustDriftY;
+        ctx.drawImage(oc, dx, dy, dustSz, dustSz);
+        ctx.globalCompositeOperation = "source-over";
+        ctx.restore();
       }
 
       // Update hover ref (no setState — avoids re-render)
@@ -2238,7 +2235,7 @@ const Hero = ({ setSection }) => {
         <div style={{
           position: "absolute", inset: 0,
           background: `
-            radial-gradient(ellipse 80% 60% at 50% 45%, #12121e 0%, ${P.abyss} 70%),
+            radial-gradient(ellipse 80% 60% at 50% 45%, #090912 0%, ${P.abyss} 70%),
             radial-gradient(circle at 25% 30%, ${P.cyan}08 0%, transparent 50%),
             radial-gradient(circle at 75% 65%, ${P.magenta}06 0%, transparent 50%)
           `,
@@ -2287,7 +2284,7 @@ const Hero = ({ setSection }) => {
       <div ref={vigRef} style={{ position: "absolute", inset: -60, zIndex: 25, pointerEvents: "none", willChange: "transform" }}>
         <div style={{
           position: "absolute", inset: 0,
-          background: `radial-gradient(ellipse 100% 95% at 50% 50%, transparent 35%, ${P.abyss}44 60%, ${P.abyss}88 80%, ${P.abyss}cc 95%)`,
+          background: `radial-gradient(ellipse 100% 95% at 50% 50%, transparent 25%, ${P.abyss}66 50%, ${P.abyss}aa 70%, ${P.abyss}dd 85%, ${P.abyss} 100%)`,
           opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s",
         }} />
         <div style={{
