@@ -1437,51 +1437,51 @@ const Hero = ({ setSection }) => {
 
   // Stars in polar coords (angle + distance from center) for natural rotation
   // Layer 0: Deep dust (tiny + small)
-  const starsDust = useRef(Array.from({ length: 200 }, () => {
+  const starsDust = useRef(Array.from({ length: 1200 }, () => {
     const tier = Math.random() < 0.7 ? "tiny" : "small";
     return {
       angle: Math.random() * Math.PI * 2,
-      dist: Math.random() * 2800 + 100,
+      dist: Math.random() * 3500 + 50,
       size: tier === "tiny" ? Math.random() * 0.6 + 0.2 : Math.random() * 1.0 + 0.4,
       spriteSize: tier === "tiny" ? Math.random() * 6 + 3 : Math.random() * 10 + 6,
-      opacity: Math.random() * 0.3 + 0.05,
+      opacity: Math.random() * 0.15 + 0.02,
       color: ["#c8daff", "#a8c4ff", "#8eb0ff", "#d0e8ff"][Math.floor(Math.random() * 4)],
       phase: Math.random() * Math.PI * 2,
-      twinkleSpeed: Math.random() * 0.3 + 0.1,
+      twinkleSpeed: Math.random() * 2.0 + 1.0,
       sprite: tier,
     };
   }));
   // Layer 1: Mid-field (small + medium + large)
-  const starsMid = useRef(Array.from({ length: 60 }, () => {
+  const starsMid = useRef(Array.from({ length: 350 }, () => {
     const r = Math.random();
     const tier = r < 0.5 ? "small" : r < 0.85 ? "medium" : "large";
     return {
       angle: Math.random() * Math.PI * 2,
-      dist: Math.random() * 2200 + 150,
+      dist: Math.random() * 3000 + 80,
       size: tier === "small" ? Math.random() * 1.2 + 0.5 : tier === "medium" ? Math.random() * 2.0 + 1.0 : Math.random() * 3.0 + 2.0,
       spriteSize: tier === "small" ? Math.random() * 12 + 8 : tier === "medium" ? Math.random() * 24 + 16 : Math.random() * 40 + 28,
       haloSize: tier === "small" ? Math.random() * 6 + 3 : tier === "medium" ? Math.random() * 10 + 6 : Math.random() * 16 + 10,
-      opacity: tier === "large" ? Math.random() * 0.6 + 0.3 : Math.random() * 0.4 + 0.1,
+      opacity: tier === "large" ? Math.random() * 0.3 + 0.1 : Math.random() * 0.2 + 0.05,
       color: ["#b8d0ff", "#90b8ff", P.cyan, "#c0d8ff", "#a0c0ff"][Math.floor(Math.random() * 5)],
       phase: Math.random() * Math.PI * 2,
-      twinkleSpeed: Math.random() * 0.6 + 0.2,
+      twinkleSpeed: Math.random() * 3.0 + 1.5,
       sprite: tier,
     };
   }));
   // Layer 2: Near field (large + xlarge + xxlarge — the big beautiful diffraction spike stars)
-  const starsFG = useRef(Array.from({ length: 18 }, () => {
+  const starsFG = useRef(Array.from({ length: 80 }, () => {
     const r = Math.random();
     const tier = r < 0.45 ? "large" : r < 0.8 ? "xlarge" : "xxlarge";
     return {
       angle: Math.random() * Math.PI * 2,
-      dist: Math.random() * 1800 + 200,
+      dist: Math.random() * 2500 + 100,
       size: tier === "large" ? Math.random() * 2.5 + 1.5 : tier === "xlarge" ? Math.random() * 3.5 + 2.5 : Math.random() * 5.0 + 3.5,
       spriteSize: tier === "large" ? Math.random() * 48 + 32 : tier === "xlarge" ? Math.random() * 80 + 56 : Math.random() * 128 + 96,
       spikeLen: tier === "large" ? Math.random() * 18 + 10 : tier === "xlarge" ? Math.random() * 30 + 18 : Math.random() * 50 + 30,
-      opacity: tier === "xxlarge" ? Math.random() * 0.4 + 0.4 : Math.random() * 0.5 + 0.3,
+      opacity: tier === "xxlarge" ? Math.random() * 0.2 + 0.15 : Math.random() * 0.25 + 0.1,
       color: [P.cyan, "#c0e0ff", "#8eb8ff", "#a0d0ff"][Math.floor(Math.random() * 4)],
       phase: Math.random() * Math.PI * 2,
-      twinkleSpeed: tier === "xxlarge" ? Math.random() * 0.6 + 0.2 : Math.random() * 1.2 + 0.5,
+      twinkleSpeed: tier === "xxlarge" ? Math.random() * 2.0 + 1.0 : Math.random() * 3.5 + 2.0,
       sprite: tier,
     };
   }));
@@ -1724,7 +1724,7 @@ const Hero = ({ setSection }) => {
             glow.addColorStop(0.15, s.color + "60");
             glow.addColorStop(0.5, "#4488ff20");
             glow.addColorStop(1, "transparent");
-            ctx.globalAlpha = opac * 0.5;
+            ctx.globalAlpha = opac * 0.3;
             ctx.fillStyle = glow;
             ctx.fillRect(x - glowR, y - glowR, glowR * 2, glowR * 2);
           }
@@ -1732,13 +1732,13 @@ const Hero = ({ setSection }) => {
           if (s.spikeLen) {
             ctx.strokeStyle = s.color;
             ctx.lineWidth = 1;
-            ctx.globalAlpha = opac * 0.6;
+            ctx.globalAlpha = opac * 0.4;
             const sl = s.spikeLen * tw;
             ctx.beginPath();
             ctx.moveTo(x - sl, y); ctx.lineTo(x + sl, y);
             ctx.moveTo(x, y - sl); ctx.lineTo(x, y + sl);
             ctx.stroke();
-            ctx.globalAlpha = opac * 0.2;
+            ctx.globalAlpha = opac * 0.12;
             ctx.lineWidth = 0.5;
             const sl2 = sl * 0.5;
             ctx.beginPath();
@@ -1753,7 +1753,7 @@ const Hero = ({ setSection }) => {
           ctx.arc(x, y, Math.max(s.size * tw, 0.1), 0, Math.PI * 2);
           ctx.fill();
           // Color halo ring
-          ctx.globalAlpha = opac * 0.5;
+          ctx.globalAlpha = opac * 0.3;
           ctx.fillStyle = s.color;
           ctx.beginPath();
           ctx.arc(x, y, Math.max(s.size * tw * 1.8, 0.2), 0, Math.PI * 2);
@@ -1768,7 +1768,7 @@ const Hero = ({ setSection }) => {
       for (const s of starsDust.current) {
         const x = Math.cos(s.angle) * s.dist;
         const y = Math.sin(s.angle) * s.dist;
-        const tw = 0.6 + 0.4 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
+        const tw = 0.5 + 0.5 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
         drawStar(x, y, s, tw, a * s.opacity * tw);
       }
       ctx.restore();
