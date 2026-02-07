@@ -1656,15 +1656,27 @@ const Hero = ({ setSection }) => {
       ctx.translate(cx, cy);
       ctx.scale(zoom, zoom);
 
-      // ── Rectangular grid ──
+      // ── Rectangular grid (infinite — extends past viewport at any zoom) ──
       ctx.strokeStyle = P.cyan;
       ctx.lineWidth = 0.5;
       ctx.globalAlpha = a * 0.14;
+      const gridSpacing = 86;
+      // Calculate visible world-space bounds (with padding)
+      const halfVW = (cw / zoom) / 2 + 200;
+      const halfVH = (ch / zoom) / 2 + 200;
+      // Account for pan offset in world space
+      const wpx = -fpx / zoom;
+      const wpy = -fpy / zoom;
+      const gridLeft = Math.floor((wpx - halfVW) / gridSpacing) * gridSpacing;
+      const gridRight = Math.ceil((wpx + halfVW) / gridSpacing) * gridSpacing;
+      const gridTop = Math.floor((wpy - halfVH) / gridSpacing) * gridSpacing;
+      const gridBottom = Math.ceil((wpy + halfVH) / gridSpacing) * gridSpacing;
       ctx.beginPath();
-      for (let i = 0; i < 25; i++) {
-        const pos = i * 86 - 1080;
-        ctx.moveTo(-1460, pos); ctx.lineTo(1460, pos);
-        ctx.moveTo(pos, -1040); ctx.lineTo(pos, 1040);
+      for (let y = gridTop; y <= gridBottom; y += gridSpacing) {
+        ctx.moveTo(gridLeft, y); ctx.lineTo(gridRight, y);
+      }
+      for (let x = gridLeft; x <= gridRight; x += gridSpacing) {
+        ctx.moveTo(x, gridTop); ctx.lineTo(x, gridBottom);
       }
       ctx.stroke();
 
@@ -1672,7 +1684,7 @@ const Hero = ({ setSection }) => {
       ctx.save();
       ctx.rotate(gr.circles * Math.PI / 180);
       ctx.strokeStyle = P.cyan;
-      const circleR = [80, 160, 260, 380, 520, 680, 860, 1080, 1350, 1700, 2100];
+      const circleR = [80, 160, 260, 380, 520, 680, 860, 1080, 1350, 1700, 2100, 2600, 3200];
       for (let i = 0; i < circleR.length; i++) {
         ctx.lineWidth = i < 3 ? 1 : i < 6 ? 0.7 : 0.5;
         ctx.globalAlpha = a * (0.32 - i * 0.02);
@@ -1695,7 +1707,7 @@ const Hero = ({ setSection }) => {
       for (let i = 0; i < 24; i += 6) {
         const ang = (i / 24) * Math.PI * 2;
         ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(ang) * 3000, Math.sin(ang) * 3000);
+        ctx.lineTo(Math.cos(ang) * 5000, Math.sin(ang) * 5000);
       }
       ctx.stroke();
       // Minor radials
@@ -1706,7 +1718,7 @@ const Hero = ({ setSection }) => {
         if (i % 6 === 0) continue;
         const ang = (i / 24) * Math.PI * 2;
         ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(ang) * 3000, Math.sin(ang) * 3000);
+        ctx.lineTo(Math.cos(ang) * 5000, Math.sin(ang) * 5000);
       }
       ctx.stroke();
       ctx.restore();
