@@ -135,10 +135,10 @@ const Particles = () => {
 
 const MORPH_VARIANTS = [
   { fontFamily: "inherit", opacity: 1 },                                                    // settled — original font
-  { fontFamily: "'Geist Pixel Square', inherit", opacity: 0.96 },                            // sharpest pixel
-  { fontFamily: "'Geist Pixel Grid', inherit", opacity: 0.90 },                              // grid texture
-  { fontFamily: "'Geist Pixel Circle', inherit", opacity: 0.82 },                            // soft pixel
-  { fontFamily: "'Geist Pixel Line', inherit", opacity: 0.68 },                              // most abstract
+  { fontFamily: "'Geist Pixel Square', sans-serif", opacity: 0.96 },                         // sharpest pixel
+  { fontFamily: "'Geist Pixel Grid', sans-serif", opacity: 0.90 },                           // grid texture
+  { fontFamily: "'Geist Pixel Circle', sans-serif", opacity: 0.82 },                         // soft pixel
+  { fontFamily: "'Geist Pixel Line', sans-serif", opacity: 0.68 },                           // most abstract
 ];
 
 // Hero entrance — scramble then cycle
