@@ -1594,8 +1594,8 @@ const Hero = ({ setSection }) => {
               <line key={`gv-${i}`} x1={i * 54 - 500} y1="-500" x2={i * 54 - 500} y2="1580" stroke={P.cyan} strokeWidth="0.5" opacity="0.4" />
             ))}
           </g>
-          {/* Concentric circles — pronounced, radiating from center */}
-          <g opacity="0.4">
+          {/* Concentric circles — slowly rotating clockwise */}
+          <g opacity="0.4" style={{ transformOrigin: "960px 540px", animation: "spin 600s linear infinite" }}>
             {[80, 160, 260, 380, 520, 680, 860, 1080, 1350, 1700, 2100].map((r, i) => (
               <circle key={`cc-${i}`} cx="960" cy="540" r={r} fill="none" stroke={P.cyan}
                 strokeWidth={i < 3 ? "1" : i < 6 ? "0.7" : "0.5"}
@@ -1603,8 +1603,8 @@ const Hero = ({ setSection }) => {
                 strokeDasharray={i % 3 === 2 ? "6 12" : "none"} />
             ))}
           </g>
-          {/* Radial lines — every 15 degrees, extending well past viewport */}
-          <g opacity="0.3">
+          {/* Radial lines — slowly rotating counter-clockwise */}
+          <g opacity="0.3" style={{ transformOrigin: "960px 540px", animation: "spin 480s linear infinite reverse" }}>
             {Array.from({ length: 24 }, (_, i) => {
               const angle = (i / 24) * Math.PI * 2;
               const x2 = 960 + Math.cos(angle) * 3000;
@@ -1615,7 +1615,7 @@ const Hero = ({ setSection }) => {
             })}
           </g>
           {/* Slowly spinning outer tick ring */}
-          <g opacity="0.25" style={{ transformOrigin: "960px 540px", animation: "spin 180s linear infinite" }}>
+          <g opacity="0.25" style={{ transformOrigin: "960px 540px", animation: "spin 240s linear infinite" }}>
             {Array.from({ length: 72 }, (_, i) => {
               const angle = (i / 72) * Math.PI * 2;
               const inner = 480;
@@ -1888,10 +1888,12 @@ const Hero = ({ setSection }) => {
           background: `radial-gradient(ellipse 100% 95% at 50% 50%, transparent 35%, ${P.abyss}44 60%, ${P.abyss}88 80%, ${P.abyss}cc 95%)`,
           opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s",
         }} />
-        {/* CRT scanlines */}
+        {/* CRT scanlines — scrolling upward */}
         <div style={{
           position: "absolute", inset: 0,
-          background: "repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px)",
+          backgroundImage: "repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px)",
+          backgroundSize: "100% 200px",
+          animation: "crtScan 8s linear infinite",
           opacity: vis ? 0.6 : 0,
           transition: "opacity 3s ease 0.5s",
         }} />
@@ -2604,6 +2606,7 @@ export default function App() {
     <CalmContext.Provider value={calm}>
     <div style={{ minHeight: "100vh", background: P.abyss, color: P.ghost, position: "relative" }}>
       <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Sans';src:url('/fonts/Geist-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}@font-face{font-family:'Geist Mono';src:url('/fonts/GeistMono-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}:root{--pf1:'Geist Pixel Square',monospace;--pf2:'Geist Pixel Grid',monospace;--pf3:'Geist Pixel Circle',monospace;--pf4:'Geist Pixel Triangle',monospace;--pf5:'Geist Pixel Line',monospace;--ss1:normal;--ss2:normal;--ss3:normal;--ss4:normal;--ss5:normal}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0;font-family:'Geist Pixel Square',monospace}body:not([data-calm]) *:nth-child(5n+1):not([data-morph]){font-family:var(--pf1)!important;font-feature-settings:var(--ss1)}body:not([data-calm]) *:nth-child(5n+2):not([data-morph]){font-family:var(--pf2)!important;font-feature-settings:var(--ss2)}body:not([data-calm]) *:nth-child(5n+3):not([data-morph]){font-family:var(--pf3)!important;font-feature-settings:var(--ss3)}body:not([data-calm]) *:nth-child(5n+4):not([data-morph]){font-family:var(--pf4)!important;font-feature-settings:var(--ss4)}body:not([data-calm]) *:nth-child(5n):not([data-morph]){font-family:var(--pf5)!important;font-feature-settings:var(--ss5)}body[data-calm]{font-family:'Geist Sans',sans-serif!important}body[data-calm] *:not([data-morph]){font-family:inherit!important;animation:none!important;transition:none!important}body[data-calm] [style*="Courier"],body[data-calm] [style*="monospace"]{font-family:'Geist Mono',monospace!important}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(0.82)}}@keyframes morphBreathStrong{0%,100%{filter:brightness(1)}50%{filter:brightness(0.7)}}@keyframes morphBreathSoft{0%,100%{filter:brightness(1)}50%{filter:brightness(0.85)}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}@keyframes twinkle{0%,100%{opacity:inherit}50%{opacity:0.02}}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}@keyframes fractalPulse{0%,100%{transform:scale(1);opacity:inherit}50%{transform:scale(1.04);opacity:0.6}}@keyframes fractalFloat{0%,100%{transform:translateY(0) rotate(0deg)}25%{transform:translateY(-8px) rotate(2deg)}50%{transform:translateY(0) rotate(0deg)}75%{transform:translateY(8px) rotate(-2deg)}}`}</style>
+      <style>{`@keyframes crtScan{from{background-position:0 0}to{background-position:0 -200px}}`}</style>
       {loading && <Preloader onComplete={() => setLoading(false)} />}
       {!isMobile && <Particles />}
       {!isMobile && <Nav section={section} setSection={setSection} cartCount={cart.length} />}
