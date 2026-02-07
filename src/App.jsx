@@ -1,4 +1,7 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, createContext, useContext } from "react";
+
+// ─── CALM MODE CONTEXT ─────────────────────────────────
+const CalmContext = createContext(false);
 
 // ─── IMAGE ASSETS ───────────────────────────────────────
 // Logo served from public/logo.png — swap the file to update site-wide.
@@ -143,15 +146,18 @@ const MORPH_VARIANTS = [
 
 // Hero entrance — scramble then cycle
 const MorphText = ({ children, speed = 45 }) => {
+  const calm = useContext(CalmContext);
   const text = String(children);
   const chars = text.split("");
   const [variants, setVariants] = useState(() => chars.map(() => Math.floor(Math.random() * 5)));
   useEffect(() => {
+    if (calm) return;
     const id = setInterval(() => {
       setVariants(prev => prev.map(() => Math.floor(Math.random() * 5)));
     }, speed);
     return () => clearInterval(id);
-  }, [text, speed]);
+  }, [text, speed, calm]);
+  if (calm) return <span aria-label={text}>{text}</span>;
   return (<span aria-label={text} style={{ display: "inline" }}>{chars.map((c, i) => {
     if (c === " ") return <span key={i}>&nbsp;</span>;
     const v = MORPH_VARIANTS[variants[i]] || MORPH_VARIANTS[0];
@@ -177,15 +183,16 @@ const ScrollMorphText = ({ children, speed = 45, threshold = 0.3 }) => {
 
 // Hover interaction morph
 const HoverMorphText = ({ children, speed = 45 }) => {
+  const calm = useContext(CalmContext);
   const text = typeof children === "string" ? children : String(children);
   const chars = text.split("");
   const [hovered, setHovered] = useState(false);
   const [variants, setVariants] = useState(() => chars.map(() => 0));
   useEffect(() => {
-    if (!hovered) { setVariants(chars.map(() => 0)); return; }
+    if (calm || !hovered) { setVariants(chars.map(() => 0)); return; }
     const id = setInterval(() => { setVariants(chars.map(() => Math.floor(Math.random() * 5))); }, speed);
     return () => clearInterval(id);
-  }, [hovered, text, speed]);
+  }, [hovered, text, speed, calm]);
   return (<span onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ cursor: "inherit", display: "inline" }}>
     {chars.map((c, i) => {
       if (c === " ") return <span key={i}>&nbsp;</span>;
@@ -1879,8 +1886,16 @@ export default function App() {
   const [designProject, setDesignProject] = useState(null);
   const [portfolioTab, setPortfolioTab] = useState(() => loadLocal("tab", "curated"));
   const [cart, setCart] = useState(() => loadLocal("cart", []));
+  const [calm, setCalm] = useState(() => loadLocal("calm", false));
   const [toast, setToast] = useState(null);
   useImageProtection();
+
+  // CALM MODE — sync to body attribute for CSS kill switch
+  const toggleCalm = () => { setCalm(prev => { const next = !prev; saveLocal("calm", next); return next; }); };
+  useEffect(() => {
+    if (calm) { document.body.setAttribute("data-calm", ""); document.body.style.fontFamily = "'Geist Pixel Square', monospace"; }
+    else { document.body.removeAttribute("data-calm"); }
+  }, [calm]);
 
   // GLOBAL FONT RIVER — cycles entire site through all 5 Geist Pixel variants
   const PIXEL_FONTS = [
@@ -1891,13 +1906,14 @@ export default function App() {
     "'Geist Pixel Line', monospace",
   ];
   useEffect(() => {
+    if (calm) return;
     let i = 0;
     const river = setInterval(() => {
       i = (i + 1) % PIXEL_FONTS.length;
       document.body.style.fontFamily = PIXEL_FONTS[i];
     }, 120);
     return () => clearInterval(river);
-  }, []);
+  }, [calm]);
 
   const addToCart = (p) => { setCart(prev => { const next = [...prev, p]; saveLocal("cart", next); return next; }); setToast(`Added "${p.title}"`); setTimeout(() => setToast(null), 2000); };
   const removeFromCart = (i) => setCart(prev => { const next = prev.filter((_, idx) => idx !== i); saveLocal("cart", next); return next; });
@@ -1906,8 +1922,9 @@ export default function App() {
   const validSections = ["hero", "portfolio", "showcase", "case-study", "media", "the-work", "now", "about", "shop", "contact", "cart", "privacy", "terms", "shipping"];
   const is404 = !validSections.includes(section);
   return (
+    <CalmContext.Provider value={calm}>
     <div style={{ minHeight: "100vh", background: P.abyss, color: P.ghost, position: "relative" }}>
-      <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0;font-family:'Geist Pixel Square',monospace}body *:not([data-morph]){font-family:inherit!important}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(0.82)}}@keyframes morphBreathStrong{0%,100%{filter:brightness(1)}50%{filter:brightness(0.7)}}@keyframes morphBreathSoft{0%,100%{filter:brightness(1)}50%{filter:brightness(0.85)}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}}`}</style>
+      <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0;font-family:'Geist Pixel Square',monospace}body *:not([data-morph]){font-family:inherit!important}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(0.82)}}@keyframes morphBreathStrong{0%,100%{filter:brightness(1)}50%{filter:brightness(0.7)}}@keyframes morphBreathSoft{0%,100%{filter:brightness(1)}50%{filter:brightness(0.85)}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}}body[data-calm] *{animation:none!important;transition:none!important}`}</style>
       {loading && <Preloader onComplete={() => setLoading(false)} />}
       <Particles />
       <Nav section={section} setSection={setSection} cartCount={cart.length} />
@@ -1930,6 +1947,25 @@ export default function App() {
       {toast && <div style={{ position: "fixed", bottom: 52, left: "50%", transform: "translateX(-50%)", background: `${P.surface}ee`, border: `1px solid ${P.cyan}22`, color: P.ghost, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 2, padding: "8px 20px", zIndex: 200, backdropFilter: "blur(8px)", animation: "toastIn 0.25s ease" }}>{toast}</div>}
       <CookieConsent />
       <SpotifyBar />
+      {/* Calm Mode Toggle — above Soul Connection on right */}
+      <button
+        onClick={toggleCalm}
+        aria-label={calm ? "Enable animations" : "Enable calm mode"}
+        title={calm ? "Animations off — click to enable" : "Calm mode — click to pause all motion"}
+        style={{
+          position: "fixed", bottom: 42, right: 20, zIndex: 151,
+          background: `${P.abyss}ee`,
+          border: `1px solid ${calm ? P.cyan + "44" : P.cyan + "22"}`,
+          borderRadius: 3, padding: "5px 12px",
+          fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 3,
+          color: calm ? P.cyan : P.bone, opacity: calm ? 1 : 0.5,
+          cursor: "pointer", backdropFilter: "blur(8px)",
+          textTransform: "uppercase",
+        }}
+        onMouseEnter={e => { e.target.style.opacity = "1"; e.target.style.color = P.cyan; }}
+        onMouseLeave={e => { e.target.style.opacity = calm ? "1" : "0.5"; e.target.style.color = calm ? P.cyan : P.bone; }}
+      >{calm ? "\u2726 Calm" : "\u2248 River"}</button>
     </div>
+    </CalmContext.Provider>
   );
 }
