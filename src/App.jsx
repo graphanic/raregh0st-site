@@ -1578,31 +1578,47 @@ const Hero = ({ setSection }) => {
       {/* L2: Zoom field — the entire solar system (grid + moon + title + orbiting nodes) */}
       <div ref={setLayerRef(2)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
         <div ref={fieldRef} style={{ position: "absolute", inset: 0, willChange: "transform", transformOrigin: "50% 50%" }}>
-        {/* HUD grid — anchored behind the moon, moves with zoom/pan */}
-        <svg width="100%" height="100%" style={{ position: "absolute", inset: -60, overflow: "visible", opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s", pointerEvents: "none" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
-          <g opacity="0.14">
-            {[100, 180, 280, 400, 540, 700, 880, 1100, 1400, 1800].map((r, i) => (
-              <circle key={`cc-${i}`} cx="960" cy="540" r={r} fill="none" stroke={P.cyan} strokeWidth={i < 4 ? "0.6" : "0.4"} opacity={0.7 - i * 0.05} strokeDasharray={i % 2 === 0 ? "none" : "4 8"} />
+        {/* HUD grid — Destiny-style pronounced grid, centered on the moon */}
+        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, overflow: "visible", opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s", pointerEvents: "none" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
+          {/* Rectangular grid — bright, Destiny-style cartographic lines */}
+          <g opacity="0.35">
+            {Array.from({ length: 50 }, (_, i) => (
+              <line key={`gh-${i}`} x1="-500" y1={i * 54 - 500} x2="2420" y2={i * 54 - 500} stroke={P.cyan} strokeWidth="0.5" opacity="0.4" />
             ))}
-            {Array.from({ length: 24 }, (_, i) => {
-              const angle = (i / 24) * Math.PI * 2;
-              const x2 = 960 + Math.cos(angle) * 2500;
-              const y2 = 540 + Math.sin(angle) * 2500;
-              return <line key={`rl-${i}`} x1="960" y1="540" x2={x2} y2={y2} stroke={P.cyan} strokeWidth="0.4" opacity={i % 3 === 0 ? 0.5 : 0.2} />;
-            })}
-            {Array.from({ length: 30 }, (_, i) => (
-              <line key={`gh-${i}`} x1="-200" y1={i * 54 - 200} x2="2120" y2={i * 54 - 200} stroke={P.steel} strokeWidth="0.3" opacity="0.25" />
-            ))}
-            {Array.from({ length: 30 }, (_, i) => (
-              <line key={`gv-${i}`} x1={i * 80 - 200} y1="-200" x2={i * 80 - 200} y2="1280" stroke={P.steel} strokeWidth="0.3" opacity="0.25" />
+            {Array.from({ length: 50 }, (_, i) => (
+              <line key={`gv-${i}`} x1={i * 54 - 500} y1="-500" x2={i * 54 - 500} y2="1580" stroke={P.cyan} strokeWidth="0.5" opacity="0.4" />
             ))}
           </g>
-          <g opacity="0.1" style={{ transformOrigin: "960px 540px", animation: "spin 180s linear infinite" }}>
-            {Array.from({ length: 36 }, (_, i) => {
-              const angle = (i / 36) * Math.PI * 2;
+          {/* Concentric circles — pronounced, radiating from center */}
+          <g opacity="0.4">
+            {[80, 160, 260, 380, 520, 680, 860, 1080, 1350, 1700, 2100].map((r, i) => (
+              <circle key={`cc-${i}`} cx="960" cy="540" r={r} fill="none" stroke={P.cyan}
+                strokeWidth={i < 3 ? "1" : i < 6 ? "0.7" : "0.5"}
+                opacity={0.8 - i * 0.05}
+                strokeDasharray={i % 3 === 2 ? "6 12" : "none"} />
+            ))}
+          </g>
+          {/* Radial lines — every 15 degrees, extending well past viewport */}
+          <g opacity="0.3">
+            {Array.from({ length: 24 }, (_, i) => {
+              const angle = (i / 24) * Math.PI * 2;
+              const x2 = 960 + Math.cos(angle) * 3000;
+              const y2 = 540 + Math.sin(angle) * 3000;
+              return <line key={`rl-${i}`} x1="960" y1="540" x2={x2} y2={y2}
+                stroke={P.cyan} strokeWidth={i % 6 === 0 ? "0.8" : "0.4"}
+                opacity={i % 6 === 0 ? 0.7 : 0.35} />;
+            })}
+          </g>
+          {/* Slowly spinning outer tick ring */}
+          <g opacity="0.25" style={{ transformOrigin: "960px 540px", animation: "spin 180s linear infinite" }}>
+            {Array.from({ length: 72 }, (_, i) => {
+              const angle = (i / 72) * Math.PI * 2;
               const inner = 480;
-              const outer = 500;
-              return <line key={`tick-${i}`} x1={960 + Math.cos(angle) * inner} y1={540 + Math.sin(angle) * inner} x2={960 + Math.cos(angle) * outer} y2={540 + Math.sin(angle) * outer} stroke={P.cyan} strokeWidth={i % 3 === 0 ? "2" : "0.8"} />;
+              const outer = i % 6 === 0 ? 510 : i % 3 === 0 ? 498 : 492;
+              return <line key={`tick-${i}`}
+                x1={960 + Math.cos(angle) * inner} y1={540 + Math.sin(angle) * inner}
+                x2={960 + Math.cos(angle) * outer} y2={540 + Math.sin(angle) * outer}
+                stroke={P.cyan} strokeWidth={i % 6 === 0 ? "1.5" : i % 3 === 0 ? "0.8" : "0.4"} />;
             })}
           </g>
         </svg>
