@@ -1347,24 +1347,26 @@ const Hero = ({ setSection }) => {
   const containerRef = useRef(null);
   const layerRefs = useRef([]);
   const nodeRefs = useRef([]);
+  const fieldRef = useRef(null);
   const mouse = useRef({ x: 0, y: 0 });
   const smoothed = useRef({ x: 0, y: 0 });
   const raf = useRef(null);
   const lastTime = useRef(null);
+  const zoomTarget = useRef(1);
+  const zoomCurrent = useRef(1);
 
-  // L0:cosmos L1:stars L2:grid L3:moon L4:nodes+connections+center L5:vignette
+  // L0:cosmos L1:stars L2:grid L3:moon L4:field(nodes+center) L5:vignette
   const depths = [0.02, 0.04, 0.05, 0.03, 0.015, 0.07];
   const maxShift = 40;
 
   // ── Navigation nodes — orbiting the central moon ──
-  // Each node orbits at its own radius and speed. Farther = slower.
-  // startAngle spreads them evenly around the circle initially.
+  // Wider orbits so they spread across the viewport. Farther = slower.
   const nodes = [
-    { label: "Portfolio", dest: "portfolio", color: P.cyan,    orbitRadius: 240, speed: 180, startAngle: 200, radius: 52, ringCount: 3, desc: "Curated Works" },
-    { label: "Shop",      dest: "shop",      color: P.gold,    orbitRadius: 300, speed: 240, startAngle: 340, radius: 44, ringCount: 2, desc: "Prints & Originals" },
-    { label: "Media",     dest: "media",     color: P.magenta, orbitRadius: 210, speed: 160, startAngle: 130, radius: 40, ringCount: 2, desc: "Motion & Sound" },
-    { label: "The Work",  dest: "the-work",  color: P.purple,  orbitRadius: 330, speed: 300, startAngle: 50,  radius: 46, ringCount: 3, desc: "Process & Philosophy" },
-    { label: "Now",       dest: "now",       color: P.green,   orbitRadius: 170, speed: 120, startAngle: 270, radius: 34, ringCount: 2, desc: "Current Status" },
+    { label: "Portfolio", dest: "portfolio", color: P.cyan,    orbitRadius: 380, speed: 200, startAngle: 200, radius: 52, ringCount: 3, desc: "Curated Works" },
+    { label: "Shop",      dest: "shop",      color: P.gold,    orbitRadius: 480, speed: 280, startAngle: 340, radius: 44, ringCount: 2, desc: "Prints & Originals" },
+    { label: "Media",     dest: "media",     color: P.magenta, orbitRadius: 340, speed: 180, startAngle: 130, radius: 40, ringCount: 2, desc: "Motion & Sound" },
+    { label: "The Work",  dest: "the-work",  color: P.purple,  orbitRadius: 540, speed: 340, startAngle: 50,  radius: 46, ringCount: 3, desc: "Process & Philosophy" },
+    { label: "Now",       dest: "now",       color: P.green,   orbitRadius: 260, speed: 140, startAngle: 270, radius: 34, ringCount: 2, desc: "Current Status" },
   ];
 
   useEffect(() => { setTimeout(() => setVis(true), 100); }, []);
@@ -1381,8 +1383,17 @@ const Hero = ({ setSection }) => {
       mouse.current.x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
       mouse.current.y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
     };
+    const onWheel = (e) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.08 : 0.08;
+      zoomTarget.current = Math.max(0.3, Math.min(2.5, zoomTarget.current + delta));
+    };
     el.addEventListener("mousemove", onMove);
-    return () => el.removeEventListener("mousemove", onMove);
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("mousemove", onMove);
+      el.removeEventListener("wheel", onWheel);
+    };
   }, []);
 
   // Orbit angles stored in a ref so they persist across frames
@@ -1408,6 +1419,13 @@ const Hero = ({ setSection }) => {
         const tx = sx * maxShift * (d / 0.04);
         const ty = sy * maxShift * (d / 0.04);
         layer.style.transform = `translate3d(${-tx}px, ${-ty}px, 0)`;
+      }
+
+      // Smooth zoom
+      zoomCurrent.current += (zoomTarget.current - zoomCurrent.current) * 0.08;
+      const z = zoomCurrent.current;
+      if (fieldRef.current) {
+        fieldRef.current.style.transform = `scale(${z})`;
       }
 
       // Orbit each node
@@ -1521,6 +1539,8 @@ const Hero = ({ setSection }) => {
 
       {/* L4: Center hub + orbiting navigation nodes */}
       <div ref={setLayerRef(4)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
+        {/* Zoom field — scroll wheel scales this entire container */}
+        <div ref={fieldRef} style={{ position: "absolute", inset: 0, willChange: "transform", transformOrigin: "50% 50%" }}>
         {/* ── Center hub: logo + title ── */}
         <div style={{
           position: "absolute", left: "50%", top: "50%",
@@ -1666,6 +1686,7 @@ const Hero = ({ setSection }) => {
             </div>
           );
         })}
+        </div>{/* end zoom field */}
       </div>
 
       {/* L5: Vignette — softened so grid lines show through more */}
