@@ -134,11 +134,11 @@ const Particles = () => {
 // PRODUCTION: npm i geist → swap CSS filter sims for real fontFamily in MORPH_VARIANTS
 
 const MORPH_VARIANTS = [
-  { fontFamily: "inherit", opacity: 1 },                                                    // settled — original font
-  { fontFamily: "'Geist Pixel Square', sans-serif", opacity: 0.96 },                         // sharpest pixel
-  { fontFamily: "'Geist Pixel Grid', sans-serif", opacity: 0.90 },                           // grid texture
-  { fontFamily: "'Geist Pixel Circle', sans-serif", opacity: 0.82 },                         // soft pixel
-  { fontFamily: "'Geist Pixel Line', sans-serif", opacity: 0.68 },                           // most abstract
+  { fontFamily: "'Geist Pixel Square', monospace", opacity: 1 },                             // settled — base
+  { fontFamily: "'Geist Pixel Grid', monospace", opacity: 0.96 },                            // grid texture
+  { fontFamily: "'Geist Pixel Circle', monospace", opacity: 0.92 },                          // soft pixel
+  { fontFamily: "'Geist Pixel Triangle', monospace", opacity: 0.88 },                        // angular
+  { fontFamily: "'Geist Pixel Line', monospace", opacity: 0.80 },                            // most abstract
 ];
 
 // Hero entrance — scramble then cycle
@@ -1905,6 +1905,24 @@ export default function App() {
   const [cart, setCart] = useState(() => loadLocal("cart", []));
   const [toast, setToast] = useState(null);
   useImageProtection();
+
+  // GLOBAL FONT RIVER — cycles entire site through all 5 Geist Pixel variants
+  const PIXEL_FONTS = [
+    "'Geist Pixel Square', monospace",
+    "'Geist Pixel Grid', monospace",
+    "'Geist Pixel Circle', monospace",
+    "'Geist Pixel Triangle', monospace",
+    "'Geist Pixel Line', monospace",
+  ];
+  useEffect(() => {
+    let i = 0;
+    const river = setInterval(() => {
+      i = (i + 1) % PIXEL_FONTS.length;
+      document.body.style.fontFamily = PIXEL_FONTS[i];
+    }, 120);
+    return () => clearInterval(river);
+  }, []);
+
   const addToCart = (p) => { setCart(prev => { const next = [...prev, p]; saveLocal("cart", next); return next; }); setToast(`Added "${p.title}"`); setTimeout(() => setToast(null), 2000); };
   const removeFromCart = (i) => setCart(prev => { const next = prev.filter((_, idx) => idx !== i); saveLocal("cart", next); return next; });
   useEffect(() => { saveLocal("section", section); window.scrollTo({ top: 0, behavior: "smooth" }); }, [section]);
@@ -1913,7 +1931,7 @@ export default function App() {
   const is404 = !validSections.includes(section);
   return (
     <div style={{ minHeight: "100vh", background: P.abyss, color: P.ghost, position: "relative" }}>
-      <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(0.82)}}@keyframes morphBreathStrong{0%,100%{filter:brightness(1)}50%{filter:brightness(0.7)}}@keyframes morphBreathSoft{0%,100%{filter:brightness(1)}50%{filter:brightness(0.85)}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}}`}</style>
+      <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0;font-family:'Geist Pixel Square',monospace}body *{font-family:inherit!important}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(0.82)}}@keyframes morphBreathStrong{0%,100%{filter:brightness(1)}50%{filter:brightness(0.7)}}@keyframes morphBreathSoft{0%,100%{filter:brightness(1)}50%{filter:brightness(0.85)}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}}`}</style>
       {loading && <Preloader onComplete={() => setLoading(false)} />}
       <Particles />
       <Nav section={section} setSection={setSection} cartCount={cart.length} />
