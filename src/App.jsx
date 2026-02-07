@@ -1346,13 +1346,50 @@ const Hero = ({ setSection }) => {
   const [hoveredNode, setHoveredNode] = useState(null);
   const containerRef = useRef(null);
   const layerRefs = useRef([]);
+  const nodeRefs = useRef([]);
+  const fieldRef = useRef(null);
   const mouse = useRef({ x: 0, y: 0 });
   const smoothed = useRef({ x: 0, y: 0 });
   const raf = useRef(null);
+  const lastTime = useRef(null);
+  const zoomTarget = useRef(1);
+  const zoomCurrent = useRef(1);
+  // Panning state
+  const panTarget = useRef({ x: 0, y: 0 });
+  const panCurrent = useRef({ x: 0, y: 0 });
+  const isDragging = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const dragPanStart = useRef({ x: 0, y: 0 });
 
-  // L0:cosmos L1:stars L2:grid L3:connections L3.5:moon L4:nodes+center L5:vignette
-  const depths = [0.02, 0.04, 0.05, 0.035, 0.03, 0.015, 0.07];
+  // L0:cosmos L1:stars L2:field(grid+moon+center+nodes) L3:vignette
+  const depths = [0.02, 0.04, 0.015, 0.07];
   const maxShift = 40;
+
+  // ── Navigation nodes — orbiting the central moon ──
+  // Wider orbits so they spread across the viewport. Farther = slower.
+  // Nodes can have `moons` — sub-items that orbit the node itself.
+  const nodes = [
+    { label: "Portfolio", dest: "portfolio", color: P.cyan,    orbitRadius: 480, speed: 200, startAngle: 200, radius: 52, ringCount: 3, desc: "Curated Works" },
+    { label: "Shop",      dest: "shop",      color: P.gold,    orbitRadius: 620, speed: 280, startAngle: 340, radius: 54, ringCount: 2, desc: "Prints & Originals", moons: [
+      { label: "Apparel",     orbitRadius: 70,  speed: 18, startAngle: 0,   size: 18 },
+      { label: "Accessories", orbitRadius: 90,  speed: 24, startAngle: 72,  size: 16 },
+      { label: "Art Prints",  orbitRadius: 110, speed: 30, startAngle: 144, size: 20 },
+      { label: "Digital",     orbitRadius: 130, speed: 36, startAngle: 216, size: 15 },
+      { label: "Courses",     orbitRadius: 150, speed: 42, startAngle: 288, size: 17 },
+    ]},
+    { label: "Media",     dest: "media",     color: P.magenta, orbitRadius: 420, speed: 180, startAngle: 130, radius: 40, ringCount: 2, desc: "Motion & Sound" },
+    { label: "The Work",  dest: "the-work",  color: P.purple,  orbitRadius: 720, speed: 340, startAngle: 50,  radius: 46, ringCount: 3, desc: "Process & Philosophy" },
+    { label: "Now",       dest: "now",       color: P.green,   orbitRadius: 340, speed: 140, startAngle: 270, radius: 34, ringCount: 2, desc: "Current Status" },
+  ];
+
+  // Build flat list of all sub-moons for RAF tracking
+  const allMoons = [];
+  nodes.forEach((node, ni) => {
+    if (node.moons) node.moons.forEach((moon, mi) => {
+      allMoons.push({ nodeIndex: ni, moonIndex: mi, ...moon });
+    });
+  });
+  const moonRefs = useRef([]);
 
   useEffect(() => { setTimeout(() => setVis(true), 100); }, []);
   useEffect(() => {
@@ -1363,18 +1400,74 @@ const Hero = ({ setSection }) => {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+
     const onMove = (e) => {
       const rect = el.getBoundingClientRect();
       mouse.current.x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
       mouse.current.y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+      mouse.current.px = e.clientX - rect.left;
+      mouse.current.py = e.clientY - rect.top;
+      mouse.current.w = rect.width;
+      mouse.current.h = rect.height;
+      // Drag panning
+      if (isDragging.current) {
+        const dx = e.clientX - dragStart.current.x;
+        const dy = e.clientY - dragStart.current.y;
+        panTarget.current.x = dragPanStart.current.x + dx;
+        panTarget.current.y = dragPanStart.current.y + dy;
+      }
+    };
+    const onDown = (e) => {
+      if (e.button !== 0) return;
+      isDragging.current = true;
+      dragStart.current = { x: e.clientX, y: e.clientY };
+      dragPanStart.current = { x: panTarget.current.x, y: panTarget.current.y };
+      el.style.cursor = "grabbing";
+    };
+    const onUp = () => {
+      isDragging.current = false;
+      el.style.cursor = "";
+    };
+    const onWheel = (e) => {
+      e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      // Mouse position relative to viewport center
+      const mx = e.clientX - rect.left - rect.width / 2;
+      const my = e.clientY - rect.top - rect.height / 2;
+      const oldZoom = zoomTarget.current;
+      const delta = e.deltaY > 0 ? -0.08 : 0.08;
+      const newZoom = Math.max(0.3, Math.min(2.5, oldZoom + delta));
+      // Adjust pan so the point under the mouse stays fixed
+      const factor = 1 - newZoom / oldZoom;
+      panTarget.current.x += (mx - panTarget.current.x) * factor;
+      panTarget.current.y += (my - panTarget.current.y) * factor;
+      zoomTarget.current = newZoom;
     };
     el.addEventListener("mousemove", onMove);
-    return () => el.removeEventListener("mousemove", onMove);
+    el.addEventListener("mousedown", onDown);
+    window.addEventListener("mouseup", onUp);
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("mousemove", onMove);
+      el.removeEventListener("mousedown", onDown);
+      window.removeEventListener("mouseup", onUp);
+      el.removeEventListener("wheel", onWheel);
+    };
   }, []);
+
+  // Orbit angles stored in a ref so they persist across frames
+  const orbitAngles = useRef(nodes.map(n => n.startAngle));
+  const moonAngles = useRef(allMoons.map(m => m.startAngle));
 
   useEffect(() => {
     const ease = 0.08;
-    const tick = () => {
+    const tick = (timestamp) => {
+      // Delta time
+      if (!lastTime.current) lastTime.current = timestamp;
+      const dt = Math.min((timestamp - lastTime.current) / 1000, 0.1); // cap at 100ms
+      lastTime.current = timestamp;
+
+      // Parallax layers
       smoothed.current.x += (mouse.current.x - smoothed.current.x) * ease;
       smoothed.current.y += (mouse.current.y - smoothed.current.y) * ease;
       const sx = smoothed.current.x;
@@ -1387,6 +1480,57 @@ const Hero = ({ setSection }) => {
         const ty = sy * maxShift * (d / 0.04);
         layer.style.transform = `translate3d(${-tx}px, ${-ty}px, 0)`;
       }
+
+      // Clamp pan — tight at max zoom-out, expansive when zoomed in
+      // At min zoom (0.3): boundary is ~0.35 viewport (brand stays reachable)
+      // As you zoom in the boundary scales up so you can explore the full system
+      const vw = mouse.current.w || window.innerWidth;
+      const vh = mouse.current.h || window.innerHeight;
+      const curZoom = zoomTarget.current;
+      const minZoom = 0.3;
+      const boundScale = curZoom / minZoom; // 1x at min zoom, ~3.3x at zoom 1, ~8.3x at zoom 2.5
+      const maxPanX = vw * 0.35 * boundScale;
+      const maxPanY = vh * 0.35 * boundScale;
+      panTarget.current.x = Math.max(-maxPanX, Math.min(maxPanX, panTarget.current.x));
+      panTarget.current.y = Math.max(-maxPanY, Math.min(maxPanY, panTarget.current.y));
+
+      // Smooth pan + zoom
+      panCurrent.current.x += (panTarget.current.x - panCurrent.current.x) * 0.1;
+      panCurrent.current.y += (panTarget.current.y - panCurrent.current.y) * 0.1;
+      zoomCurrent.current += (zoomTarget.current - zoomCurrent.current) * 0.08;
+      const z = zoomCurrent.current;
+      const fpx = panCurrent.current.x;
+      const fpy = panCurrent.current.y;
+      if (fieldRef.current) {
+        fieldRef.current.style.transform = `translate(${fpx}px, ${fpy}px) scale(${z})`;
+      }
+
+      // Orbit each node around the sun
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i];
+        const el = nodeRefs.current[i];
+        if (!el) continue;
+        const degreesPerSec = 360 / node.speed;
+        orbitAngles.current[i] = (orbitAngles.current[i] + degreesPerSec * dt) % 360;
+        const rad = (orbitAngles.current[i] * Math.PI) / 180;
+        const ox = Math.cos(rad) * node.orbitRadius;
+        const oy = Math.sin(rad) * node.orbitRadius;
+        el.style.transform = `translate(${ox}px, ${oy}px)`;
+      }
+
+      // Orbit each sub-moon around its parent node
+      for (let m = 0; m < allMoons.length; m++) {
+        const moon = allMoons[m];
+        const el = moonRefs.current[m];
+        if (!el) continue;
+        const degreesPerSec = 360 / moon.speed;
+        moonAngles.current[m] = (moonAngles.current[m] + degreesPerSec * dt) % 360;
+        const rad = (moonAngles.current[m] * Math.PI) / 180;
+        const mx = Math.cos(rad) * moon.orbitRadius;
+        const my = Math.sin(rad) * moon.orbitRadius;
+        el.style.transform = `translate(${mx}px, ${my}px)`;
+      }
+
       raf.current = requestAnimationFrame(tick);
     };
     raf.current = requestAnimationFrame(tick);
@@ -1405,16 +1549,6 @@ const Hero = ({ setSection }) => {
 
   const setLayerRef = (i) => (el) => { layerRefs.current[i] = el; };
   const layerBase = { position: "absolute", inset: -60, pointerEvents: "none", willChange: "transform" };
-
-  // ── Navigation nodes — positioned like planets on a star chart ──
-  // x,y are percentages from center (0,0). Radius is the node circle size.
-  const nodes = [
-    { label: "Portfolio", dest: "portfolio", color: P.cyan,    x: -28, y: -22, radius: 52, ringCount: 3, desc: "Curated Works" },
-    { label: "Shop",      dest: "shop",      color: P.gold,    x: 30,  y: -18, radius: 44, ringCount: 2, desc: "Prints & Originals" },
-    { label: "Media",     dest: "media",     color: P.magenta, x: -32, y: 24,  radius: 40, ringCount: 2, desc: "Motion & Sound" },
-    { label: "The Work",  dest: "the-work",  color: P.purple,  x: 26,  y: 28,  radius: 46, ringCount: 3, desc: "Process & Philosophy" },
-    { label: "Now",       dest: "now",       color: P.green,   x: 0,   y: -36, radius: 34, ringCount: 2, desc: "Current Status" },
-  ];
 
   return (
     <div ref={containerRef} style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", position: "relative", overflow: "hidden" }}>
@@ -1446,133 +1580,76 @@ const Hero = ({ setSection }) => {
         ))}
       </div>
 
-      {/* L2: HUD grid overlay — radiating lines + concentric circles, extends far off-screen */}
-      <div ref={setLayerRef(2)} style={{ ...layerBase, zIndex: 2 }}>
-        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, overflow: "visible", opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
-          <g opacity="0.14">
-            {/* Concentric circles from center — extending well past viewport */}
-            {[100, 180, 280, 400, 540, 700, 880, 1100, 1400, 1800].map((r, i) => (
-              <circle key={`cc-${i}`} cx="960" cy="540" r={r} fill="none" stroke={P.cyan} strokeWidth={i < 4 ? "0.6" : "0.4"} opacity={0.7 - i * 0.05} strokeDasharray={i % 2 === 0 ? "none" : "4 8"} />
+      {/* L2: Zoom field — the entire solar system (grid + moon + title + orbiting nodes) */}
+      <div ref={setLayerRef(2)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
+        <div ref={fieldRef} style={{ position: "absolute", inset: 0, willChange: "transform", transformOrigin: "50% 50%" }}>
+        {/* HUD grid — Destiny-style pronounced grid, centered on the moon */}
+        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, overflow: "visible", opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s", pointerEvents: "none" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
+          {/* Rectangular grid — bright, Destiny-style cartographic lines */}
+          <g opacity="0.35">
+            {Array.from({ length: 50 }, (_, i) => (
+              <line key={`gh-${i}`} x1="-500" y1={i * 54 - 500} x2="2420" y2={i * 54 - 500} stroke={P.cyan} strokeWidth="0.5" opacity="0.4" />
             ))}
-            {/* Radial lines from center — every 15 degrees, extending 2500px from center (well off-screen) */}
+            {Array.from({ length: 50 }, (_, i) => (
+              <line key={`gv-${i}`} x1={i * 54 - 500} y1="-500" x2={i * 54 - 500} y2="1580" stroke={P.cyan} strokeWidth="0.5" opacity="0.4" />
+            ))}
+          </g>
+          {/* Concentric circles — pronounced, radiating from center */}
+          <g opacity="0.4">
+            {[80, 160, 260, 380, 520, 680, 860, 1080, 1350, 1700, 2100].map((r, i) => (
+              <circle key={`cc-${i}`} cx="960" cy="540" r={r} fill="none" stroke={P.cyan}
+                strokeWidth={i < 3 ? "1" : i < 6 ? "0.7" : "0.5"}
+                opacity={0.8 - i * 0.05}
+                strokeDasharray={i % 3 === 2 ? "6 12" : "none"} />
+            ))}
+          </g>
+          {/* Radial lines — every 15 degrees, extending well past viewport */}
+          <g opacity="0.3">
             {Array.from({ length: 24 }, (_, i) => {
               const angle = (i / 24) * Math.PI * 2;
-              const x2 = 960 + Math.cos(angle) * 2500;
-              const y2 = 540 + Math.sin(angle) * 2500;
-              return <line key={`rl-${i}`} x1="960" y1="540" x2={x2} y2={y2} stroke={P.cyan} strokeWidth="0.4" opacity={i % 3 === 0 ? 0.5 : 0.2} />;
+              const x2 = 960 + Math.cos(angle) * 3000;
+              const y2 = 540 + Math.sin(angle) * 3000;
+              return <line key={`rl-${i}`} x1="960" y1="540" x2={x2} y2={y2}
+                stroke={P.cyan} strokeWidth={i % 6 === 0 ? "0.8" : "0.4"}
+                opacity={i % 6 === 0 ? 0.7 : 0.35} />;
             })}
-            {/* Rectangular grid — extends full viewport and beyond */}
-            {Array.from({ length: 30 }, (_, i) => (
-              <line key={`gh-${i}`} x1="-200" y1={i * 54 - 200} x2="2120" y2={i * 54 - 200} stroke={P.steel} strokeWidth="0.3" opacity="0.25" />
-            ))}
-            {Array.from({ length: 30 }, (_, i) => (
-              <line key={`gv-${i}`} x1={i * 80 - 200} y1="-200" x2={i * 80 - 200} y2="1280" stroke={P.steel} strokeWidth="0.3" opacity="0.25" />
-            ))}
           </g>
-          {/* Slowly spinning outer ring markers */}
-          <g opacity="0.1" style={{ transformOrigin: "960px 540px", animation: "spin 180s linear infinite" }}>
-            {Array.from({ length: 36 }, (_, i) => {
-              const angle = (i / 36) * Math.PI * 2;
+          {/* Slowly spinning outer tick ring */}
+          <g opacity="0.25" style={{ transformOrigin: "960px 540px", animation: "spin 180s linear infinite" }}>
+            {Array.from({ length: 72 }, (_, i) => {
+              const angle = (i / 72) * Math.PI * 2;
               const inner = 480;
-              const outer = 500;
-              return <line key={`tick-${i}`} x1={960 + Math.cos(angle) * inner} y1={540 + Math.sin(angle) * inner} x2={960 + Math.cos(angle) * outer} y2={540 + Math.sin(angle) * outer} stroke={P.cyan} strokeWidth={i % 3 === 0 ? "2" : "0.8"} />;
+              const outer = i % 6 === 0 ? 510 : i % 3 === 0 ? 498 : 492;
+              return <line key={`tick-${i}`}
+                x1={960 + Math.cos(angle) * inner} y1={540 + Math.sin(angle) * inner}
+                x2={960 + Math.cos(angle) * outer} y2={540 + Math.sin(angle) * outer}
+                stroke={P.cyan} strokeWidth={i % 6 === 0 ? "1.5" : i % 3 === 0 ? "0.8" : "0.4"} />;
             })}
           </g>
         </svg>
-      </div>
-
-      {/* L3: Connection lines — from center through nodes, extending off-screen */}
-      <div ref={setLayerRef(3)} style={{ ...layerBase, zIndex: 3 }}>
-        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, overflow: "visible", opacity: vis ? 1 : 0, transition: "opacity 2.5s ease 1s" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
-          {nodes.map((node, i) => {
-            const nx = 960 + (node.x / 100) * 1920;
-            const ny = 540 + (node.y / 100) * 1080;
-            const isHovered = hoveredNode === i;
-            // Extend line from center through node and far off-screen
-            const dx = nx - 960;
-            const dy = ny - 540;
-            const len = Math.sqrt(dx * dx + dy * dy) || 1;
-            const ex = 960 + (dx / len) * 2500;
-            const ey = 540 + (dy / len) * 2500;
-            return (
-              <g key={`conn-${i}`}>
-                {/* Extended connection line — through node to edge of space */}
-                <line x1="960" y1="540" x2={ex} y2={ey}
-                  stroke={node.color} strokeWidth={isHovered ? "1" : "0.5"}
-                  opacity={isHovered ? 0.4 : 0.12}
-                  style={{ transition: "all 0.5s ease", filter: isHovered ? `drop-shadow(0 0 6px ${node.color})` : "none" }}
-                />
-                {/* Brighter segment from center to node */}
-                <line x1="960" y1="540" x2={nx} y2={ny}
-                  stroke={node.color} strokeWidth={isHovered ? "1.4" : "0.7"}
-                  opacity={isHovered ? 0.6 : 0.2}
-                  style={{ transition: "all 0.5s ease" }}
-                />
-                {/* Mid-point diamond marker */}
-                <g transform={`translate(${(960 + nx) / 2},${(540 + ny) / 2}) rotate(45)`}>
-                  <rect x="-3" y="-3" width="6" height="6" fill="none" stroke={node.color} strokeWidth="0.6" opacity={isHovered ? 0.6 : 0.25} />
-                </g>
-                {/* Cross-connections between adjacent nodes */}
-                {i < nodes.length - 1 && (() => {
-                  const next = nodes[i + 1];
-                  const nnx = 960 + (next.x / 100) * 1920;
-                  const nny = 540 + (next.y / 100) * 1080;
-                  return <line x1={nx} y1={ny} x2={nnx} y2={nny} stroke={P.steel} strokeWidth="0.4" opacity="0.12" strokeDasharray="6 12" />;
-                })()}
-              </g>
-            );
-          })}
-          {/* Close the loop: last to first */}
-          {(() => {
-            const first = nodes[0];
-            const last = nodes[nodes.length - 1];
-            const fx = 960 + (first.x / 100) * 1920;
-            const fy = 540 + (first.y / 100) * 1080;
-            const lx = 960 + (last.x / 100) * 1920;
-            const ly = 540 + (last.y / 100) * 1080;
-            return <line x1={lx} y1={ly} x2={fx} y2={fy} stroke={P.steel} strokeWidth="0.4" opacity="0.12" strokeDasharray="6 12" />;
-          })()}
-        </svg>
-      </div>
-
-      {/* L4: Moon — central celestial body behind text */}
-      <div ref={setLayerRef(4)} style={{ ...layerBase, zIndex: 4, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        {/* ── Moon — gravitational center, anchored to the brand identity ── */}
         <div style={{
+          position: "absolute", left: "50%", top: "50%",
+          transform: "translate(-50%, -50%)",
           width: "clamp(350px, 45vw, 580px)", height: "clamp(350px, 45vw, 580px)",
           borderRadius: "50%",
           background: `radial-gradient(circle at 50% 40%, #1e1e2e 0%, #141420 45%, #0c0c16 70%, ${P.abyss} 100%)`,
           boxShadow: `0 0 120px 40px ${P.abyss}, inset 0 0 80px rgba(0,0,0,0.4), 0 0 200px 60px ${P.cyan}08`,
           opacity: vis ? 1 : 0,
           transition: "opacity 2.5s cubic-bezier(0.16,1,0.3,1)",
+          zIndex: 1,
         }} />
-      </div>
-
-      {/* L5: Center hub + navigation nodes — interactive */}
-      <div ref={setLayerRef(5)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
-        {/* ── Center hub: logo + title ── */}
+        {/* ── Center hub: logo + title (sits on the moon) ── */}
         <div style={{
           position: "absolute", left: "50%", top: "50%",
           transform: "translate(-50%, -50%)",
           display: "flex", flexDirection: "column", alignItems: "center",
-          pointerEvents: "auto",
+          pointerEvents: "auto", zIndex: 20,
         }}>
-          {/* Concentric rings around center */}
-          {[90, 120, 160].map((size, i) => (
-            <div key={`hub-ring-${i}`} style={{
-              position: "absolute",
-              width: size, height: size,
-              borderRadius: "50%",
-              border: `1px solid ${P.cyan}`,
-              opacity: vis ? [0.2, 0.12, 0.07][i] : 0,
-              transition: `opacity 2s ease ${1 + i * 0.2}s`,
-              animation: `fractalPulse ${8 + i * 2}s ease-in-out ${i * 0.3}s infinite`,
-              boxShadow: `0 0 12px ${P.cyan}15, inset 0 0 8px ${P.cyan}08`,
-            }} />
-          ))}
-          {/* Logo */}
+          {/* Logo — 33% of original size */}
           <div style={{ opacity: vis ? 1 : 0, transition: "opacity 2s cubic-bezier(0.16,1,0.3,1) 0.3s", marginBottom: 16 }}>
             <img src={LOGO_IMG} alt="RareGh0st" style={{
-              width: "clamp(100px, 15vw, 160px)", height: "clamp(100px, 15vw, 160px)",
+              width: "clamp(33px, 5vw, 53px)", height: "clamp(33px, 5vw, 53px)",
               filter: `brightness(1.1) drop-shadow(0 0 24px hsl(${logoGlow}, 100%, 50%, 0.25)) drop-shadow(0 0 48px hsl(${(logoGlow + 180) % 360}, 100%, 50%, 0.12))`,
               animation: "breathe 4s ease-in-out infinite",
             }} />
@@ -1587,19 +1664,39 @@ const Hero = ({ setSection }) => {
           </div>
         </div>
 
-        {/* ── Navigation nodes — circular destinations ── */}
+        {/* ── Orbit tracks (visible rings showing each orbit path) ── */}
+        {nodes.map((node, i) => (
+          <div key={`orbit-track-${i}`} style={{
+            position: "absolute",
+            left: "50%", top: "50%",
+            width: node.orbitRadius * 2,
+            height: node.orbitRadius * 2,
+            marginLeft: -node.orbitRadius,
+            marginTop: -node.orbitRadius,
+            borderRadius: "50%",
+            border: `0.5px solid ${node.color}`,
+            opacity: vis ? 0.06 : 0,
+            transition: `opacity 2s ease ${1 + i * 0.2}s`,
+            pointerEvents: "none",
+          }} />
+        ))}
+
+        {/* ── Orbiting navigation nodes (JS-driven via RAF) ── */}
         {nodes.map((node, i) => {
           const isHovered = hoveredNode === i;
           return (
-            <div key={node.dest} style={{
-              position: "absolute",
-              left: `${50 + node.x}%`,
-              top: `${50 + node.y}%`,
-              transform: "translate(-50%, -50%)",
-              pointerEvents: "auto",
-              cursor: "pointer",
-              zIndex: 15,
-            }}
+            <div key={node.dest}
+              ref={(el) => { nodeRefs.current[i] = el; }}
+              style={{
+                position: "absolute",
+                left: "50%", top: "50%",
+                marginLeft: -node.radius,
+                marginTop: -node.radius,
+                pointerEvents: "auto",
+                cursor: "pointer",
+                zIndex: 15,
+                willChange: "transform",
+              }}
               onClick={() => setSection(node.dest)}
               onMouseEnter={() => setHoveredNode(i)}
               onMouseLeave={() => setHoveredNode(null)}
@@ -1616,12 +1713,12 @@ const Hero = ({ setSection }) => {
                   borderRadius: "50%",
                   border: `${ri === 0 ? 1.5 : 0.5}px solid ${node.color}`,
                   opacity: vis ? (isHovered ? 0.5 - ri * 0.12 : 0.18 - ri * 0.05) : 0,
-                  transition: `opacity 0.5s ease, box-shadow 0.5s ease`,
+                  transition: "opacity 0.5s ease, box-shadow 0.5s ease",
                   boxShadow: isHovered ? `0 0 ${16 + ri * 4}px ${node.color}30, inset 0 0 ${8 + ri * 2}px ${node.color}15` : "none",
                   animation: `fractalPulse ${6 + ri * 2}s ease-in-out ${ri * 0.5 + i * 0.3}s infinite`,
                 }} />
               ))}
-              {/* Dotted ring (innermost detail) */}
+              {/* Dotted ring */}
               <div style={{
                 position: "absolute",
                 left: "50%", top: "50%",
@@ -1635,7 +1732,7 @@ const Hero = ({ setSection }) => {
                 transition: "opacity 0.5s ease",
                 animation: `spin ${30 + i * 10}s linear infinite ${i % 2 === 0 ? "" : "reverse"}`,
               }} />
-              {/* Inner glow disc */}
+              {/* Inner glow disc + labels */}
               <div style={{
                 width: node.radius * 2,
                 height: node.radius * 2,
@@ -1644,46 +1741,33 @@ const Hero = ({ setSection }) => {
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                 transition: "background 0.5s ease",
               }}>
-                {/* Label */}
                 <div style={{
                   fontFamily: "'Courier New', monospace",
-                  fontSize: 10,
-                  letterSpacing: 4,
-                  color: node.color,
+                  fontSize: 10, letterSpacing: 4, color: node.color,
                   textTransform: "uppercase",
                   opacity: vis ? (isHovered ? 1 : 0.7) : 0,
                   transition: "opacity 0.4s ease",
                   textShadow: isHovered ? `0 0 12px ${node.color}` : "none",
-                  textAlign: "center",
-                  lineHeight: 1.4,
+                  textAlign: "center", lineHeight: 1.4,
                 }}>
                   <HoverMorphText>{node.label}</HoverMorphText>
                 </div>
-                {/* Description — shows on hover */}
                 <div style={{
-                  fontFamily: "'Georgia', serif",
-                  fontSize: 9,
-                  color: P.bone,
+                  fontFamily: "'Georgia', serif", fontSize: 9, color: P.bone,
                   opacity: isHovered ? 0.5 : 0,
                   transition: "opacity 0.4s ease 0.1s",
-                  marginTop: 4,
-                  textAlign: "center",
-                  letterSpacing: 1,
+                  marginTop: 4, textAlign: "center", letterSpacing: 1,
                 }}>
                   {node.desc}
                 </div>
               </div>
-              {/* Tick marks around node — like a compass */}
+              {/* Tick marks */}
               <svg style={{
-                position: "absolute",
-                left: "50%", top: "50%",
-                width: node.radius * 2 + 30,
-                height: node.radius * 2 + 30,
-                marginLeft: -(node.radius + 15),
-                marginTop: -(node.radius + 15),
+                position: "absolute", left: "50%", top: "50%",
+                width: node.radius * 2 + 30, height: node.radius * 2 + 30,
+                marginLeft: -(node.radius + 15), marginTop: -(node.radius + 15),
                 opacity: vis ? (isHovered ? 0.5 : 0.12) : 0,
-                transition: "opacity 0.5s ease",
-                pointerEvents: "none",
+                transition: "opacity 0.5s ease", pointerEvents: "none",
               }} viewBox={`0 0 ${node.radius * 2 + 30} ${node.radius * 2 + 30}`}>
                 {Array.from({ length: 12 }, (_, ti) => {
                   const angle = (ti / 12) * Math.PI * 2;
@@ -1697,19 +1781,129 @@ const Hero = ({ setSection }) => {
                     stroke={node.color} strokeWidth={ti % 3 === 0 ? "1.2" : "0.5"} />;
                 })}
               </svg>
+              {/* ── Sub-moons orbiting this node ── */}
+              {node.moons && node.moons.map((moon, mi) => {
+                // Find the flat index in allMoons
+                const flatIdx = allMoons.findIndex(m => m.nodeIndex === i && m.moonIndex === mi);
+                return (
+                  <div key={`moon-${mi}`} style={{ contents: "initial", display: "contents" }}>
+                    {/* Moon orbit track */}
+                    <div style={{
+                      position: "absolute",
+                      left: "50%", top: "50%",
+                      width: moon.orbitRadius * 2, height: moon.orbitRadius * 2,
+                      marginLeft: -moon.orbitRadius, marginTop: -moon.orbitRadius,
+                      borderRadius: "50%",
+                      border: `0.5px dashed ${node.color}`,
+                      opacity: vis ? 0.08 : 0,
+                      transition: "opacity 2s ease",
+                      pointerEvents: "none",
+                    }} />
+                    {/* Moon body */}
+                    <div
+                      ref={(el) => { moonRefs.current[flatIdx] = el; }}
+                      style={{
+                        position: "absolute",
+                        left: "50%", top: "50%",
+                        marginLeft: -(moon.size / 2),
+                        marginTop: -(moon.size / 2),
+                        width: moon.size, height: moon.size,
+                        willChange: "transform",
+                        pointerEvents: "auto",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {/* Moon glow disc */}
+                      <div style={{
+                        width: moon.size, height: moon.size,
+                        borderRadius: "50%",
+                        border: `1px solid ${node.color}`,
+                        background: `radial-gradient(circle, ${node.color}15 0%, transparent 70%)`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        opacity: vis ? 0.7 : 0,
+                        transition: "opacity 0.4s ease",
+                        boxShadow: `0 0 8px ${node.color}20`,
+                      }}>
+                        <div style={{
+                          width: moon.size * 0.4, height: moon.size * 0.4,
+                          borderRadius: "50%",
+                          background: node.color,
+                          opacity: 0.5,
+                        }} />
+                      </div>
+                      {/* Moon label */}
+                      <div style={{
+                        position: "absolute",
+                        top: moon.size + 4,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        fontFamily: "'Courier New', monospace",
+                        fontSize: 7, letterSpacing: 2,
+                        color: node.color,
+                        textTransform: "uppercase",
+                        whiteSpace: "nowrap",
+                        opacity: vis ? 0.5 : 0,
+                        textAlign: "center",
+                      }}>
+                        {moon.label}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           );
         })}
-      </div>
+        </div>{/* end zoom field */}
+      </div>{/* end L2 */}
 
-      {/* L6: Vignette — softened so grid lines show through more */}
-      <div ref={setLayerRef(6)} style={{ ...layerBase, zIndex: 20, pointerEvents: "none" }}>
+      {/* L3: Vignette — softened so grid lines show through more */}
+      <div ref={setLayerRef(3)} style={{ ...layerBase, zIndex: 20, pointerEvents: "none" }}>
         <div style={{
           position: "absolute", inset: 0,
           background: `radial-gradient(ellipse 100% 95% at 50% 50%, transparent 35%, ${P.abyss}44 60%, ${P.abyss}88 80%, ${P.abyss}cc 95%)`,
           opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s",
         }} />
       </div>
+
+      {/* Home button — resets pan/zoom to center */}
+      <button
+        onClick={() => {
+          panTarget.current = { x: 0, y: 0 };
+          zoomTarget.current = 1;
+        }}
+        style={{
+          position: "absolute",
+          bottom: 24, left: 24,
+          zIndex: 30,
+          width: 40, height: 40,
+          borderRadius: "50%",
+          border: `1px solid ${P.cyan}40`,
+          background: `${P.abyss}cc`,
+          color: P.cyan,
+          cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          opacity: vis ? 0.7 : 0,
+          transition: "opacity 0.4s ease, border-color 0.3s ease, box-shadow 0.3s ease",
+          backdropFilter: "blur(8px)",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.opacity = "1";
+          e.currentTarget.style.borderColor = P.cyan;
+          e.currentTarget.style.boxShadow = `0 0 12px ${P.cyan}40`;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.opacity = "0.7";
+          e.currentTarget.style.borderColor = `${P.cyan}40`;
+          e.currentTarget.style.boxShadow = "none";
+        }}
+        aria-label="Return to center"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+      </button>
     </div>
   );
 };
@@ -2032,7 +2226,7 @@ const Footer = ({ setSection }) => (
   </footer>
 );
 
-// ─── IMAGE PROTECTION HOOK ──────────────────────────────
+// ─── IMAGE PROTECTION HOOK ───────────────────────────���──
 const useImageProtection = () => {
   useEffect(() => {
     // Disable right-click on images
@@ -2108,6 +2302,130 @@ const Preloader = ({ onComplete }) => {
           background: `linear-gradient(to right, ${P.cyan}44, ${P.magenta}44)`,
           transition: "width 1.2s cubic-bezier(0.16,1,0.3,1)",
         }} />
+      </div>
+    </div>
+  );
+};
+
+// ─── MOBILE DETECTION ──────────────────────────────────
+const useIsMobile = (breakpoint = 768) => {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < breakpoint);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isMobile;
+};
+
+// ─── MOBILE HUB ───────���────────────────────────────────
+// Clean linktree-style navigation center for mobile devices.
+// Replaces the entire orbital Hero experience.
+const MobileHub = ({ setSection, cartCount }) => {
+  const links = [
+    { label: "Portfolio", dest: "portfolio", color: P.cyan, desc: "Curated Works" },
+    { label: "Shop", dest: "shop", color: P.gold, desc: "Prints & Originals" },
+    { label: "Media", dest: "media", color: P.magenta, desc: "Motion & Sound" },
+    { label: "The Work", dest: "the-work", color: P.purple, desc: "Process & Philosophy" },
+    { label: "Now", dest: "now", color: P.green, desc: "Current Status" },
+    { label: "Contact", dest: "contact", color: P.bone, desc: "Get In Touch" },
+    { label: "About", dest: "about", color: P.bone, desc: "The Artist" },
+  ];
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: `radial-gradient(ellipse at 50% 30%, ${P.deep} 0%, ${P.abyss} 70%)`,
+      display: "flex", flexDirection: "column", alignItems: "center",
+      padding: "60px 24px 40px",
+    }}>
+      {/* Brand identity */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 48 }}>
+        <img src={LOGO_IMG} alt="RareGh0st" style={{ width: 48, height: 48, opacity: 0.8, marginBottom: 16 }} />
+        <div style={{
+          fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8,
+          color: P.bone, textTransform: "uppercase", opacity: 0.4, marginBottom: 8,
+        }}>The Art of</div>
+        <div style={{
+          fontFamily: "'Courier New', monospace", fontSize: 38, fontWeight: 700, letterSpacing: 6,
+          marginBottom: 8,
+        }}>
+          <span style={{ color: P.cyan }}>Rare</span>
+          <span style={{ color: P.magenta }}>Gh</span>
+          <span style={{ color: P.ghost }}>0</span>
+          <span style={{ color: P.magenta }}>st</span>
+        </div>
+        <div style={{
+          fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 6,
+          color: P.bone, textTransform: "uppercase", opacity: 0.3,
+        }}>Trauma Integration Made Visible</div>
+      </div>
+
+      {/* Navigation links */}
+      <div style={{ width: "100%", maxWidth: 360, display: "flex", flexDirection: "column", gap: 12 }}>
+        {links.map((link, i) => (
+          <button
+            key={link.dest}
+            onClick={() => setSection(link.dest)}
+            style={{
+              width: "100%",
+              background: `${link.color}08`,
+              border: `1px solid ${link.color}25`,
+              borderRadius: 2,
+              padding: "16px 20px",
+              cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              transition: "all 0.3s ease",
+              opacity: 1,
+            }}
+          >
+            <div style={{ textAlign: "left" }}>
+              <div style={{
+                fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 4,
+                color: link.color, textTransform: "uppercase", fontWeight: 600,
+              }}>{link.label}</div>
+              <div style={{
+                fontFamily: "'Georgia', serif", fontSize: 10, color: P.bone, opacity: 0.35,
+                marginTop: 4,
+              }}>{link.desc}</div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={link.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4 }}>
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        ))}
+      </div>
+
+      {/* Cart link */}
+      {cartCount > 0 && (
+        <button
+          onClick={() => setSection("cart")}
+          style={{
+            marginTop: 20, width: "100%", maxWidth: 360,
+            background: `${P.gold}10`, border: `1px solid ${P.gold}30`,
+            borderRadius: 2, padding: "14px 20px", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          }}
+        >
+          <span style={{
+            fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 4,
+            color: P.gold, textTransform: "uppercase",
+          }}>Cart ({cartCount})</span>
+        </button>
+      )}
+
+      {/* Divider */}
+      <div style={{ width: 40, height: 1, background: `${P.steel}22`, margin: "32px 0 20px" }} />
+
+      {/* Social / secondary links */}
+      <div style={{ display: "flex", gap: 20, opacity: 0.35 }}>
+        {["Privacy", "Terms", "Shipping"].map(s => (
+          <button key={s} onClick={() => setSection(s.toLowerCase())} style={{
+            background: "none", border: "none", color: P.bone, cursor: "pointer",
+            fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3,
+            textTransform: "uppercase",
+          }}>{s}</button>
+        ))}
       </div>
     </div>
   );
@@ -2197,6 +2515,7 @@ const loadLocal = (key, fallback) => { try { const v = localStorage.getItem(`rg_
 
 // ���══════════════════════════════════════════════
 export default function App() {
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [section, setSection] = useState(() => {
     const saved = loadLocal("section", "hero");
@@ -2255,11 +2574,50 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: P.abyss, color: P.ghost, position: "relative" }}>
       <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Sans';src:url('/fonts/Geist-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}@font-face{font-family:'Geist Mono';src:url('/fonts/GeistMono-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}:root{--pf1:'Geist Pixel Square',monospace;--pf2:'Geist Pixel Grid',monospace;--pf3:'Geist Pixel Circle',monospace;--pf4:'Geist Pixel Triangle',monospace;--pf5:'Geist Pixel Line',monospace;--ss1:normal;--ss2:normal;--ss3:normal;--ss4:normal;--ss5:normal}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0;font-family:'Geist Pixel Square',monospace}body:not([data-calm]) *:nth-child(5n+1):not([data-morph]){font-family:var(--pf1)!important;font-feature-settings:var(--ss1)}body:not([data-calm]) *:nth-child(5n+2):not([data-morph]){font-family:var(--pf2)!important;font-feature-settings:var(--ss2)}body:not([data-calm]) *:nth-child(5n+3):not([data-morph]){font-family:var(--pf3)!important;font-feature-settings:var(--ss3)}body:not([data-calm]) *:nth-child(5n+4):not([data-morph]){font-family:var(--pf4)!important;font-feature-settings:var(--ss4)}body:not([data-calm]) *:nth-child(5n):not([data-morph]){font-family:var(--pf5)!important;font-feature-settings:var(--ss5)}body[data-calm]{font-family:'Geist Sans',sans-serif!important}body[data-calm] *:not([data-morph]){font-family:inherit!important;animation:none!important;transition:none!important}body[data-calm] [style*="Courier"],body[data-calm] [style*="monospace"]{font-family:'Geist Mono',monospace!important}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(0.82)}}@keyframes morphBreathStrong{0%,100%{filter:brightness(1)}50%{filter:brightness(0.7)}}@keyframes morphBreathSoft{0%,100%{filter:brightness(1)}50%{filter:brightness(0.85)}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}@keyframes twinkle{0%,100%{opacity:inherit}50%{opacity:0.02}}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}@keyframes fractalPulse{0%,100%{transform:scale(1);opacity:inherit}50%{transform:scale(1.04);opacity:0.6}}@keyframes fractalFloat{0%,100%{transform:translateY(0) rotate(0deg)}25%{transform:translateY(-8px) rotate(2deg)}50%{transform:translateY(0) rotate(0deg)}75%{transform:translateY(8px) rotate(-2deg)}}`}</style>
       {loading && <Preloader onComplete={() => setLoading(false)} />}
-      <Particles />
-      <Nav section={section} setSection={setSection} cartCount={cart.length} />
-      <div style={{ position: "relative", zIndex: 2, animation: "morphBreath 1.5s ease-in-out infinite", willChange: "filter" }} data-protected>
+      {!isMobile && <Particles />}
+      {!isMobile && <Nav section={section} setSection={setSection} cartCount={cart.length} />}
+      {/* Mobile: minimal sticky header for inner pages */}
+      {isMobile && section !== "hero" && (
+        <nav style={{
+          position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+          padding: "12px 20px",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          background: `${P.abyss}f0`, backdropFilter: "blur(12px)",
+          borderBottom: `1px solid ${P.steel}15`,
+        }}>
+          <button onClick={() => setSection("hero")} style={{
+            background: "none", border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 8,
+            color: P.cyan, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 3,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            HUB
+          </button>
+          <div style={{
+            fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4,
+            color: P.bone, textTransform: "uppercase", opacity: 0.5,
+          }}>{section === "the-work" ? "The Work" : section}</div>
+          <div onClick={() => setSection("cart")} style={{
+            cursor: "pointer", position: "relative", color: P.bone,
+            fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2,
+          }}>
+            CART{cart.length > 0 && <span style={{
+              position: "absolute", top: -6, right: -10,
+              background: P.magenta, color: "#fff", fontSize: 7, fontWeight: 700,
+              width: 12, height: 12, borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>{cart.length}</span>}
+          </div>
+        </nav>
+      )}
+      <div style={{ position: "relative", zIndex: 2, animation: isMobile ? "none" : "morphBreath 1.5s ease-in-out infinite", willChange: isMobile ? "auto" : "filter" }} data-protected>
         {is404 && <NotFound setSection={setSection} />}
-        {section === "hero" && <Hero setSection={setSection} />}
+        {section === "hero" && (isMobile
+          ? <MobileHub setSection={setSection} cartCount={cart.length} />
+          : <Hero setSection={setSection} />
+        )}
         {section === "portfolio" && <Portfolio setSection={setSection} setSelected={setSelected} setDesignProject={setDesignProject} addToCart={addToCart} portfolioTab={portfolioTab} setPortfolioTab={setPortfolioTab} />}
         {section === "showcase" && <ShowcaseDetail piece={selected} setSection={setSection} addToCart={addToCart} portfolioTab={portfolioTab} />}
         {section === "case-study" && <CaseStudyDetail project={designProject} setSection={setSection} portfolioTab={portfolioTab} />}
