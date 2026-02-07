@@ -1387,7 +1387,7 @@ const Hero = ({ setSection }) => {
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const dragPanStart = useRef({ x: 0, y: 0 });
-  const gridRot = useRef({ circles: 0, radials: 0, ticks: 0 });
+  const fieldAngle = useRef(0); // unified rotation for entire celestial system
   const hoveredRef = useRef(-1);
   const nodeScreenPos = useRef([]);
   const visRef = useRef(false);
@@ -1430,48 +1430,69 @@ const Hero = ({ setSection }) => {
   const orbitAngles = useRef(nodes.map(n => n.startAngle));
   const moonAnglesRef = useRef(allMoons.map(m => m.startAngle));
 
-  // Stars (generated once, drawn every frame — trivial in canvas)
-  // ── Three-tier starfield ──
-  // Layer 0: Deep dust (far background, tiny, slow parallax)
+  // ── Star sprite system ──
+  // Place: /images/stars/star-small.png, star-medium.png, star-large.png, star-bright.png
+  const starSprites = useRef({ small: null, medium: null, large: null, bright: null });
+  const spritesLoaded = useRef(false);
+
+  // Stars stored in polar coords (angle + distance from center) so they rotate naturally
+  // Layer 0: Deep dust
   const starsDust = useRef(Array.from({ length: 200 }, () => ({
-    x: Math.random(), y: Math.random(),
+    angle: Math.random() * Math.PI * 2,
+    dist: Math.random() * 2400 + 100,
     size: Math.random() * 0.8 + 0.2,
+    spriteSize: Math.random() * 8 + 4, // for sprite rendering
     opacity: Math.random() * 0.3 + 0.05,
     color: ["#ffffff", "#e8e8ff", "#d0e8ff", P.ghost][Math.floor(Math.random() * 4)],
     phase: Math.random() * Math.PI * 2,
     twinkleSpeed: Math.random() * 0.3 + 0.1,
+    sprite: "small",
   })));
-  // Layer 1: Mid-field glow stars (soft halo, moderate parallax)
+  // Layer 1: Mid-field glow stars
   const starsMid = useRef(Array.from({ length: 60 }, () => {
     const bright = Math.random();
     return {
-      x: Math.random(), y: Math.random(),
+      angle: Math.random() * Math.PI * 2,
+      dist: Math.random() * 2000 + 150,
       size: bright < 0.1 ? Math.random() * 3 + 2 : Math.random() * 1.5 + 0.5,
+      spriteSize: bright < 0.1 ? Math.random() * 32 + 24 : Math.random() * 16 + 8,
       haloSize: bright < 0.1 ? Math.random() * 12 + 8 : Math.random() * 6 + 3,
       opacity: bright < 0.1 ? Math.random() * 0.6 + 0.3 : Math.random() * 0.4 + 0.1,
       color: [P.ghost, "#e0f0ff", P.cyan, "#ffe8d0", "#ffd0e8"][Math.floor(Math.random() * 5)],
       phase: Math.random() * Math.PI * 2,
       twinkleSpeed: Math.random() * 0.6 + 0.2,
+      sprite: bright < 0.1 ? "large" : "medium",
     };
   }));
-  // Layer 2: Foreground brilliant stars (diffraction spikes, rare, bright)
+  // Layer 2: Foreground brilliant stars
   const starsFG = useRef(Array.from({ length: 12 }, () => ({
-    x: Math.random(), y: Math.random(),
+    angle: Math.random() * Math.PI * 2,
+    dist: Math.random() * 1600 + 200,
     size: Math.random() * 2.5 + 1.5,
+    spriteSize: Math.random() * 48 + 32,
     spikeLen: Math.random() * 18 + 10,
     opacity: Math.random() * 0.5 + 0.3,
     color: [P.cyan, "#ffffff", "#e0f0ff", "#ff7eb3"][Math.floor(Math.random() * 4)],
     phase: Math.random() * Math.PI * 2,
     twinkleSpeed: Math.random() * 1.2 + 0.5,
-    rotation: Math.random() * Math.PI / 6, // slight tilt to spikes
+    sprite: "bright",
   })));
 
-  // Moon image preload
+  // Moon + star sprite preload
   const moonImg = useRef(null);
   useEffect(() => {
     const img = new Image();
     img.src = "/images/moon.png";
     img.onload = () => { moonImg.current = img; };
+    // Load star sprites (graceful — canvas fallback if missing)
+    const spriteNames = ["small", "medium", "large", "bright"];
+    let loaded = 0;
+    spriteNames.forEach(name => {
+      const si = new Image();
+      si.src = `/images/stars/star-${name}.png`;
+      si.onload = () => { starSprites.current[name] = si; loaded++; if (loaded === 4) spritesLoaded.current = true; };
+      si.onerror = () => { loaded++; }; // graceful — will use canvas fallback
+    });
     setTimeout(() => { setVis(true); visRef.current = true; }, 100);
   }, []);
 
@@ -1643,11 +1664,9 @@ const Hero = ({ setSection }) => {
         moonAnglesRef.current[m] = (moonAnglesRef.current[m] + (360 / allMoons[m].speed) * dt) % 360;
       }
 
-      // Grid rotation
-      const gr = gridRot.current;
-      gr.circles = (gr.circles + dt * 0.5) % 360;
-      gr.radials = (gr.radials - dt * 0.7) % 360;
-      gr.ticks = (gr.ticks + dt * 1.2) % 360;
+      // Unified field rotation (very slow, majestic — one full rotation every ~10 minutes)
+      fieldAngle.current = (fieldAngle.current + dt * 0.6) % 360;
+      const fa = fieldAngle.current * Math.PI / 180;
 
       // ── Font river cycle (~100ms, per-character randomization) ──
       lastFontCycle.current += dt * 1000;
@@ -1669,43 +1688,64 @@ const Hero = ({ setSection }) => {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cw, ch);
 
-      // ── Stars Layer 0: Deep dust (very slow parallax, slight pan tracking) ──
-      const dustOx = sx * 12 - fpx * 0.08;
-      const dustOy = sy * 12 - fpy * 0.08;
-      for (const s of starsDust.current) {
-        const x = s.x * cw - dustOx;
-        const y = s.y * ch - dustOy;
-        const tw = 0.6 + 0.4 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
-        ctx.globalAlpha = a * s.opacity * tw;
-        ctx.fillStyle = s.color;
-        ctx.beginPath();
-        ctx.arc(x, y, s.size, 0, Math.PI * 2);
-        ctx.fill();
-      }
+      // ── Helper: draw star (sprite if loaded, canvas fallback) ──
+      const drawStar = (x, y, s, tw, opac) => {
+        const sprite = starSprites.current[s.sprite];
+        if (sprite) {
+          // Sprite rendering — photorealistic
+          const sz = s.spriteSize * (0.7 + 0.3 * tw);
+          ctx.globalAlpha = opac;
+          ctx.drawImage(sprite, x - sz / 2, y - sz / 2, sz, sz);
+        } else if (s.sprite === "bright" || s.sprite === "large") {
+          // Canvas fallback — glow star
+          const hSize = (s.haloSize || s.spikeLen || 10) * tw;
+          if (hSize > 0) {
+            const halo = ctx.createRadialGradient(x, y, 0, x, y, hSize);
+            halo.addColorStop(0, s.color);
+            halo.addColorStop(0.3, s.color + "40");
+            halo.addColorStop(1, "transparent");
+            ctx.globalAlpha = opac * 0.4;
+            ctx.fillStyle = halo;
+            ctx.fillRect(x - hSize, y - hSize, hSize * 2, hSize * 2);
+          }
+          ctx.globalAlpha = opac;
+          ctx.fillStyle = s.color;
+          ctx.beginPath();
+          ctx.arc(x, y, Math.max(s.size * tw, 0.1), 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          // Canvas fallback — simple dot
+          ctx.globalAlpha = opac;
+          ctx.fillStyle = s.color;
+          ctx.beginPath();
+          ctx.arc(x, y, Math.max(s.size, 0.1), 0, Math.PI * 2);
+          ctx.fill();
+        }
+      };
 
-      // ── Stars Layer 1: Mid-field glow stars (pan-tracked) ──
-      const starOx = sx * 40 - fpx * 0.25;
-      const starOy = sy * 40 - fpy * 0.25;
-      for (const s of starsMid.current) {
-        const x = s.x * cw - starOx;
-        const y = s.y * ch - starOy;
-        const tw = 0.5 + 0.5 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
-        const opac = a * s.opacity * tw;
-        // Soft halo glow
-        const halo = ctx.createRadialGradient(x, y, 0, x, y, s.haloSize * tw);
-        halo.addColorStop(0, s.color);
-        halo.addColorStop(0.3, s.color + "40");
-        halo.addColorStop(1, "transparent");
-        ctx.globalAlpha = opac * 0.4;
-        ctx.fillStyle = halo;
-        ctx.fillRect(x - s.haloSize, y - s.haloSize, s.haloSize * 2, s.haloSize * 2);
-        // Bright core
-        ctx.globalAlpha = opac;
-        ctx.fillStyle = s.color;
-        ctx.beginPath();
-        ctx.arc(x, y, s.size * tw, 0, Math.PI * 2);
-        ctx.fill();
+      // ── Stars Layer 0: Deep dust (rotates at 30% field speed) ──
+      ctx.save();
+      ctx.translate(cw / 2 - sx * 12 - panCurrent.current.x * 0.08, ch / 2 - sy * 12 - panCurrent.current.y * 0.08);
+      ctx.rotate(fa * 0.3);
+      for (const s of starsDust.current) {
+        const x = Math.cos(s.angle) * s.dist;
+        const y = Math.sin(s.angle) * s.dist;
+        const tw = 0.6 + 0.4 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
+        drawStar(x, y, s, tw, a * s.opacity * tw);
       }
+      ctx.restore();
+
+      // ── Stars Layer 1: Mid-field glow stars (rotates at 60% field speed) ──
+      ctx.save();
+      ctx.translate(cw / 2 - sx * 40 - panCurrent.current.x * 0.25, ch / 2 - sy * 40 - panCurrent.current.y * 0.25);
+      ctx.rotate(fa * 0.6);
+      for (const s of starsMid.current) {
+        const x = Math.cos(s.angle) * s.dist;
+        const y = Math.sin(s.angle) * s.dist;
+        const tw = 0.5 + 0.5 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
+        drawStar(x, y, s, tw, a * s.opacity * tw);
+      }
+      ctx.restore();
 
       // ── Field transform (L2 parallax + zoom/pan) ──
       const fOx = sx * 15;
@@ -1717,11 +1757,12 @@ const Hero = ({ setSection }) => {
       ctx.translate(cx, cy);
       ctx.scale(zoom, zoom);
 
-      // ── Moon image (drawn first so grid/lines render on top) ──
+      // ── Moon image (drawn first so grid/lines render on top, rotates with field) ──
       if (moonImg.current) {
         const moonSize = Math.min(Math.max(438, cw * 0.5625), 725);
         const r = moonSize / 2;
         ctx.save();
+        ctx.rotate(fa); // unified rotation
         ctx.beginPath();
         ctx.arc(0, 0, r, 0, Math.PI * 2);
         ctx.clip();
@@ -1739,21 +1780,19 @@ const Hero = ({ setSection }) => {
         ctx.restore();
       }
 
-      // ── Rectangular grid (infinite — extends past viewport at any zoom) ──
+      // ── Rectangular grid (infinite, rotates with field) ──
+      ctx.save();
+      ctx.rotate(fa);
       ctx.strokeStyle = P.cyan;
       ctx.lineWidth = 0.5;
       ctx.globalAlpha = a * 0.14;
       const gridSpacing = 86;
-      // Calculate visible world-space bounds (with padding)
-      const halfVW = (cw / zoom) / 2 + 200;
-      const halfVH = (ch / zoom) / 2 + 200;
-      // Account for pan offset in world space
-      const wpx = -fpx / zoom;
-      const wpy = -fpy / zoom;
-      const gridLeft = Math.floor((wpx - halfVW) / gridSpacing) * gridSpacing;
-      const gridRight = Math.ceil((wpx + halfVW) / gridSpacing) * gridSpacing;
-      const gridTop = Math.floor((wpy - halfVH) / gridSpacing) * gridSpacing;
-      const gridBottom = Math.ceil((wpy + halfVH) / gridSpacing) * gridSpacing;
+      // When rotated, diagonal corners need extra coverage
+      const halfExtent = Math.sqrt((cw / zoom) * (cw / zoom) + (ch / zoom) * (ch / zoom)) / 2 + 300;
+      const gridLeft = Math.floor((-halfExtent) / gridSpacing) * gridSpacing;
+      const gridRight = Math.ceil((halfExtent) / gridSpacing) * gridSpacing;
+      const gridTop = Math.floor((-halfExtent) / gridSpacing) * gridSpacing;
+      const gridBottom = Math.ceil((halfExtent) / gridSpacing) * gridSpacing;
       ctx.beginPath();
       for (let y = gridTop; y <= gridBottom; y += gridSpacing) {
         ctx.moveTo(gridLeft, y); ctx.lineTo(gridRight, y);
@@ -1762,10 +1801,11 @@ const Hero = ({ setSection }) => {
         ctx.moveTo(x, gridTop); ctx.lineTo(x, gridBottom);
       }
       ctx.stroke();
+      ctx.restore(); // end grid rotation
 
-      // ── Concentric circles (rotating) ──
+      // ── Concentric circles (unified rotation) ──
       ctx.save();
-      ctx.rotate(gr.circles * Math.PI / 180);
+      ctx.rotate(fa);
       ctx.strokeStyle = P.cyan;
       const circleR = [80, 160, 260, 380, 520, 680, 860, 1080, 1350, 1700, 2100, 2600, 3200];
       for (let i = 0; i < circleR.length; i++) {
@@ -1779,9 +1819,9 @@ const Hero = ({ setSection }) => {
       ctx.setLineDash([]);
       ctx.restore();
 
-      // ── Radial lines (rotating) ──
+      // ── Radial lines (unified rotation) ──
       ctx.save();
-      ctx.rotate(gr.radials * Math.PI / 180);
+      ctx.rotate(fa);
       ctx.strokeStyle = P.cyan;
       // Major radials
       ctx.lineWidth = 0.8;
@@ -1806,9 +1846,9 @@ const Hero = ({ setSection }) => {
       ctx.stroke();
       ctx.restore();
 
-      // ── Tick ring (rotating) ──
+      // ── Tick ring (unified rotation) ──
       ctx.save();
-      ctx.rotate(gr.ticks * Math.PI / 180);
+      ctx.rotate(fa);
       ctx.strokeStyle = P.cyan;
       ctx.globalAlpha = a * 0.25;
       // Major ticks
@@ -2055,57 +2095,64 @@ const Hero = ({ setSection }) => {
 
       ctx.restore(); // field transform
 
-      // ── Stars Layer 2: Foreground brilliant stars (diffraction spikes, pan-tracked) ──
-      const fgOx = sx * 60 - fpx * 0.5;
-      const fgOy = sy * 60 - fpy * 0.5;
+      // ── Stars Layer 2: Foreground brilliant stars (rotates at 80% field speed) ──
+      ctx.save();
+      ctx.translate(cw / 2 - sx * 60 - panCurrent.current.x * 0.5, ch / 2 - sy * 60 - panCurrent.current.y * 0.5);
+      ctx.rotate(fa * 0.8);
       for (const s of starsFG.current) {
-        const x = s.x * cw - fgOx;
-        const y = s.y * ch - fgOy;
+        const x = Math.cos(s.angle) * s.dist;
+        const y = Math.sin(s.angle) * s.dist;
         const tw = 0.5 + 0.5 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
         const opac = a * s.opacity * tw;
-        // Outer bloom
-        const bloom = ctx.createRadialGradient(x, y, 0, x, y, s.spikeLen * 0.8);
-        bloom.addColorStop(0, s.color + "30");
-        bloom.addColorStop(1, "transparent");
-        ctx.globalAlpha = opac * 0.5;
-        ctx.fillStyle = bloom;
-        ctx.beginPath();
-        ctx.arc(x, y, s.spikeLen * 0.8, 0, Math.PI * 2);
-        ctx.fill();
-        // Diffraction spikes (4-point cross)
-        ctx.save();
-        ctx.translate(x, y);
-        ctx.rotate(s.rotation);
-        ctx.strokeStyle = s.color;
-        ctx.lineWidth = 1;
-        ctx.globalAlpha = opac * 0.7;
-        const sl = s.spikeLen * tw;
-        ctx.beginPath();
-        ctx.moveTo(-sl, 0); ctx.lineTo(sl, 0);
-        ctx.moveTo(0, -sl); ctx.lineTo(0, sl);
-        ctx.stroke();
-        // Secondary spikes (45° rotated, shorter, dimmer)
-        ctx.globalAlpha = opac * 0.25;
-        ctx.lineWidth = 0.5;
-        const sl2 = sl * 0.5;
-        ctx.beginPath();
-        ctx.moveTo(-sl2, -sl2); ctx.lineTo(sl2, sl2);
-        ctx.moveTo(sl2, -sl2); ctx.lineTo(-sl2, sl2);
-        ctx.stroke();
-        ctx.restore();
-        // Bright core
-        ctx.globalAlpha = opac;
-        ctx.fillStyle = "#ffffff";
-        ctx.beginPath();
-        ctx.arc(x, y, s.size * tw, 0, Math.PI * 2);
-        ctx.fill();
-        // Color core (slightly larger, tinted)
-        ctx.globalAlpha = opac * 0.6;
-        ctx.fillStyle = s.color;
-        ctx.beginPath();
-        ctx.arc(x, y, s.size * tw * 1.5, 0, Math.PI * 2);
-        ctx.fill();
+        const sprite = starSprites.current[s.sprite];
+        if (sprite) {
+          // Sprite rendering
+          const sz = s.spriteSize * (0.7 + 0.3 * tw);
+          ctx.globalAlpha = opac;
+          ctx.drawImage(sprite, x - sz / 2, y - sz / 2, sz, sz);
+        } else {
+          // Canvas fallback — diffraction spikes
+          const bloomR = s.spikeLen * 0.8;
+          if (bloomR > 0) {
+            const bloom = ctx.createRadialGradient(x, y, 0, x, y, bloomR);
+            bloom.addColorStop(0, s.color + "30");
+            bloom.addColorStop(1, "transparent");
+            ctx.globalAlpha = opac * 0.5;
+            ctx.fillStyle = bloom;
+            ctx.beginPath();
+            ctx.arc(x, y, bloomR, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          // Spikes (all aligned — no per-star rotation)
+          ctx.strokeStyle = s.color;
+          ctx.lineWidth = 1;
+          ctx.globalAlpha = opac * 0.7;
+          const sl = s.spikeLen * tw;
+          ctx.beginPath();
+          ctx.moveTo(x - sl, y); ctx.lineTo(x + sl, y);
+          ctx.moveTo(x, y - sl); ctx.lineTo(x, y + sl);
+          ctx.stroke();
+          ctx.globalAlpha = opac * 0.25;
+          ctx.lineWidth = 0.5;
+          const sl2 = sl * 0.5;
+          ctx.beginPath();
+          ctx.moveTo(x - sl2, y - sl2); ctx.lineTo(x + sl2, y + sl2);
+          ctx.moveTo(x + sl2, y - sl2); ctx.lineTo(x - sl2, y + sl2);
+          ctx.stroke();
+          // Cores
+          ctx.globalAlpha = opac;
+          ctx.fillStyle = "#ffffff";
+          ctx.beginPath();
+          ctx.arc(x, y, Math.max(s.size * tw, 0.1), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = opac * 0.6;
+          ctx.fillStyle = s.color;
+          ctx.beginPath();
+          ctx.arc(x, y, Math.max(s.size * tw * 1.5, 0.1), 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
+      ctx.restore();
 
       // Update hover ref (no setState — avoids re-render)
       hoveredRef.current = newHovered;
