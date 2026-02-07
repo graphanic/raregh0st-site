@@ -1656,6 +1656,33 @@ const Hero = ({ setSection }) => {
       ctx.translate(cx, cy);
       ctx.scale(zoom, zoom);
 
+      // ── Moon image (drawn first so grid/lines render on top) ──
+      if (moonImg.current) {
+        const moonSize = Math.min(Math.max(438, cw * 0.5625), 725);
+        const r = moonSize / 2;
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(0, 0, r, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.globalAlpha = a;
+        ctx.drawImage(moonImg.current, -r, -r, moonSize, moonSize);
+        // Desaturate overlay
+        ctx.globalCompositeOperation = "saturation";
+        ctx.fillStyle = "hsl(0, 5%, 50%)";
+        ctx.fillRect(-r, -r, moonSize, moonSize);
+        ctx.globalCompositeOperation = "source-over";
+        // Edge fade — matches background center color #12121e
+        const grad = ctx.createRadialGradient(0, -r * 0.1, r * 0.35, 0, 0, r);
+        grad.addColorStop(0, "transparent");
+        grad.addColorStop(0.6, "rgba(18,18,30,0.2)");
+        grad.addColorStop(0.78, "rgba(18,18,30,0.55)");
+        grad.addColorStop(0.9, "rgba(18,18,30,0.85)");
+        grad.addColorStop(1, "rgba(18,18,30,1)");
+        ctx.fillStyle = grad;
+        ctx.fillRect(-r, -r, moonSize, moonSize);
+        ctx.restore();
+      }
+
       // ── Rectangular grid (infinite — extends past viewport at any zoom) ──
       ctx.strokeStyle = P.cyan;
       ctx.lineWidth = 0.5;
@@ -1758,34 +1785,6 @@ const Hero = ({ setSection }) => {
       }
       ctx.stroke();
       ctx.restore();
-
-      // ── Moon image ──
-      if (moonImg.current) {
-        const moonSize = Math.min(Math.max(438, cw * 0.5625), 725);
-        const r = moonSize / 2;
-        ctx.save();
-        ctx.beginPath();
-        ctx.arc(0, 0, r, 0, Math.PI * 2);
-        ctx.clip();
-        ctx.globalAlpha = a;
-        // Apply brightness/contrast via composite — draw image then overlay
-        ctx.drawImage(moonImg.current, -r, -r, moonSize, moonSize);
-        // Desaturate overlay
-        ctx.globalCompositeOperation = "saturation";
-        ctx.fillStyle = "hsl(0, 5%, 50%)";
-        ctx.fillRect(-r, -r, moonSize, moonSize);
-        ctx.globalCompositeOperation = "source-over";
-        // Edge fade — full dissolve, no visible rim
-        const grad = ctx.createRadialGradient(0, -r * 0.1, r * 0.35, 0, 0, r);
-        grad.addColorStop(0, "transparent");
-        grad.addColorStop(0.6, "rgba(6,6,12,0.2)");
-        grad.addColorStop(0.78, "rgba(6,6,12,0.55)");
-        grad.addColorStop(0.9, "rgba(6,6,12,0.85)");
-        grad.addColorStop(1, "rgba(6,6,12,1)");
-        ctx.fillStyle = grad;
-        ctx.fillRect(-r, -r, moonSize, moonSize);
-        ctx.restore();
-      }
 
       // ── Orbit tracks ──
       for (let i = 0; i < nodes.length; i++) {
