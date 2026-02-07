@@ -1473,22 +1473,20 @@ const Hero = ({ setSection }) => {
       <div ref={setLayerRef(2)} style={{ ...layerBase, zIndex: 2, display: "flex", alignItems: "center", justifyContent: "center" }}>
         {/* Sacred geometry: nested rotating polygons */}
         {[
-          { sides: 3, size: 520, color: P.cyan,    alpha: "0c", speed: 60,  dir: 1,  delay: 0 },
-          { sides: 3, size: 440, color: P.magenta,  alpha: "0a", speed: 50,  dir: -1, delay: 0.2 },
-          { sides: 6, size: 380, color: P.cyan,    alpha: "0d", speed: 80,  dir: 1,  delay: 0.4 },
-          { sides: 6, size: 320, color: P.magenta,  alpha: "08", speed: 70,  dir: -1, delay: 0.6 },
-          { sides: 4, size: 260, color: P.steel,   alpha: "08", speed: 45,  dir: 1,  delay: 0.8 },
-          { sides: 4, size: 200, color: P.gold,    alpha: "06", speed: 55,  dir: -1, delay: 1.0 },
-          { sides: 8, size: 500, color: P.steel,   alpha: "06", speed: 100, dir: 1,  delay: 0.3 },
-          { sides: 12, size: 600, color: P.cyan,   alpha: "05", speed: 120, dir: -1, delay: 0.5 },
-        ].map(({ sides, size, color, alpha, speed, dir, delay }, i) => {
-          // Build SVG polygon points
+          { sides: 3, size: 520, color: P.cyan,    opacity: 0.18, speed: 60,  dir: 1,  delay: 0,   glow: 12 },
+          { sides: 3, size: 440, color: P.magenta,  opacity: 0.15, speed: 50,  dir: -1, delay: 0.2, glow: 10 },
+          { sides: 6, size: 380, color: P.cyan,    opacity: 0.20, speed: 80,  dir: 1,  delay: 0.4, glow: 14 },
+          { sides: 6, size: 320, color: P.magenta,  opacity: 0.14, speed: 70,  dir: -1, delay: 0.6, glow: 10 },
+          { sides: 4, size: 260, color: P.steel,   opacity: 0.12, speed: 45,  dir: 1,  delay: 0.8, glow: 8  },
+          { sides: 4, size: 200, color: P.gold,    opacity: 0.10, speed: 55,  dir: -1, delay: 1.0, glow: 8  },
+          { sides: 8, size: 500, color: P.steel,   opacity: 0.10, speed: 100, dir: 1,  delay: 0.3, glow: 10 },
+          { sides: 12, size: 600, color: P.cyan,   opacity: 0.08, speed: 120, dir: -1, delay: 0.5, glow: 14 },
+        ].map(({ sides, size, color, opacity, speed, dir, delay, glow }, i) => {
           const r = size / 2;
           const points = Array.from({ length: sides }, (_, j) => {
             const angle = (j / sides) * Math.PI * 2 - Math.PI / 2;
             return `${r + Math.cos(angle) * r},${r + Math.sin(angle) * r}`;
           }).join(" ");
-          const scaleFactor = `clamp(0.5, ${size / 600}, 1)`;
           return (
             <div key={`fractal-deep-${i}`} style={{
               position: "absolute",
@@ -1496,39 +1494,52 @@ const Hero = ({ setSection }) => {
               width: size, height: size,
               marginLeft: -size / 2,
               marginTop: -size / 2,
-              opacity: vis ? 1 : 0,
+              opacity: vis ? opacity : 0,
               transition: `opacity 2.5s ease ${1 + delay}s`,
               animation: `spin ${speed}s linear infinite ${dir < 0 ? "reverse" : ""}`,
-              transform: `scale(${scaleFactor})`,
             }}>
               <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: "visible" }}>
                 <polygon
                   points={points}
                   fill="none"
-                  stroke={`${color}${alpha}`}
-                  strokeWidth="0.8"
-                  style={{ filter: `drop-shadow(0 0 6px ${color}${alpha})` }}
+                  stroke={color}
+                  strokeWidth="1.5"
+                  style={{ filter: `drop-shadow(0 0 ${glow}px ${color})` }}
                 />
+                {/* Inner nested duplicate rotated 15deg */}
+                <g transform={`translate(${r},${r}) rotate(${15 + i * 7.5}) scale(0.6) translate(${-r},${-r})`}>
+                  <polygon
+                    points={points}
+                    fill="none"
+                    stroke={color}
+                    strokeWidth="0.8"
+                    style={{ filter: `drop-shadow(0 0 ${glow * 0.6}px ${color})` }}
+                  />
+                </g>
               </svg>
             </div>
           );
         })}
         {/* Concentric glow rings */}
-        {[180, 280, 400, 550].map((size, i) => (
-          <div key={`ring-${i}`} style={{
-            position: "absolute",
-            left: "50%", top: "50%",
-            width: size, height: size,
-            marginLeft: -size / 2,
-            marginTop: -size / 2,
-            borderRadius: "50%",
-            border: `1px solid ${[P.cyan, P.magenta, P.cyan, P.magenta][i]}${["0a", "08", "06", "04"][i]}`,
-            boxShadow: `0 0 ${12 + i * 4}px ${[P.cyan, P.magenta, P.cyan, P.magenta][i]}${["08", "06", "04", "03"][i]}, inset 0 0 ${8 + i * 3}px ${[P.cyan, P.magenta, P.cyan, P.magenta][i]}${["05", "04", "03", "02"][i]}`,
-            opacity: vis ? 1 : 0,
-            transition: `opacity 2s ease ${1.2 + i * 0.3}s`,
-            animation: `fractalPulse ${6 + i * 2}s ease-in-out ${i * 0.5}s infinite, spin ${60 + i * 30}s linear infinite ${i % 2 === 0 ? "" : "reverse"}`,
-          }} />
-        ))}
+        {[180, 280, 400, 550].map((size, i) => {
+          const ringColor = [P.cyan, P.magenta, P.cyan, P.magenta][i];
+          const ringOpacity = [0.16, 0.12, 0.09, 0.06][i];
+          return (
+            <div key={`ring-${i}`} style={{
+              position: "absolute",
+              left: "50%", top: "50%",
+              width: size, height: size,
+              marginLeft: -size / 2,
+              marginTop: -size / 2,
+              borderRadius: "50%",
+              border: `1px solid ${ringColor}`,
+              boxShadow: `0 0 ${16 + i * 6}px ${ringColor}, inset 0 0 ${10 + i * 4}px ${ringColor}`,
+              opacity: vis ? ringOpacity : 0,
+              transition: `opacity 2s ease ${1.2 + i * 0.3}s`,
+              animation: `fractalPulse ${6 + i * 2}s ease-in-out ${i * 0.5}s infinite, spin ${60 + i * 30}s linear infinite ${i % 2 === 0 ? "" : "reverse"}`,
+            }} />
+          );
+        })}
       </div>
 
       {/* L3: Moon */}
@@ -1603,13 +1614,13 @@ const Hero = ({ setSection }) => {
       <div ref={setLayerRef(6)} style={{ ...layerBase, zIndex: 12, pointerEvents: "none" }}>
         {/* Corner fractal shards */}
         {[
-          { x: "8%",  y: "15%", size: 120, sides: 3, rot: 15,  color: P.cyan,    alpha: "12", speed: 35 },
-          { x: "88%", y: "20%", size: 90,  sides: 6, rot: -20, color: P.magenta,  alpha: "0e", speed: 45 },
-          { x: "12%", y: "75%", size: 80,  sides: 4, rot: 45,  color: P.magenta,  alpha: "0a", speed: 40 },
-          { x: "85%", y: "80%", size: 100, sides: 3, rot: -30, color: P.cyan,    alpha: "10", speed: 50 },
-          { x: "50%", y: "8%",  size: 70,  sides: 8, rot: 22,  color: P.steel,   alpha: "08", speed: 60 },
-          { x: "45%", y: "90%", size: 60,  sides: 6, rot: -15, color: P.gold,    alpha: "08", speed: 55 },
-        ].map(({ x, y, size, sides, rot, color, alpha, speed }, i) => {
+          { x: "8%",  y: "15%", size: 120, sides: 3, opacity: 0.22, color: P.cyan,    glow: 16, speed: 35 },
+          { x: "88%", y: "20%", size: 90,  sides: 6, opacity: 0.18, color: P.magenta,  glow: 14, speed: 45 },
+          { x: "12%", y: "75%", size: 80,  sides: 4, opacity: 0.15, color: P.magenta,  glow: 12, speed: 40 },
+          { x: "85%", y: "80%", size: 100, sides: 3, opacity: 0.20, color: P.cyan,    glow: 16, speed: 50 },
+          { x: "50%", y: "8%",  size: 70,  sides: 8, opacity: 0.12, color: P.steel,   glow: 10, speed: 60 },
+          { x: "45%", y: "90%", size: 60,  sides: 6, opacity: 0.10, color: P.gold,    glow: 10, speed: 55 },
+        ].map(({ x, y, size, sides, opacity, color, glow, speed }, i) => {
           const r = size / 2;
           const points = Array.from({ length: sides }, (_, j) => {
             const angle = (j / sides) * Math.PI * 2 - Math.PI / 2;
@@ -1622,27 +1633,26 @@ const Hero = ({ setSection }) => {
               width: size, height: size,
               marginLeft: -size / 2,
               marginTop: -size / 2,
-              opacity: vis ? 1 : 0,
+              opacity: vis ? opacity : 0,
               transition: `opacity 3s ease ${1.5 + i * 0.2}s`,
-              animation: `spin ${speed}s linear infinite ${i % 2 === 0 ? "" : "reverse"}, fractalFloat ${8 + i * 2}s ease-in-out ${i * 0.7}s infinite`,
-              transform: `rotate(${rot}deg)`,
+              animation: `spin ${speed}s linear infinite ${i % 2 === 0 ? "" : "reverse"}`,
             }}>
               <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`} style={{ overflow: "visible" }}>
                 <polygon
                   points={points}
                   fill="none"
-                  stroke={`${color}${alpha}`}
-                  strokeWidth="0.6"
-                  style={{ filter: `drop-shadow(0 0 10px ${color}${alpha})` }}
+                  stroke={color}
+                  strokeWidth="1.2"
+                  style={{ filter: `drop-shadow(0 0 ${glow}px ${color})` }}
                 />
-                {/* Inner nested shape at half scale */}
-                <g transform={`translate(${r},${r}) scale(0.5) translate(${-r},${-r})`}>
+                {/* Inner nested shape at half scale, rotated */}
+                <g transform={`translate(${r},${r}) rotate(${30 + i * 10}) scale(0.5) translate(${-r},${-r})`}>
                   <polygon
                     points={points}
                     fill="none"
-                    stroke={`${color}${alpha}`}
-                    strokeWidth="0.4"
-                    style={{ filter: `drop-shadow(0 0 6px ${color}${alpha})` }}
+                    stroke={color}
+                    strokeWidth="0.7"
+                    style={{ filter: `drop-shadow(0 0 ${glow * 0.5}px ${color})` }}
                   />
                 </g>
               </svg>
@@ -2135,7 +2145,7 @@ const CookieConsent = () => {
 const saveLocal = (key, val) => { try { localStorage.setItem(`rg_${key}`, JSON.stringify(val)); } catch(e) {} };
 const loadLocal = (key, fallback) => { try { const v = localStorage.getItem(`rg_${key}`); return v ? JSON.parse(v) : fallback; } catch(e) { return fallback; } };
 
-// ═══════════════════════════════════════════════
+// ���══════════════════════════════════════════════
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [section, setSection] = useState(() => {
