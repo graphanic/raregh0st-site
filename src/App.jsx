@@ -1666,11 +1666,25 @@ const Hero = ({ setSection }) => {
           </div>
           {/* Title — original full size */}
           <div style={{ textAlign: "center", opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(28px)", transition: "all 1.5s cubic-bezier(0.16,1,0.3,1)" }}>
-            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 8, color: "#1a1a1a", marginBottom: 22, textTransform: "uppercase", opacity: 0.7 }}><MorphText speed={80}>The Art of</MorphText></div>
-            <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(48px, 10vw, 110px)", fontWeight: 400, color: "#111", margin: 0, lineHeight: 0.9, letterSpacing: -2 }}>
-              <span style={{ color: "#0a0a0a" }}><MorphText speed={90}>Rare</MorphText></span><span style={{ color: "#1a1a1a" }}><MorphText speed={90}>Gh</MorphText></span><span style={{ color: "#333", opacity: 0.5 }}><MorphText speed={90}>0</MorphText></span><span style={{ color: "#1a1a1a" }}><MorphText speed={90}>st</MorphText></span>
+            <div style={{
+              fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8,
+              color: P.bone, textTransform: "uppercase",
+              background: `${P.abyss}cc`, backdropFilter: "blur(8px)",
+              padding: "6px 18px", borderRadius: 20,
+              border: `1px solid ${P.steel}30`,
+              marginBottom: 22,
+            }}><MorphText speed={80}>The Art of</MorphText></div>
+            <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(48px, 10vw, 110px)", fontWeight: 400, margin: 0, lineHeight: 0.9, letterSpacing: -2 }}>
+              <span style={{ color: P.cyan }}><MorphText speed={90}>Rare</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>Gh</MorphText></span><span style={{ color: P.steel, opacity: 0.45 }}><MorphText speed={90}>0</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>st</MorphText></span>
             </h1>
-            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: "#222", marginTop: 28, opacity: 0.6, textTransform: "uppercase" }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
+            <div style={{
+              fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 6,
+              color: P.bone, textTransform: "uppercase",
+              background: `${P.abyss}cc`, backdropFilter: "blur(8px)",
+              padding: "6px 18px", borderRadius: 20,
+              border: `1px solid ${P.steel}30`,
+              marginTop: 28, opacity: 0.8,
+            }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
           </div>
         </div>
 
