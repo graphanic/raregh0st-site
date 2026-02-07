@@ -1139,7 +1139,7 @@ const SHOP_PRODUCTS = [
 // All unique tags across products
 const ALL_ITEM_TAGS = [...new Set(SHOP_PRODUCTS.flatMap(p => [p.subcategory]))];
 
-// ─── SHOP COMPONENTS ────────────────────────────────────
+// ─── SHOP COMPONENTS ─────────────────────────────���──────
 const ShopCard = ({ product, onAdd }) => {
   const [h, setH] = useState(false);
   const cat = SHOP_CATEGORIES.find(c => c.id === product.category);
@@ -1357,6 +1357,11 @@ const Hero = ({ setSection }) => {
   // Panning state
   const panTarget = useRef({ x: 0, y: 0 });
   const panCurrent = useRef({ x: 0, y: 0 });
+  // Grid rotation refs (SVG <g> elements driven by RAF, not CSS animation)
+  const circlesRef = useRef(null);
+  const radialsRef = useRef(null);
+  const ticksRef = useRef(null);
+  const gridRotation = useRef({ circles: 0, radials: 0, ticks: 0 });
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const dragPanStart = useRef({ x: 0, y: 0 });
@@ -1518,6 +1523,15 @@ const Hero = ({ setSection }) => {
         el.style.transform = `translate(${ox}px, ${oy}px)`;
       }
 
+      // Rotate grid layers around the moon axis (960,540 in SVG coords)
+      const gr = gridRotation.current;
+      gr.circles = (gr.circles + dt * 0.5) % 360;      // ~1 revolution per 12 min
+      gr.radials = (gr.radials - dt * 0.7) % 360;       // counter-clockwise, slightly faster
+      gr.ticks = (gr.ticks + dt * 1.2) % 360;           // tick ring spins fastest
+      if (circlesRef.current) circlesRef.current.setAttribute("transform", `rotate(${gr.circles} 960 540)`);
+      if (radialsRef.current) radialsRef.current.setAttribute("transform", `rotate(${gr.radials} 960 540)`);
+      if (ticksRef.current) ticksRef.current.setAttribute("transform", `rotate(${gr.ticks} 960 540)`);
+
       // Orbit each sub-moon around its parent node
       for (let m = 0; m < allMoons.length; m++) {
         const moon = allMoons[m];
@@ -1594,8 +1608,8 @@ const Hero = ({ setSection }) => {
               <line key={`gv-${i}`} x1={i * 54 - 500} y1="-500" x2={i * 54 - 500} y2="1580" stroke={P.cyan} strokeWidth="0.5" opacity="0.4" />
             ))}
           </g>
-          {/* Concentric circles — pronounced, radiating from center */}
-          <g opacity="0.4">
+          {/* Concentric circles — rotating clockwise via RAF */}
+          <g ref={circlesRef} opacity="0.4">
             {[80, 160, 260, 380, 520, 680, 860, 1080, 1350, 1700, 2100].map((r, i) => (
               <circle key={`cc-${i}`} cx="960" cy="540" r={r} fill="none" stroke={P.cyan}
                 strokeWidth={i < 3 ? "1" : i < 6 ? "0.7" : "0.5"}
@@ -1603,8 +1617,8 @@ const Hero = ({ setSection }) => {
                 strokeDasharray={i % 3 === 2 ? "6 12" : "none"} />
             ))}
           </g>
-          {/* Radial lines — every 15 degrees, extending well past viewport */}
-          <g opacity="0.3">
+          {/* Radial lines — rotating counter-clockwise via RAF */}
+          <g ref={radialsRef} opacity="0.3">
             {Array.from({ length: 24 }, (_, i) => {
               const angle = (i / 24) * Math.PI * 2;
               const x2 = 960 + Math.cos(angle) * 3000;
@@ -1614,8 +1628,8 @@ const Hero = ({ setSection }) => {
                 opacity={i % 6 === 0 ? 0.7 : 0.35} />;
             })}
           </g>
-          {/* Slowly spinning outer tick ring */}
-          <g opacity="0.25" style={{ transformOrigin: "960px 540px", animation: "spin 180s linear infinite" }}>
+          {/* Outer tick ring — spinning via RAF */}
+          <g ref={ticksRef} opacity="0.25">
             {Array.from({ length: 72 }, (_, i) => {
               const angle = (i / 72) * Math.PI * 2;
               const inner = 480;
@@ -1633,12 +1647,22 @@ const Hero = ({ setSection }) => {
           transform: "translate(-50%, -50%)",
           width: "clamp(350px, 45vw, 580px)", height: "clamp(350px, 45vw, 580px)",
           borderRadius: "50%",
-          background: `radial-gradient(circle at 50% 40%, #1e1e2e 0%, #141420 45%, #0c0c16 70%, ${P.abyss} 100%)`,
-          boxShadow: `0 0 120px 40px ${P.abyss}, inset 0 0 80px rgba(0,0,0,0.4), 0 0 200px 60px ${P.cyan}08`,
+          overflow: "hidden",
+          boxShadow: `0 0 120px 40px ${P.abyss}, 0 0 200px 60px ${P.cyan}08`,
           opacity: vis ? 1 : 0,
           transition: "opacity 2.5s cubic-bezier(0.16,1,0.3,1)",
           zIndex: 1,
-        }} />
+        }}>
+          <img src="/images/moon.png" alt="" style={{
+            width: "100%", height: "100%", objectFit: "cover",
+            filter: "brightness(1.1) contrast(1.05) saturate(0.1)",
+          }} />
+          {/* Subtle edge fade so the moon blends into the background at its rim */}
+          <div style={{
+            position: "absolute", inset: 0, borderRadius: "50%",
+            background: `radial-gradient(circle at 50% 45%, transparent 55%, ${P.abyss}20 78%, ${P.abyss}88 100%)`,
+          }} />
+        </div>
         {/* ── Center hub: logo + title (sits on the moon) ── */}
         <div style={{
           position: "absolute", left: "50%", top: "50%",
@@ -1656,11 +1680,25 @@ const Hero = ({ setSection }) => {
           </div>
           {/* Title — original full size */}
           <div style={{ textAlign: "center", opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(28px)", transition: "all 1.5s cubic-bezier(0.16,1,0.3,1)" }}>
-            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 8, color: P.cyan, marginBottom: 22, textTransform: "uppercase", opacity: 0.85, textShadow: `0 0 20px ${P.cyan}25` }}><MorphText speed={80}>The Art of</MorphText></div>
-            <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(48px, 10vw, 110px)", fontWeight: 400, color: P.ghost, margin: 0, lineHeight: 0.9, letterSpacing: -2 }}>
+            <div style={{
+              fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8,
+              color: P.bone, textTransform: "uppercase",
+              background: `${P.abyss}cc`, backdropFilter: "blur(8px)",
+              padding: "6px 18px", borderRadius: 20,
+              border: `1px solid ${P.steel}30`,
+              marginBottom: 22,
+            }}><MorphText speed={80}>The Art of</MorphText></div>
+            <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(48px, 10vw, 110px)", fontWeight: 400, margin: 0, lineHeight: 0.9, letterSpacing: -2 }}>
               <span style={{ color: P.cyan }}><MorphText speed={90}>Rare</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>Gh</MorphText></span><span style={{ color: P.steel, opacity: 0.45 }}><MorphText speed={90}>0</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>st</MorphText></span>
             </h1>
-            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.bone, marginTop: 28, opacity: 0.6, textTransform: "uppercase", textShadow: `0 0 16px ${P.abyss}` }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
+            <div style={{
+              fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 6,
+              color: P.bone, textTransform: "uppercase",
+              background: `${P.abyss}cc`, backdropFilter: "blur(8px)",
+              padding: "6px 18px", borderRadius: 20,
+              border: `1px solid ${P.steel}30`,
+              marginTop: 28, opacity: 0.8,
+            }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
           </div>
         </div>
 
@@ -1863,6 +1901,15 @@ const Hero = ({ setSection }) => {
           position: "absolute", inset: 0,
           background: `radial-gradient(ellipse 100% 95% at 50% 50%, transparent 35%, ${P.abyss}44 60%, ${P.abyss}88 80%, ${P.abyss}cc 95%)`,
           opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s",
+        }} />
+        {/* CRT scanlines — scrolling upward */}
+        <div style={{
+          position: "absolute", inset: 0,
+          backgroundImage: "repeating-linear-gradient(to bottom, transparent 0px, transparent 2px, rgba(0,0,0,0.12) 2px, rgba(0,0,0,0.12) 4px)",
+          backgroundSize: "100% 200px",
+          animation: "crtScan 8s linear infinite",
+          opacity: vis ? 0.6 : 0,
+          transition: "opacity 3s ease 0.5s",
         }} />
       </div>
 
@@ -2573,6 +2620,7 @@ export default function App() {
     <CalmContext.Provider value={calm}>
     <div style={{ minHeight: "100vh", background: P.abyss, color: P.ghost, position: "relative" }}>
       <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Sans';src:url('/fonts/Geist-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}@font-face{font-family:'Geist Mono';src:url('/fonts/GeistMono-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}:root{--pf1:'Geist Pixel Square',monospace;--pf2:'Geist Pixel Grid',monospace;--pf3:'Geist Pixel Circle',monospace;--pf4:'Geist Pixel Triangle',monospace;--pf5:'Geist Pixel Line',monospace;--ss1:normal;--ss2:normal;--ss3:normal;--ss4:normal;--ss5:normal}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0;font-family:'Geist Pixel Square',monospace}body:not([data-calm]) *:nth-child(5n+1):not([data-morph]){font-family:var(--pf1)!important;font-feature-settings:var(--ss1)}body:not([data-calm]) *:nth-child(5n+2):not([data-morph]){font-family:var(--pf2)!important;font-feature-settings:var(--ss2)}body:not([data-calm]) *:nth-child(5n+3):not([data-morph]){font-family:var(--pf3)!important;font-feature-settings:var(--ss3)}body:not([data-calm]) *:nth-child(5n+4):not([data-morph]){font-family:var(--pf4)!important;font-feature-settings:var(--ss4)}body:not([data-calm]) *:nth-child(5n):not([data-morph]){font-family:var(--pf5)!important;font-feature-settings:var(--ss5)}body[data-calm]{font-family:'Geist Sans',sans-serif!important}body[data-calm] *:not([data-morph]){font-family:inherit!important;animation:none!important;transition:none!important}body[data-calm] [style*="Courier"],body[data-calm] [style*="monospace"]{font-family:'Geist Mono',monospace!important}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(0.82)}}@keyframes morphBreathStrong{0%,100%{filter:brightness(1)}50%{filter:brightness(0.7)}}@keyframes morphBreathSoft{0%,100%{filter:brightness(1)}50%{filter:brightness(0.85)}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}@keyframes twinkle{0%,100%{opacity:inherit}50%{opacity:0.02}}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}@keyframes fractalPulse{0%,100%{transform:scale(1);opacity:inherit}50%{transform:scale(1.04);opacity:0.6}}@keyframes fractalFloat{0%,100%{transform:translateY(0) rotate(0deg)}25%{transform:translateY(-8px) rotate(2deg)}50%{transform:translateY(0) rotate(0deg)}75%{transform:translateY(8px) rotate(-2deg)}}`}</style>
+      <style>{`@keyframes crtScan{from{background-position:0 0}to{background-position:0 -200px}}`}</style>
       {loading && <Preloader onComplete={() => setLoading(false)} />}
       {!isMobile && <Particles />}
       {!isMobile && <Nav section={section} setSection={setSection} cartCount={cart.length} />}
