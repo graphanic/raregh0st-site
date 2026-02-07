@@ -2313,7 +2313,7 @@ const useIsMobile = (breakpoint = 768) => {
   return isMobile;
 };
 
-// ─── MOBILE HUB ────────────────────────────────────────
+// ─── MOBILE HUB ───────���────────────────────────────────
 // Clean linktree-style navigation center for mobile devices.
 // Replaces the entire orbital Hero experience.
 const MobileHub = ({ setSection, cartCount }) => {
@@ -2342,7 +2342,7 @@ const MobileHub = ({ setSection, cartCount }) => {
           color: P.bone, textTransform: "uppercase", opacity: 0.4, marginBottom: 8,
         }}>The Art of</div>
         <div style={{
-          fontFamily: "'Courier New', monospace", fontSize: 28, fontWeight: 700, letterSpacing: 4,
+          fontFamily: "'Courier New', monospace", fontSize: 38, fontWeight: 700, letterSpacing: 6,
           marginBottom: 8,
         }}>
           <span style={{ color: P.cyan }}>Rare</span>
@@ -2371,8 +2371,7 @@ const MobileHub = ({ setSection, cartCount }) => {
               cursor: "pointer",
               display: "flex", alignItems: "center", justifyContent: "space-between",
               transition: "all 0.3s ease",
-              opacity: 0,
-              animation: `fadeSlideIn 0.4s ease ${i * 0.06}s forwards`,
+              opacity: 1,
             }}
           >
             <div style={{ textAlign: "left" }}>
