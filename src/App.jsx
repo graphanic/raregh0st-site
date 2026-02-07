@@ -1346,13 +1346,34 @@ const Hero = ({ setSection }) => {
   const [hoveredNode, setHoveredNode] = useState(null);
   const containerRef = useRef(null);
   const layerRefs = useRef([]);
+  const nodeRefs = useRef([]);
+  const fieldRef = useRef(null);
   const mouse = useRef({ x: 0, y: 0 });
   const smoothed = useRef({ x: 0, y: 0 });
   const raf = useRef(null);
+  const lastTime = useRef(null);
+  const zoomTarget = useRef(1);
+  const zoomCurrent = useRef(1);
+  // Panning state
+  const panTarget = useRef({ x: 0, y: 0 });
+  const panCurrent = useRef({ x: 0, y: 0 });
+  const isDragging = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const dragPanStart = useRef({ x: 0, y: 0 });
 
-  // L0:cosmos L1:stars L2:grid L3:connections L3.5:moon L4:nodes+center L5:vignette
-  const depths = [0.02, 0.04, 0.05, 0.035, 0.03, 0.015, 0.07];
+  // L0:cosmos L1:stars L2:grid L3:field(moon+center+nodes) L4:vignette
+  const depths = [0.02, 0.04, 0.05, 0.015, 0.07];
   const maxShift = 40;
+
+  // ── Navigation nodes — orbiting the central moon ──
+  // Wider orbits so they spread across the viewport. Farther = slower.
+  const nodes = [
+    { label: "Portfolio", dest: "portfolio", color: P.cyan,    orbitRadius: 380, speed: 200, startAngle: 200, radius: 52, ringCount: 3, desc: "Curated Works" },
+    { label: "Shop",      dest: "shop",      color: P.gold,    orbitRadius: 480, speed: 280, startAngle: 340, radius: 44, ringCount: 2, desc: "Prints & Originals" },
+    { label: "Media",     dest: "media",     color: P.magenta, orbitRadius: 340, speed: 180, startAngle: 130, radius: 40, ringCount: 2, desc: "Motion & Sound" },
+    { label: "The Work",  dest: "the-work",  color: P.purple,  orbitRadius: 540, speed: 340, startAngle: 50,  radius: 46, ringCount: 3, desc: "Process & Philosophy" },
+    { label: "Now",       dest: "now",       color: P.green,   orbitRadius: 260, speed: 140, startAngle: 270, radius: 34, ringCount: 2, desc: "Current Status" },
+  ];
 
   useEffect(() => { setTimeout(() => setVis(true), 100); }, []);
   useEffect(() => {
@@ -1363,18 +1384,70 @@ const Hero = ({ setSection }) => {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    const edgeZone = 60; // px from edge where auto-pan activates
+    const edgeSpeed = 400; // px per second pan speed at the very edge
+
     const onMove = (e) => {
       const rect = el.getBoundingClientRect();
       mouse.current.x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
       mouse.current.y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+      // Store raw pixel position for edge detection
+      mouse.current.px = e.clientX - rect.left;
+      mouse.current.py = e.clientY - rect.top;
+      mouse.current.w = rect.width;
+      mouse.current.h = rect.height;
+      // Drag panning
+      if (isDragging.current) {
+        const dx = e.clientX - dragStart.current.x;
+        const dy = e.clientY - dragStart.current.y;
+        panTarget.current.x = dragPanStart.current.x + dx;
+        panTarget.current.y = dragPanStart.current.y + dy;
+      }
     };
+    const onDown = (e) => {
+      // Only drag on left click, not on interactive elements
+      if (e.button !== 0) return;
+      isDragging.current = true;
+      dragStart.current = { x: e.clientX, y: e.clientY };
+      dragPanStart.current = { x: panTarget.current.x, y: panTarget.current.y };
+      el.style.cursor = "grabbing";
+    };
+    const onUp = () => {
+      isDragging.current = false;
+      el.style.cursor = "";
+    };
+    const onWheel = (e) => {
+      e.preventDefault();
+      const delta = e.deltaY > 0 ? -0.08 : 0.08;
+      zoomTarget.current = Math.max(0.3, Math.min(2.5, zoomTarget.current + delta));
+    };
+    // Store edgeZone + edgeSpeed on the ref for the RAF loop
+    mouse.current.edgeZone = edgeZone;
+    mouse.current.edgeSpeed = edgeSpeed;
     el.addEventListener("mousemove", onMove);
-    return () => el.removeEventListener("mousemove", onMove);
+    el.addEventListener("mousedown", onDown);
+    window.addEventListener("mouseup", onUp);
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("mousemove", onMove);
+      el.removeEventListener("mousedown", onDown);
+      window.removeEventListener("mouseup", onUp);
+      el.removeEventListener("wheel", onWheel);
+    };
   }, []);
+
+  // Orbit angles stored in a ref so they persist across frames
+  const orbitAngles = useRef(nodes.map(n => n.startAngle));
 
   useEffect(() => {
     const ease = 0.08;
-    const tick = () => {
+    const tick = (timestamp) => {
+      // Delta time
+      if (!lastTime.current) lastTime.current = timestamp;
+      const dt = Math.min((timestamp - lastTime.current) / 1000, 0.1); // cap at 100ms
+      lastTime.current = timestamp;
+
+      // Parallax layers
       smoothed.current.x += (mouse.current.x - smoothed.current.x) * ease;
       smoothed.current.y += (mouse.current.y - smoothed.current.y) * ease;
       const sx = smoothed.current.x;
@@ -1387,6 +1460,43 @@ const Hero = ({ setSection }) => {
         const ty = sy * maxShift * (d / 0.04);
         layer.style.transform = `translate3d(${-tx}px, ${-ty}px, 0)`;
       }
+
+      // Edge-of-screen auto-panning (only when not dragging)
+      if (!isDragging.current && mouse.current.w) {
+        const { px, py, w, h, edgeZone, edgeSpeed } = mouse.current;
+        let ex = 0, ey = 0;
+        if (px < edgeZone) ex = (1 - px / edgeZone) * edgeSpeed * dt;
+        else if (px > w - edgeZone) ex = -((1 - (w - px) / edgeZone) * edgeSpeed * dt);
+        if (py < edgeZone) ey = (1 - py / edgeZone) * edgeSpeed * dt;
+        else if (py > h - edgeZone) ey = -((1 - (h - py) / edgeZone) * edgeSpeed * dt);
+        panTarget.current.x += ex;
+        panTarget.current.y += ey;
+      }
+
+      // Smooth pan + zoom
+      panCurrent.current.x += (panTarget.current.x - panCurrent.current.x) * 0.1;
+      panCurrent.current.y += (panTarget.current.y - panCurrent.current.y) * 0.1;
+      zoomCurrent.current += (zoomTarget.current - zoomCurrent.current) * 0.08;
+      const z = zoomCurrent.current;
+      const px = panCurrent.current.x;
+      const py = panCurrent.current.y;
+      if (fieldRef.current) {
+        fieldRef.current.style.transform = `translate(${px}px, ${py}px) scale(${z})`;
+      }
+
+      // Orbit each node
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i];
+        const el = nodeRefs.current[i];
+        if (!el) continue;
+        const degreesPerSec = 360 / node.speed;
+        orbitAngles.current[i] = (orbitAngles.current[i] + degreesPerSec * dt) % 360;
+        const rad = (orbitAngles.current[i] * Math.PI) / 180;
+        const ox = Math.cos(rad) * node.orbitRadius;
+        const oy = Math.sin(rad) * node.orbitRadius;
+        el.style.transform = `translate(${ox}px, ${oy}px)`;
+      }
+
       raf.current = requestAnimationFrame(tick);
     };
     raf.current = requestAnimationFrame(tick);
@@ -1405,16 +1515,6 @@ const Hero = ({ setSection }) => {
 
   const setLayerRef = (i) => (el) => { layerRefs.current[i] = el; };
   const layerBase = { position: "absolute", inset: -60, pointerEvents: "none", willChange: "transform" };
-
-  // ── Navigation nodes — positioned like planets on a star chart ──
-  // x,y are percentages from center (0,0). Radius is the node circle size.
-  const nodes = [
-    { label: "Portfolio", dest: "portfolio", color: P.cyan,    x: -28, y: -22, radius: 52, ringCount: 3, desc: "Curated Works" },
-    { label: "Shop",      dest: "shop",      color: P.gold,    x: 30,  y: -18, radius: 44, ringCount: 2, desc: "Prints & Originals" },
-    { label: "Media",     dest: "media",     color: P.magenta, x: -32, y: 24,  radius: 40, ringCount: 2, desc: "Motion & Sound" },
-    { label: "The Work",  dest: "the-work",  color: P.purple,  x: 26,  y: 28,  radius: 46, ringCount: 3, desc: "Process & Philosophy" },
-    { label: "Now",       dest: "now",       color: P.green,   x: 0,   y: -36, radius: 34, ringCount: 2, desc: "Current Status" },
-  ];
 
   return (
     <div ref={containerRef} style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", position: "relative", overflow: "hidden" }}>
@@ -1481,98 +1581,32 @@ const Hero = ({ setSection }) => {
         </svg>
       </div>
 
-      {/* L3: Connection lines — from center through nodes, extending off-screen */}
-      <div ref={setLayerRef(3)} style={{ ...layerBase, zIndex: 3 }}>
-        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, overflow: "visible", opacity: vis ? 1 : 0, transition: "opacity 2.5s ease 1s" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
-          {nodes.map((node, i) => {
-            const nx = 960 + (node.x / 100) * 1920;
-            const ny = 540 + (node.y / 100) * 1080;
-            const isHovered = hoveredNode === i;
-            // Extend line from center through node and far off-screen
-            const dx = nx - 960;
-            const dy = ny - 540;
-            const len = Math.sqrt(dx * dx + dy * dy) || 1;
-            const ex = 960 + (dx / len) * 2500;
-            const ey = 540 + (dy / len) * 2500;
-            return (
-              <g key={`conn-${i}`}>
-                {/* Extended connection line — through node to edge of space */}
-                <line x1="960" y1="540" x2={ex} y2={ey}
-                  stroke={node.color} strokeWidth={isHovered ? "1" : "0.5"}
-                  opacity={isHovered ? 0.4 : 0.12}
-                  style={{ transition: "all 0.5s ease", filter: isHovered ? `drop-shadow(0 0 6px ${node.color})` : "none" }}
-                />
-                {/* Brighter segment from center to node */}
-                <line x1="960" y1="540" x2={nx} y2={ny}
-                  stroke={node.color} strokeWidth={isHovered ? "1.4" : "0.7"}
-                  opacity={isHovered ? 0.6 : 0.2}
-                  style={{ transition: "all 0.5s ease" }}
-                />
-                {/* Mid-point diamond marker */}
-                <g transform={`translate(${(960 + nx) / 2},${(540 + ny) / 2}) rotate(45)`}>
-                  <rect x="-3" y="-3" width="6" height="6" fill="none" stroke={node.color} strokeWidth="0.6" opacity={isHovered ? 0.6 : 0.25} />
-                </g>
-                {/* Cross-connections between adjacent nodes */}
-                {i < nodes.length - 1 && (() => {
-                  const next = nodes[i + 1];
-                  const nnx = 960 + (next.x / 100) * 1920;
-                  const nny = 540 + (next.y / 100) * 1080;
-                  return <line x1={nx} y1={ny} x2={nnx} y2={nny} stroke={P.steel} strokeWidth="0.4" opacity="0.12" strokeDasharray="6 12" />;
-                })()}
-              </g>
-            );
-          })}
-          {/* Close the loop: last to first */}
-          {(() => {
-            const first = nodes[0];
-            const last = nodes[nodes.length - 1];
-            const fx = 960 + (first.x / 100) * 1920;
-            const fy = 540 + (first.y / 100) * 1080;
-            const lx = 960 + (last.x / 100) * 1920;
-            const ly = 540 + (last.y / 100) * 1080;
-            return <line x1={lx} y1={ly} x2={fx} y2={fy} stroke={P.steel} strokeWidth="0.4" opacity="0.12" strokeDasharray="6 12" />;
-          })()}
-        </svg>
-      </div>
-
-      {/* L4: Moon — central celestial body behind text */}
-      <div ref={setLayerRef(4)} style={{ ...layerBase, zIndex: 4, display: "flex", alignItems: "center", justifyContent: "center" }}>
+      {/* L3: Zoom field — the entire solar system (moon + title + orbiting nodes) */}
+      <div ref={setLayerRef(3)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
+        <div ref={fieldRef} style={{ position: "absolute", inset: 0, willChange: "transform", transformOrigin: "50% 50%" }}>
+        {/* ── Moon — gravitational center, anchored to the brand identity ── */}
         <div style={{
-          width: "clamp(350px, 45vw, 580px)", height: "clamp(350px, 45vw, 580px)",
+          position: "absolute", left: "50%", top: "50%",
+          transform: "translate(-50%, -50%)",
+          width: 280, height: 280,
           borderRadius: "50%",
           background: `radial-gradient(circle at 50% 40%, #1e1e2e 0%, #141420 45%, #0c0c16 70%, ${P.abyss} 100%)`,
-          boxShadow: `0 0 120px 40px ${P.abyss}, inset 0 0 80px rgba(0,0,0,0.4), 0 0 200px 60px ${P.cyan}08`,
+          boxShadow: `0 0 80px 30px ${P.abyss}, inset 0 0 60px rgba(0,0,0,0.4), 0 0 160px 50px ${P.cyan}06`,
           opacity: vis ? 1 : 0,
           transition: "opacity 2.5s cubic-bezier(0.16,1,0.3,1)",
+          zIndex: 1,
         }} />
-      </div>
-
-      {/* L5: Center hub + navigation nodes — interactive */}
-      <div ref={setLayerRef(5)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
-        {/* ── Center hub: logo + title ── */}
+        {/* ── Center hub: logo + title (sits on the moon) ── */}
         <div style={{
           position: "absolute", left: "50%", top: "50%",
           transform: "translate(-50%, -50%)",
           display: "flex", flexDirection: "column", alignItems: "center",
-          pointerEvents: "auto",
+          pointerEvents: "auto", zIndex: 20,
         }}>
-          {/* Concentric rings around center */}
-          {[90, 120, 160].map((size, i) => (
-            <div key={`hub-ring-${i}`} style={{
-              position: "absolute",
-              width: size, height: size,
-              borderRadius: "50%",
-              border: `1px solid ${P.cyan}`,
-              opacity: vis ? [0.2, 0.12, 0.07][i] : 0,
-              transition: `opacity 2s ease ${1 + i * 0.2}s`,
-              animation: `fractalPulse ${8 + i * 2}s ease-in-out ${i * 0.3}s infinite`,
-              boxShadow: `0 0 12px ${P.cyan}15, inset 0 0 8px ${P.cyan}08`,
-            }} />
-          ))}
-          {/* Logo */}
+          {/* Logo — 33% of original size */}
           <div style={{ opacity: vis ? 1 : 0, transition: "opacity 2s cubic-bezier(0.16,1,0.3,1) 0.3s", marginBottom: 16 }}>
             <img src={LOGO_IMG} alt="RareGh0st" style={{
-              width: "clamp(100px, 15vw, 160px)", height: "clamp(100px, 15vw, 160px)",
+              width: "clamp(33px, 5vw, 53px)", height: "clamp(33px, 5vw, 53px)",
               filter: `brightness(1.1) drop-shadow(0 0 24px hsl(${logoGlow}, 100%, 50%, 0.25)) drop-shadow(0 0 48px hsl(${(logoGlow + 180) % 360}, 100%, 50%, 0.12))`,
               animation: "breathe 4s ease-in-out infinite",
             }} />
@@ -1587,19 +1621,39 @@ const Hero = ({ setSection }) => {
           </div>
         </div>
 
-        {/* ── Navigation nodes — circular destinations ── */}
+        {/* ── Orbit tracks (visible rings showing each orbit path) ── */}
+        {nodes.map((node, i) => (
+          <div key={`orbit-track-${i}`} style={{
+            position: "absolute",
+            left: "50%", top: "50%",
+            width: node.orbitRadius * 2,
+            height: node.orbitRadius * 2,
+            marginLeft: -node.orbitRadius,
+            marginTop: -node.orbitRadius,
+            borderRadius: "50%",
+            border: `0.5px solid ${node.color}`,
+            opacity: vis ? 0.06 : 0,
+            transition: `opacity 2s ease ${1 + i * 0.2}s`,
+            pointerEvents: "none",
+          }} />
+        ))}
+
+        {/* ── Orbiting navigation nodes (JS-driven via RAF) ── */}
         {nodes.map((node, i) => {
           const isHovered = hoveredNode === i;
           return (
-            <div key={node.dest} style={{
-              position: "absolute",
-              left: `${50 + node.x}%`,
-              top: `${50 + node.y}%`,
-              transform: "translate(-50%, -50%)",
-              pointerEvents: "auto",
-              cursor: "pointer",
-              zIndex: 15,
-            }}
+            <div key={node.dest}
+              ref={(el) => { nodeRefs.current[i] = el; }}
+              style={{
+                position: "absolute",
+                left: "50%", top: "50%",
+                marginLeft: -node.radius,
+                marginTop: -node.radius,
+                pointerEvents: "auto",
+                cursor: "pointer",
+                zIndex: 15,
+                willChange: "transform",
+              }}
               onClick={() => setSection(node.dest)}
               onMouseEnter={() => setHoveredNode(i)}
               onMouseLeave={() => setHoveredNode(null)}
@@ -1616,12 +1670,12 @@ const Hero = ({ setSection }) => {
                   borderRadius: "50%",
                   border: `${ri === 0 ? 1.5 : 0.5}px solid ${node.color}`,
                   opacity: vis ? (isHovered ? 0.5 - ri * 0.12 : 0.18 - ri * 0.05) : 0,
-                  transition: `opacity 0.5s ease, box-shadow 0.5s ease`,
+                  transition: "opacity 0.5s ease, box-shadow 0.5s ease",
                   boxShadow: isHovered ? `0 0 ${16 + ri * 4}px ${node.color}30, inset 0 0 ${8 + ri * 2}px ${node.color}15` : "none",
                   animation: `fractalPulse ${6 + ri * 2}s ease-in-out ${ri * 0.5 + i * 0.3}s infinite`,
                 }} />
               ))}
-              {/* Dotted ring (innermost detail) */}
+              {/* Dotted ring */}
               <div style={{
                 position: "absolute",
                 left: "50%", top: "50%",
@@ -1635,7 +1689,7 @@ const Hero = ({ setSection }) => {
                 transition: "opacity 0.5s ease",
                 animation: `spin ${30 + i * 10}s linear infinite ${i % 2 === 0 ? "" : "reverse"}`,
               }} />
-              {/* Inner glow disc */}
+              {/* Inner glow disc + labels */}
               <div style={{
                 width: node.radius * 2,
                 height: node.radius * 2,
@@ -1644,46 +1698,33 @@ const Hero = ({ setSection }) => {
                 display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
                 transition: "background 0.5s ease",
               }}>
-                {/* Label */}
                 <div style={{
                   fontFamily: "'Courier New', monospace",
-                  fontSize: 10,
-                  letterSpacing: 4,
-                  color: node.color,
+                  fontSize: 10, letterSpacing: 4, color: node.color,
                   textTransform: "uppercase",
                   opacity: vis ? (isHovered ? 1 : 0.7) : 0,
                   transition: "opacity 0.4s ease",
                   textShadow: isHovered ? `0 0 12px ${node.color}` : "none",
-                  textAlign: "center",
-                  lineHeight: 1.4,
+                  textAlign: "center", lineHeight: 1.4,
                 }}>
                   <HoverMorphText>{node.label}</HoverMorphText>
                 </div>
-                {/* Description — shows on hover */}
                 <div style={{
-                  fontFamily: "'Georgia', serif",
-                  fontSize: 9,
-                  color: P.bone,
+                  fontFamily: "'Georgia', serif", fontSize: 9, color: P.bone,
                   opacity: isHovered ? 0.5 : 0,
                   transition: "opacity 0.4s ease 0.1s",
-                  marginTop: 4,
-                  textAlign: "center",
-                  letterSpacing: 1,
+                  marginTop: 4, textAlign: "center", letterSpacing: 1,
                 }}>
                   {node.desc}
                 </div>
               </div>
-              {/* Tick marks around node — like a compass */}
+              {/* Tick marks */}
               <svg style={{
-                position: "absolute",
-                left: "50%", top: "50%",
-                width: node.radius * 2 + 30,
-                height: node.radius * 2 + 30,
-                marginLeft: -(node.radius + 15),
-                marginTop: -(node.radius + 15),
+                position: "absolute", left: "50%", top: "50%",
+                width: node.radius * 2 + 30, height: node.radius * 2 + 30,
+                marginLeft: -(node.radius + 15), marginTop: -(node.radius + 15),
                 opacity: vis ? (isHovered ? 0.5 : 0.12) : 0,
-                transition: "opacity 0.5s ease",
-                pointerEvents: "none",
+                transition: "opacity 0.5s ease", pointerEvents: "none",
               }} viewBox={`0 0 ${node.radius * 2 + 30} ${node.radius * 2 + 30}`}>
                 {Array.from({ length: 12 }, (_, ti) => {
                   const angle = (ti / 12) * Math.PI * 2;
@@ -1700,10 +1741,11 @@ const Hero = ({ setSection }) => {
             </div>
           );
         })}
-      </div>
+        </div>{/* end zoom field */}
+      </div>{/* end L3 */}
 
-      {/* L6: Vignette — softened so grid lines show through more */}
-      <div ref={setLayerRef(6)} style={{ ...layerBase, zIndex: 20, pointerEvents: "none" }}>
+      {/* L4: Vignette — softened so grid lines show through more */}
+      <div ref={setLayerRef(4)} style={{ ...layerBase, zIndex: 20, pointerEvents: "none" }}>
         <div style={{
           position: "absolute", inset: 0,
           background: `radial-gradient(ellipse 100% 95% at 50% 50%, transparent 35%, ${P.abyss}44 60%, ${P.abyss}88 80%, ${P.abyss}cc 95%)`,
@@ -2032,7 +2074,7 @@ const Footer = ({ setSection }) => (
   </footer>
 );
 
-// ─── IMAGE PROTECTION HOOK ──────────────────────────────
+// ─── IMAGE PROTECTION HOOK ───────────────────────────���──
 const useImageProtection = () => {
   useEffect(() => {
     // Disable right-click on images
