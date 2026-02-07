@@ -1625,20 +1625,6 @@ const Hero = ({ setSection }) => {
       if (visRef.current && fadeIn.current < 1) fadeIn.current = Math.min(1, fadeIn.current + dt * 0.5);
       const a = fadeIn.current;
 
-      // Smooth mouse
-      smoothed.current.x += (mouse.current.x - smoothed.current.x) * 0.08;
-      smoothed.current.y += (mouse.current.y - smoothed.current.y) * 0.08;
-      const sx = smoothed.current.x;
-      const sy = smoothed.current.y;
-
-      // Parallax CSS layers
-      if (bgRef.current) {
-        bgRef.current.style.transform = `translate3d(${-sx * 20 + panCurrent.current.x * 0.05}px, ${-sy * 20 + panCurrent.current.y * 0.05}px, 0)`;
-      }
-      if (vigRef.current) {
-        vigRef.current.style.transform = `translate3d(${-sx * 70}px, ${-sy * 70}px, 0)`;
-      }
-
       // Pan clamp
       const vw = mouse.current.w || cw;
       const vh = mouse.current.h || ch;
@@ -1656,6 +1642,9 @@ const Hero = ({ setSection }) => {
       const fpx = panCurrent.current.x;
       const fpy = panCurrent.current.y;
 
+      // CSS layers — pan tracking only
+      if (bgRef.current) bgRef.current.style.transform = `translate3d(${fpx * 0.05}px, ${fpy * 0.05}px, 0)`;
+
       // Update angles
       for (let i = 0; i < nodes.length; i++) {
         orbitAngles.current[i] = (orbitAngles.current[i] + (360 / nodes[i].speed) * dt) % 360;
@@ -1665,8 +1654,10 @@ const Hero = ({ setSection }) => {
       }
 
       // Unified field rotation (very slow, majestic — one full rotation every ~10 minutes)
+      // Split rotation: square grid + moon spin RIGHT, circular elements spin LEFT
       fieldAngle.current = (fieldAngle.current + dt * 0.6) % 360;
-      const fa = fieldAngle.current * Math.PI / 180;
+      const faR = fieldAngle.current * Math.PI / 180;   // clockwise
+      const faL = -fieldAngle.current * Math.PI / 180;  // counter-clockwise
 
       // ── Font river cycle (~100ms, per-character randomization) ──
       lastFontCycle.current += dt * 1000;
@@ -1725,8 +1716,8 @@ const Hero = ({ setSection }) => {
 
       // ── Stars Layer 0: Deep dust (rotates at 30% field speed) ──
       ctx.save();
-      ctx.translate(cw / 2 - sx * 12 - panCurrent.current.x * 0.08, ch / 2 - sy * 12 - panCurrent.current.y * 0.08);
-      ctx.rotate(fa * 0.3);
+      ctx.translate(cw / 2 - panCurrent.current.x * 0.08, ch / 2 - panCurrent.current.y * 0.08);
+      ctx.rotate(faL * 0.3);
       for (const s of starsDust.current) {
         const x = Math.cos(s.angle) * s.dist;
         const y = Math.sin(s.angle) * s.dist;
@@ -1737,8 +1728,8 @@ const Hero = ({ setSection }) => {
 
       // ── Stars Layer 1: Mid-field glow stars (rotates at 60% field speed) ──
       ctx.save();
-      ctx.translate(cw / 2 - sx * 40 - panCurrent.current.x * 0.25, ch / 2 - sy * 40 - panCurrent.current.y * 0.25);
-      ctx.rotate(fa * 0.6);
+      ctx.translate(cw / 2 - panCurrent.current.x * 0.25, ch / 2 - panCurrent.current.y * 0.25);
+      ctx.rotate(faL * 0.6);
       for (const s of starsMid.current) {
         const x = Math.cos(s.angle) * s.dist;
         const y = Math.sin(s.angle) * s.dist;
@@ -1747,11 +1738,9 @@ const Hero = ({ setSection }) => {
       }
       ctx.restore();
 
-      // ── Field transform (L2 parallax + zoom/pan) ──
-      const fOx = sx * 15;
-      const fOy = sy * 15;
-      const cx = cw / 2 - fOx + fpx;
-      const cy = ch / 2 - fOy + fpy;
+      // ── Field transform (zoom/pan, no mouse drift) ──
+      const cx = cw / 2 + fpx;
+      const cy = ch / 2 + fpy;
 
       ctx.save();
       ctx.translate(cx, cy);
@@ -1762,7 +1751,7 @@ const Hero = ({ setSection }) => {
         const moonSize = Math.min(Math.max(438, cw * 0.5625), 725);
         const r = moonSize / 2;
         ctx.save();
-        ctx.rotate(fa); // unified rotation
+        ctx.rotate(faR); // moon spins right with square grid
         ctx.beginPath();
         ctx.arc(0, 0, r, 0, Math.PI * 2);
         ctx.clip();
@@ -1780,9 +1769,9 @@ const Hero = ({ setSection }) => {
         ctx.restore();
       }
 
-      // ── Rectangular grid (infinite, rotates with field) ──
+      // ── Rectangular grid (spins RIGHT with moon) ──
       ctx.save();
-      ctx.rotate(fa);
+      ctx.rotate(faR);
       ctx.strokeStyle = P.cyan;
       ctx.lineWidth = 0.5;
       ctx.globalAlpha = a * 0.14;
@@ -1803,9 +1792,9 @@ const Hero = ({ setSection }) => {
       ctx.stroke();
       ctx.restore(); // end grid rotation
 
-      // ── Concentric circles (unified rotation) ──
+      // ── Concentric circles (spins LEFT) ──
       ctx.save();
-      ctx.rotate(fa);
+      ctx.rotate(faL);
       ctx.strokeStyle = P.cyan;
       const circleR = [80, 160, 260, 380, 520, 680, 860, 1080, 1350, 1700, 2100, 2600, 3200];
       for (let i = 0; i < circleR.length; i++) {
@@ -1819,9 +1808,9 @@ const Hero = ({ setSection }) => {
       ctx.setLineDash([]);
       ctx.restore();
 
-      // ── Radial lines (unified rotation) ──
+      // ── Radial lines (spins LEFT) ──
       ctx.save();
-      ctx.rotate(fa);
+      ctx.rotate(faL);
       ctx.strokeStyle = P.cyan;
       // Major radials
       ctx.lineWidth = 0.8;
@@ -1846,9 +1835,9 @@ const Hero = ({ setSection }) => {
       ctx.stroke();
       ctx.restore();
 
-      // ── Tick ring (unified rotation) ──
+      // ── Tick ring (spins LEFT) ──
       ctx.save();
-      ctx.rotate(fa);
+      ctx.rotate(faL);
       ctx.strokeStyle = P.cyan;
       ctx.globalAlpha = a * 0.25;
       // Major ticks
@@ -2097,8 +2086,8 @@ const Hero = ({ setSection }) => {
 
       // ── Stars Layer 2: Foreground brilliant stars (rotates at 80% field speed) ──
       ctx.save();
-      ctx.translate(cw / 2 - sx * 60 - panCurrent.current.x * 0.5, ch / 2 - sy * 60 - panCurrent.current.y * 0.5);
-      ctx.rotate(fa * 0.8);
+      ctx.translate(cw / 2 - panCurrent.current.x * 0.5, ch / 2 - panCurrent.current.y * 0.5);
+      ctx.rotate(faR * 0.8);
       for (const s of starsFG.current) {
         const x = Math.cos(s.angle) * s.dist;
         const y = Math.sin(s.angle) * s.dist;
@@ -2164,7 +2153,7 @@ const Hero = ({ setSection }) => {
 
       // Sync DOM overlay with canvas transform
       if (overlayRef.current) {
-        overlayRef.current.style.transform = `translate(-50%, -50%) translate(${fpx - fOx}px, ${fpy - fOy}px) scale(${zoom})`;
+        overlayRef.current.style.transform = `translate(-50%, -50%) translate(${fpx}px, ${fpy}px) scale(${zoom})`;
         overlayRef.current.style.opacity = a;
       }
 
