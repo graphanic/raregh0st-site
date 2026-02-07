@@ -160,7 +160,7 @@ const MorphText = ({ children, speed = 45 }) => {
         el.style.fontFamily = v.fontFamily;
         el.style.opacity = v.opacity;
       }
-    }, Math.max(speed, 80)); // floor at 80ms (~12fps) — still looks alive, half the work
+    }, speed);
     return () => clearInterval(id);
   }, [text, speed, calm]);
   if (calm) return <span aria-label={text}>{text}</span>;
@@ -213,7 +213,7 @@ const HoverMorphText = ({ children, speed = 45 }) => {
         el.style.fontFamily = v.fontFamily;
         el.style.opacity = v.opacity;
       }
-    }, Math.max(speed, 80));
+    }, speed);
     return () => clearInterval(id);
   }, [hovered, text, speed, calm]);
   return (<span onMouseEnter={() => setHovered(true)} onMouseLeave={() => setHovered(false)} style={{ cursor: "inherit", display: "inline" }}>
@@ -2722,7 +2722,7 @@ export default function App() {
         root.style.setProperty(`--pf${g}`, PIXEL_FONTS[Math.floor(Math.random() * 5)]);
         root.style.setProperty(`--ss${g}`, SS_OPTIONS[Math.floor(Math.random() * 8)]);
       }
-    }, 200);
+    }, 100);
     return () => { clearInterval(river); for (let g = 1; g <= 5; g++) { root.style.removeProperty(`--pf${g}`); root.style.removeProperty(`--ss${g}`); } };
   }, [calm]);
 
