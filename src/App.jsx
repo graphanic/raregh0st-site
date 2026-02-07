@@ -1471,7 +1471,18 @@ const Hero = ({ setSection }) => {
     const onWheel = (e) => {
       e.preventDefault();
       const d = e.deltaY > 0 ? -0.08 : 0.08;
-      zoomTarget.current = Math.max(0.3, Math.min(2.5, zoomTarget.current + d));
+      const oldZ = zoomTarget.current;
+      const newZ = Math.max(0.3, Math.min(2.5, oldZ + d));
+      // Zoom toward cursor: adjust pan so world point under cursor stays fixed
+      const rect = el.getBoundingClientRect();
+      const mx = e.clientX - rect.left;
+      const my = e.clientY - rect.top;
+      const cxBase = rect.width / 2;
+      const cyBase = rect.height / 2;
+      const ratio = newZ / oldZ;
+      panTarget.current.x = (mx - cxBase) * (1 - ratio) + panTarget.current.x * ratio;
+      panTarget.current.y = (my - cyBase) * (1 - ratio) + panTarget.current.y * ratio;
+      zoomTarget.current = newZ;
     };
 
     const checkNodeClick = (mx, my) => {
@@ -1666,11 +1677,6 @@ const Hero = ({ setSection }) => {
         ctx.clip();
         ctx.globalAlpha = a;
         ctx.drawImage(moonImg.current, -r, -r, moonSize, moonSize);
-        // Desaturate overlay
-        ctx.globalCompositeOperation = "saturation";
-        ctx.fillStyle = "hsl(0, 5%, 50%)";
-        ctx.fillRect(-r, -r, moonSize, moonSize);
-        ctx.globalCompositeOperation = "source-over";
         // Edge fade — matches background center color #12121e
         const grad = ctx.createRadialGradient(0, -r * 0.1, r * 0.35, 0, 0, r);
         grad.addColorStop(0, "transparent");
