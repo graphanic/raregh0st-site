@@ -1356,6 +1356,17 @@ const Hero = ({ setSection }) => {
   const depths = [0.02, 0.04, 0.05, 0.03, 0.015, 0.07];
   const maxShift = 40;
 
+  // ── Navigation nodes — orbiting the central moon ──
+  // Each node orbits at its own radius and speed. Farther = slower.
+  // startAngle spreads them evenly around the circle initially.
+  const nodes = [
+    { label: "Portfolio", dest: "portfolio", color: P.cyan,    orbitRadius: 240, speed: 180, startAngle: 200, radius: 52, ringCount: 3, desc: "Curated Works" },
+    { label: "Shop",      dest: "shop",      color: P.gold,    orbitRadius: 300, speed: 240, startAngle: 340, radius: 44, ringCount: 2, desc: "Prints & Originals" },
+    { label: "Media",     dest: "media",     color: P.magenta, orbitRadius: 210, speed: 160, startAngle: 130, radius: 40, ringCount: 2, desc: "Motion & Sound" },
+    { label: "The Work",  dest: "the-work",  color: P.purple,  orbitRadius: 330, speed: 300, startAngle: 50,  radius: 46, ringCount: 3, desc: "Process & Philosophy" },
+    { label: "Now",       dest: "now",       color: P.green,   orbitRadius: 170, speed: 120, startAngle: 270, radius: 34, ringCount: 2, desc: "Current Status" },
+  ];
+
   useEffect(() => { setTimeout(() => setVis(true), 100); }, []);
   useEffect(() => {
     const interval = setInterval(() => setLogoGlow(g => (g + 1) % 360), 50);
@@ -1430,17 +1441,6 @@ const Hero = ({ setSection }) => {
 
   const setLayerRef = (i) => (el) => { layerRefs.current[i] = el; };
   const layerBase = { position: "absolute", inset: -60, pointerEvents: "none", willChange: "transform" };
-
-  // ── Navigation nodes — orbiting the central moon ──
-  // Each node orbits at its own radius and speed. Farther = slower.
-  // startAngle spreads them evenly around the circle initially.
-  const nodes = [
-    { label: "Portfolio", dest: "portfolio", color: P.cyan,    orbitRadius: 240, speed: 180, startAngle: 200, radius: 52, ringCount: 3, desc: "Curated Works" },
-    { label: "Shop",      dest: "shop",      color: P.gold,    orbitRadius: 300, speed: 240, startAngle: 340, radius: 44, ringCount: 2, desc: "Prints & Originals" },
-    { label: "Media",     dest: "media",     color: P.magenta, orbitRadius: 210, speed: 160, startAngle: 130, radius: 40, ringCount: 2, desc: "Motion & Sound" },
-    { label: "The Work",  dest: "the-work",  color: P.purple,  orbitRadius: 330, speed: 300, startAngle: 50,  radius: 46, ringCount: 3, desc: "Process & Philosophy" },
-    { label: "Now",       dest: "now",       color: P.green,   orbitRadius: 170, speed: 120, startAngle: 270, radius: 34, ringCount: 2, desc: "Current Status" },
-  ];
 
   return (
     <div ref={containerRef} style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", position: "relative", overflow: "hidden" }}>
@@ -1998,7 +1998,7 @@ const Footer = ({ setSection }) => (
   </footer>
 );
 
-// ─── IMAGE PROTECTION HOOK ──────────────────────────────
+// ─── IMAGE PROTECTION HOOK ───────────────────────────���──
 const useImageProtection = () => {
   useEffect(() => {
     // Disable right-click on images
