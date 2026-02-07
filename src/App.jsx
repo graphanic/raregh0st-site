@@ -1641,12 +1641,12 @@ const Hero = ({ setSection }) => {
         }}>
           <img src="/images/moon.png" alt="" style={{
             width: "100%", height: "100%", objectFit: "cover",
-            filter: "brightness(0.85) contrast(1.05) saturate(0.15)",
+            filter: "brightness(1.1) contrast(1.05) saturate(0.1)",
           }} />
           {/* Subtle edge fade so the moon blends into the background at its rim */}
           <div style={{
             position: "absolute", inset: 0, borderRadius: "50%",
-            background: `radial-gradient(circle at 50% 45%, transparent 50%, ${P.abyss}30 75%, ${P.abyss}aa 100%)`,
+            background: `radial-gradient(circle at 50% 45%, transparent 55%, ${P.abyss}20 78%, ${P.abyss}88 100%)`,
           }} />
         </div>
         {/* ── Center hub: logo + title (sits on the moon) ── */}
@@ -1666,11 +1666,11 @@ const Hero = ({ setSection }) => {
           </div>
           {/* Title — original full size */}
           <div style={{ textAlign: "center", opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(28px)", transition: "all 1.5s cubic-bezier(0.16,1,0.3,1)" }}>
-            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 8, color: P.cyan, marginBottom: 22, textTransform: "uppercase", opacity: 0.85, textShadow: `0 0 20px ${P.cyan}25` }}><MorphText speed={80}>The Art of</MorphText></div>
-            <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(48px, 10vw, 110px)", fontWeight: 400, color: P.ghost, margin: 0, lineHeight: 0.9, letterSpacing: -2 }}>
-              <span style={{ color: P.cyan }}><MorphText speed={90}>Rare</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>Gh</MorphText></span><span style={{ color: P.steel, opacity: 0.45 }}><MorphText speed={90}>0</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>st</MorphText></span>
+            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 8, color: "#1a1a1a", marginBottom: 22, textTransform: "uppercase", opacity: 0.7 }}><MorphText speed={80}>The Art of</MorphText></div>
+            <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(48px, 10vw, 110px)", fontWeight: 400, color: "#111", margin: 0, lineHeight: 0.9, letterSpacing: -2 }}>
+              <span style={{ color: "#0a0a0a" }}><MorphText speed={90}>Rare</MorphText></span><span style={{ color: "#1a1a1a" }}><MorphText speed={90}>Gh</MorphText></span><span style={{ color: "#333", opacity: 0.5 }}><MorphText speed={90}>0</MorphText></span><span style={{ color: "#1a1a1a" }}><MorphText speed={90}>st</MorphText></span>
             </h1>
-            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.bone, marginTop: 28, opacity: 0.6, textTransform: "uppercase", textShadow: `0 0 16px ${P.abyss}` }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
+            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: "#222", marginTop: 28, opacity: 0.6, textTransform: "uppercase" }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
           </div>
         </div>
 
