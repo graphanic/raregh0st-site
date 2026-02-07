@@ -1481,11 +1481,16 @@ const Hero = ({ setSection }) => {
         layer.style.transform = `translate3d(${-tx}px, ${-ty}px, 0)`;
       }
 
-      // Clamp pan — brand can reach corners but never fully disappear
+      // Clamp pan — tight at max zoom-out, expansive when zoomed in
+      // At min zoom (0.3): boundary is ~0.35 viewport (brand stays reachable)
+      // As you zoom in the boundary scales up so you can explore the full system
       const vw = mouse.current.w || window.innerWidth;
       const vh = mouse.current.h || window.innerHeight;
-      const maxPanX = vw * 0.35;
-      const maxPanY = vh * 0.35;
+      const curZoom = zoomTarget.current;
+      const minZoom = 0.3;
+      const boundScale = curZoom / minZoom; // 1x at min zoom, ~3.3x at zoom 1, ~8.3x at zoom 2.5
+      const maxPanX = vw * 0.35 * boundScale;
+      const maxPanY = vh * 0.35 * boundScale;
       panTarget.current.x = Math.max(-maxPanX, Math.min(maxPanX, panTarget.current.x));
       panTarget.current.y = Math.max(-maxPanY, Math.min(maxPanY, panTarget.current.y));
 
