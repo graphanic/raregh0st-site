@@ -1367,13 +1367,29 @@ const Hero = ({ setSection }) => {
 
   // ── Navigation nodes — orbiting the central moon ──
   // Wider orbits so they spread across the viewport. Farther = slower.
+  // Nodes can have `moons` — sub-items that orbit the node itself.
   const nodes = [
     { label: "Portfolio", dest: "portfolio", color: P.cyan,    orbitRadius: 380, speed: 200, startAngle: 200, radius: 52, ringCount: 3, desc: "Curated Works" },
-    { label: "Shop",      dest: "shop",      color: P.gold,    orbitRadius: 480, speed: 280, startAngle: 340, radius: 44, ringCount: 2, desc: "Prints & Originals" },
+    { label: "Shop",      dest: "shop",      color: P.gold,    orbitRadius: 480, speed: 280, startAngle: 340, radius: 54, ringCount: 2, desc: "Prints & Originals", moons: [
+      { label: "Apparel",     orbitRadius: 70,  speed: 18, startAngle: 0,   size: 18 },
+      { label: "Accessories", orbitRadius: 90,  speed: 24, startAngle: 72,  size: 16 },
+      { label: "Art Prints",  orbitRadius: 110, speed: 30, startAngle: 144, size: 20 },
+      { label: "Digital",     orbitRadius: 130, speed: 36, startAngle: 216, size: 15 },
+      { label: "Courses",     orbitRadius: 150, speed: 42, startAngle: 288, size: 17 },
+    ]},
     { label: "Media",     dest: "media",     color: P.magenta, orbitRadius: 340, speed: 180, startAngle: 130, radius: 40, ringCount: 2, desc: "Motion & Sound" },
     { label: "The Work",  dest: "the-work",  color: P.purple,  orbitRadius: 540, speed: 340, startAngle: 50,  radius: 46, ringCount: 3, desc: "Process & Philosophy" },
     { label: "Now",       dest: "now",       color: P.green,   orbitRadius: 260, speed: 140, startAngle: 270, radius: 34, ringCount: 2, desc: "Current Status" },
   ];
+
+  // Build flat list of all sub-moons for RAF tracking
+  const allMoons = [];
+  nodes.forEach((node, ni) => {
+    if (node.moons) node.moons.forEach((moon, mi) => {
+      allMoons.push({ nodeIndex: ni, moonIndex: mi, ...moon });
+    });
+  });
+  const moonRefs = useRef([]);
 
   useEffect(() => { setTimeout(() => setVis(true), 100); }, []);
   useEffect(() => {
@@ -1438,6 +1454,7 @@ const Hero = ({ setSection }) => {
 
   // Orbit angles stored in a ref so they persist across frames
   const orbitAngles = useRef(nodes.map(n => n.startAngle));
+  const moonAngles = useRef(allMoons.map(m => m.startAngle));
 
   useEffect(() => {
     const ease = 0.08;
@@ -1473,18 +1490,28 @@ const Hero = ({ setSection }) => {
         panTarget.current.y += ey;
       }
 
+      // Clamp pan so the brand center stays within the viewport corners
+      // At zoom 1, allow panning up to half the viewport in any direction.
+      // This keeps the center reachable but lets you explore the edges.
+      const vw = mouse.current.w || window.innerWidth;
+      const vh = mouse.current.h || window.innerHeight;
+      const maxPanX = vw * 0.6;
+      const maxPanY = vh * 0.6;
+      panTarget.current.x = Math.max(-maxPanX, Math.min(maxPanX, panTarget.current.x));
+      panTarget.current.y = Math.max(-maxPanY, Math.min(maxPanY, panTarget.current.y));
+
       // Smooth pan + zoom
       panCurrent.current.x += (panTarget.current.x - panCurrent.current.x) * 0.1;
       panCurrent.current.y += (panTarget.current.y - panCurrent.current.y) * 0.1;
       zoomCurrent.current += (zoomTarget.current - zoomCurrent.current) * 0.08;
       const z = zoomCurrent.current;
-      const px = panCurrent.current.x;
-      const py = panCurrent.current.y;
+      const fpx = panCurrent.current.x;
+      const fpy = panCurrent.current.y;
       if (fieldRef.current) {
-        fieldRef.current.style.transform = `translate(${px}px, ${py}px) scale(${z})`;
+        fieldRef.current.style.transform = `translate(${fpx}px, ${fpy}px) scale(${z})`;
       }
 
-      // Orbit each node
+      // Orbit each node around the sun
       for (let i = 0; i < nodes.length; i++) {
         const node = nodes[i];
         const el = nodeRefs.current[i];
@@ -1495,6 +1522,19 @@ const Hero = ({ setSection }) => {
         const ox = Math.cos(rad) * node.orbitRadius;
         const oy = Math.sin(rad) * node.orbitRadius;
         el.style.transform = `translate(${ox}px, ${oy}px)`;
+      }
+
+      // Orbit each sub-moon around its parent node
+      for (let m = 0; m < allMoons.length; m++) {
+        const moon = allMoons[m];
+        const el = moonRefs.current[m];
+        if (!el) continue;
+        const degreesPerSec = 360 / moon.speed;
+        moonAngles.current[m] = (moonAngles.current[m] + degreesPerSec * dt) % 360;
+        const rad = (moonAngles.current[m] * Math.PI) / 180;
+        const mx = Math.cos(rad) * moon.orbitRadius;
+        const my = Math.sin(rad) * moon.orbitRadius;
+        el.style.transform = `translate(${mx}px, ${my}px)`;
       }
 
       raf.current = requestAnimationFrame(tick);
@@ -1588,10 +1628,10 @@ const Hero = ({ setSection }) => {
         <div style={{
           position: "absolute", left: "50%", top: "50%",
           transform: "translate(-50%, -50%)",
-          width: 280, height: 280,
+          width: "clamp(350px, 45vw, 580px)", height: "clamp(350px, 45vw, 580px)",
           borderRadius: "50%",
           background: `radial-gradient(circle at 50% 40%, #1e1e2e 0%, #141420 45%, #0c0c16 70%, ${P.abyss} 100%)`,
-          boxShadow: `0 0 80px 30px ${P.abyss}, inset 0 0 60px rgba(0,0,0,0.4), 0 0 160px 50px ${P.cyan}06`,
+          boxShadow: `0 0 120px 40px ${P.abyss}, inset 0 0 80px rgba(0,0,0,0.4), 0 0 200px 60px ${P.cyan}08`,
           opacity: vis ? 1 : 0,
           transition: "opacity 2.5s cubic-bezier(0.16,1,0.3,1)",
           zIndex: 1,
@@ -1738,6 +1778,76 @@ const Hero = ({ setSection }) => {
                     stroke={node.color} strokeWidth={ti % 3 === 0 ? "1.2" : "0.5"} />;
                 })}
               </svg>
+              {/* ── Sub-moons orbiting this node ── */}
+              {node.moons && node.moons.map((moon, mi) => {
+                // Find the flat index in allMoons
+                const flatIdx = allMoons.findIndex(m => m.nodeIndex === i && m.moonIndex === mi);
+                return (
+                  <React.Fragment key={`moon-${mi}`}>
+                    {/* Moon orbit track */}
+                    <div style={{
+                      position: "absolute",
+                      left: "50%", top: "50%",
+                      width: moon.orbitRadius * 2, height: moon.orbitRadius * 2,
+                      marginLeft: -moon.orbitRadius, marginTop: -moon.orbitRadius,
+                      borderRadius: "50%",
+                      border: `0.5px dashed ${node.color}`,
+                      opacity: vis ? 0.08 : 0,
+                      transition: "opacity 2s ease",
+                      pointerEvents: "none",
+                    }} />
+                    {/* Moon body */}
+                    <div
+                      ref={(el) => { moonRefs.current[flatIdx] = el; }}
+                      style={{
+                        position: "absolute",
+                        left: "50%", top: "50%",
+                        marginLeft: -(moon.size / 2),
+                        marginTop: -(moon.size / 2),
+                        width: moon.size, height: moon.size,
+                        willChange: "transform",
+                        pointerEvents: "auto",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {/* Moon glow disc */}
+                      <div style={{
+                        width: moon.size, height: moon.size,
+                        borderRadius: "50%",
+                        border: `1px solid ${node.color}`,
+                        background: `radial-gradient(circle, ${node.color}15 0%, transparent 70%)`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        opacity: vis ? 0.7 : 0,
+                        transition: "opacity 0.4s ease",
+                        boxShadow: `0 0 8px ${node.color}20`,
+                      }}>
+                        <div style={{
+                          width: moon.size * 0.4, height: moon.size * 0.4,
+                          borderRadius: "50%",
+                          background: node.color,
+                          opacity: 0.5,
+                        }} />
+                      </div>
+                      {/* Moon label */}
+                      <div style={{
+                        position: "absolute",
+                        top: moon.size + 4,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        fontFamily: "'Courier New', monospace",
+                        fontSize: 7, letterSpacing: 2,
+                        color: node.color,
+                        textTransform: "uppercase",
+                        whiteSpace: "nowrap",
+                        opacity: vis ? 0.5 : 0,
+                        textAlign: "center",
+                      }}>
+                        {moon.label}
+                      </div>
+                    </div>
+                  </React.Fragment>
+                );
+              })}
             </div>
           );
         })}
