@@ -1354,6 +1354,12 @@ const Hero = ({ setSection }) => {
   const lastTime = useRef(null);
   const zoomTarget = useRef(1);
   const zoomCurrent = useRef(1);
+  // Panning state
+  const panTarget = useRef({ x: 0, y: 0 });
+  const panCurrent = useRef({ x: 0, y: 0 });
+  const isDragging = useRef(false);
+  const dragStart = useRef({ x: 0, y: 0 });
+  const dragPanStart = useRef({ x: 0, y: 0 });
 
   // L0:cosmos L1:stars L2:grid L3:field(moon+center+nodes) L4:vignette
   const depths = [0.02, 0.04, 0.05, 0.015, 0.07];
@@ -1378,20 +1384,54 @@ const Hero = ({ setSection }) => {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
+    const edgeZone = 60; // px from edge where auto-pan activates
+    const edgeSpeed = 400; // px per second pan speed at the very edge
+
     const onMove = (e) => {
       const rect = el.getBoundingClientRect();
       mouse.current.x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
       mouse.current.y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+      // Store raw pixel position for edge detection
+      mouse.current.px = e.clientX - rect.left;
+      mouse.current.py = e.clientY - rect.top;
+      mouse.current.w = rect.width;
+      mouse.current.h = rect.height;
+      // Drag panning
+      if (isDragging.current) {
+        const dx = e.clientX - dragStart.current.x;
+        const dy = e.clientY - dragStart.current.y;
+        panTarget.current.x = dragPanStart.current.x + dx;
+        panTarget.current.y = dragPanStart.current.y + dy;
+      }
+    };
+    const onDown = (e) => {
+      // Only drag on left click, not on interactive elements
+      if (e.button !== 0) return;
+      isDragging.current = true;
+      dragStart.current = { x: e.clientX, y: e.clientY };
+      dragPanStart.current = { x: panTarget.current.x, y: panTarget.current.y };
+      el.style.cursor = "grabbing";
+    };
+    const onUp = () => {
+      isDragging.current = false;
+      el.style.cursor = "";
     };
     const onWheel = (e) => {
       e.preventDefault();
       const delta = e.deltaY > 0 ? -0.08 : 0.08;
       zoomTarget.current = Math.max(0.3, Math.min(2.5, zoomTarget.current + delta));
     };
+    // Store edgeZone + edgeSpeed on the ref for the RAF loop
+    mouse.current.edgeZone = edgeZone;
+    mouse.current.edgeSpeed = edgeSpeed;
     el.addEventListener("mousemove", onMove);
+    el.addEventListener("mousedown", onDown);
+    window.addEventListener("mouseup", onUp);
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => {
       el.removeEventListener("mousemove", onMove);
+      el.removeEventListener("mousedown", onDown);
+      window.removeEventListener("mouseup", onUp);
       el.removeEventListener("wheel", onWheel);
     };
   }, []);
@@ -1421,11 +1461,27 @@ const Hero = ({ setSection }) => {
         layer.style.transform = `translate3d(${-tx}px, ${-ty}px, 0)`;
       }
 
-      // Smooth zoom
+      // Edge-of-screen auto-panning (only when not dragging)
+      if (!isDragging.current && mouse.current.w) {
+        const { px, py, w, h, edgeZone, edgeSpeed } = mouse.current;
+        let ex = 0, ey = 0;
+        if (px < edgeZone) ex = (1 - px / edgeZone) * edgeSpeed * dt;
+        else if (px > w - edgeZone) ex = -((1 - (w - px) / edgeZone) * edgeSpeed * dt);
+        if (py < edgeZone) ey = (1 - py / edgeZone) * edgeSpeed * dt;
+        else if (py > h - edgeZone) ey = -((1 - (h - py) / edgeZone) * edgeSpeed * dt);
+        panTarget.current.x += ex;
+        panTarget.current.y += ey;
+      }
+
+      // Smooth pan + zoom
+      panCurrent.current.x += (panTarget.current.x - panCurrent.current.x) * 0.1;
+      panCurrent.current.y += (panTarget.current.y - panCurrent.current.y) * 0.1;
       zoomCurrent.current += (zoomTarget.current - zoomCurrent.current) * 0.08;
       const z = zoomCurrent.current;
+      const px = panCurrent.current.x;
+      const py = panCurrent.current.y;
       if (fieldRef.current) {
-        fieldRef.current.style.transform = `scale(${z})`;
+        fieldRef.current.style.transform = `translate(${px}px, ${py}px) scale(${z})`;
       }
 
       // Orbit each node
