@@ -1393,6 +1393,17 @@ const Hero = ({ setSection }) => {
   const visRef = useRef(false);
   const fadeIn = useRef(0);
 
+  // ── Geist Pixel font river for canvas labels ──
+  const CPIXEL = [
+    "'Geist Pixel Square'", "'Geist Pixel Grid'", "'Geist Pixel Circle'",
+    "'Geist Pixel Triangle'", "'Geist Pixel Line'",
+  ];
+  // Each node label gets per-character font slots, cycled every ~100ms
+  // Structure: nodeCharFonts[nodeIndex][charIndex] = font index (0-4)
+  const nodeCharFonts = useRef([]);
+  const moonCharFonts = useRef([]);
+  const lastFontCycle = useRef(0);
+
   // ── Navigation nodes ──
   const nodes = [
     { label: "Portfolio", dest: "portfolio", color: P.cyan,    orbitRadius: 480, speed: 200, startAngle: 200, radius: 52, ringCount: 3, desc: "Curated Works" },
@@ -1600,6 +1611,22 @@ const Hero = ({ setSection }) => {
       gr.circles = (gr.circles + dt * 0.5) % 360;
       gr.radials = (gr.radials - dt * 0.7) % 360;
       gr.ticks = (gr.ticks + dt * 1.2) % 360;
+
+      // ── Font river cycle (~100ms, per-character randomization) ──
+      lastFontCycle.current += dt * 1000;
+      if (lastFontCycle.current >= 100) {
+        lastFontCycle.current = 0;
+        // Node labels
+        for (let i = 0; i < nodes.length; i++) {
+          const chars = nodes[i].label.toUpperCase().split("");
+          nodeCharFonts.current[i] = chars.map(() => Math.floor(Math.random() * 5));
+        }
+        // Moon labels
+        for (let m = 0; m < allMoons.length; m++) {
+          const chars = allMoons[m].label.toUpperCase().split("");
+          moonCharFonts.current[m] = chars.map(() => Math.floor(Math.random() * 5));
+        }
+      }
 
       // ─── DRAW ───
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -1843,23 +1870,35 @@ const Hero = ({ setSection }) => {
         ctx.arc(nx, ny, node.radius, 0, Math.PI * 2);
         ctx.fill();
 
-        // Label
-        ctx.font = "bold 10px 'Courier New', monospace";
+        // Label — per-character Geist Pixel river
+        const labelText = node.label.toUpperCase();
+        const labelChars = labelText.split("");
+        const charFonts = nodeCharFonts.current[i] || labelChars.map(() => 0);
         ctx.textAlign = "center";
         ctx.textBaseline = "middle";
-        ctx.letterSpacing = "4px";
         ctx.fillStyle = node.color;
         ctx.globalAlpha = a * (isH ? 1 : 0.7);
         if (isH) {
           ctx.shadowColor = node.color;
           ctx.shadowBlur = 12;
         }
-        ctx.fillText(node.label.toUpperCase(), nx, ny);
+        // Measure total width to center the per-char rendering
+        ctx.font = "bold 10px " + CPIXEL[0] + ", monospace";
+        const totalW = ctx.measureText(labelText).width + (labelChars.length - 1) * 2;
+        let charX = nx - totalW / 2;
+        ctx.textAlign = "left";
+        for (let ci = 0; ci < labelChars.length; ci++) {
+          const fi = charFonts[ci] !== undefined ? charFonts[ci] : 0;
+          ctx.font = "bold 10px " + CPIXEL[fi] + ", monospace";
+          ctx.fillText(labelChars[ci], charX, ny);
+          charX += ctx.measureText(labelChars[ci]).width + 2;
+        }
         ctx.shadowBlur = 0;
 
         // Description (hover only)
         if (isH) {
-          ctx.font = "italic 9px Georgia, serif";
+          ctx.font = "9px " + CPIXEL[Math.floor(Math.random() * 5)] + ", monospace";
+          ctx.textAlign = "center";
           ctx.fillStyle = P.bone;
           ctx.globalAlpha = a * 0.5;
           ctx.fillText(node.desc, nx, ny + 14);
@@ -1932,13 +1971,24 @@ const Hero = ({ setSection }) => {
             ctx.arc(mx, my, moon.size * 0.2, 0, Math.PI * 2);
             ctx.fill();
 
-            // Moon label
-            ctx.font = "7px 'Courier New', monospace";
-            ctx.textAlign = "center";
+            // Moon label — per-character Geist Pixel river
+            const moonText = moon.label.toUpperCase();
+            const moonChars = moonText.split("");
+            const mCharFonts = moonCharFonts.current[flatIdx] || moonChars.map(() => 0);
             ctx.textBaseline = "top";
             ctx.fillStyle = node.color;
             ctx.globalAlpha = a * 0.5;
-            ctx.fillText(moon.label.toUpperCase(), mx, my + moon.size / 2 + 4);
+            // Measure for centering
+            ctx.font = "7px " + CPIXEL[0] + ", monospace";
+            const mTotalW = ctx.measureText(moonText).width + (moonChars.length - 1) * 1;
+            let mCharX = mx - mTotalW / 2;
+            ctx.textAlign = "left";
+            for (let mci = 0; mci < moonChars.length; mci++) {
+              const mfi = mCharFonts[mci] !== undefined ? mCharFonts[mci] : 0;
+              ctx.font = "7px " + CPIXEL[mfi] + ", monospace";
+              ctx.fillText(moonChars[mci], mCharX, my + moon.size / 2 + 4);
+              mCharX += ctx.measureText(moonChars[mci]).width + 1;
+            }
           }
         }
       }
