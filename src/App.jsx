@@ -2302,6 +2302,131 @@ const Preloader = ({ onComplete }) => {
   );
 };
 
+// ─── MOBILE DETECTION ──────────────────────────────────
+const useIsMobile = (breakpoint = 768) => {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.innerWidth < breakpoint);
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < breakpoint);
+    window.addEventListener("resize", check);
+    return () => window.removeEventListener("resize", check);
+  }, [breakpoint]);
+  return isMobile;
+};
+
+// ─── MOBILE HUB ────────────────────────────────────────
+// Clean linktree-style navigation center for mobile devices.
+// Replaces the entire orbital Hero experience.
+const MobileHub = ({ setSection, cartCount }) => {
+  const links = [
+    { label: "Portfolio", dest: "portfolio", color: P.cyan, desc: "Curated Works" },
+    { label: "Shop", dest: "shop", color: P.gold, desc: "Prints & Originals" },
+    { label: "Media", dest: "media", color: P.magenta, desc: "Motion & Sound" },
+    { label: "The Work", dest: "the-work", color: P.purple, desc: "Process & Philosophy" },
+    { label: "Now", dest: "now", color: P.green, desc: "Current Status" },
+    { label: "Contact", dest: "contact", color: P.bone, desc: "Get In Touch" },
+    { label: "About", dest: "about", color: P.bone, desc: "The Artist" },
+  ];
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: `radial-gradient(ellipse at 50% 30%, ${P.deep} 0%, ${P.abyss} 70%)`,
+      display: "flex", flexDirection: "column", alignItems: "center",
+      padding: "60px 24px 40px",
+    }}>
+      {/* Brand identity */}
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", marginBottom: 48 }}>
+        <img src={LOGO_IMG} alt="RareGh0st" style={{ width: 48, height: 48, opacity: 0.8, marginBottom: 16 }} />
+        <div style={{
+          fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8,
+          color: P.bone, textTransform: "uppercase", opacity: 0.4, marginBottom: 8,
+        }}>The Art of</div>
+        <div style={{
+          fontFamily: "'Courier New', monospace", fontSize: 28, fontWeight: 700, letterSpacing: 4,
+          marginBottom: 8,
+        }}>
+          <span style={{ color: P.cyan }}>Rare</span>
+          <span style={{ color: P.magenta }}>Gh</span>
+          <span style={{ color: P.ghost }}>0</span>
+          <span style={{ color: P.magenta }}>st</span>
+        </div>
+        <div style={{
+          fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 6,
+          color: P.bone, textTransform: "uppercase", opacity: 0.3,
+        }}>Trauma Integration Made Visible</div>
+      </div>
+
+      {/* Navigation links */}
+      <div style={{ width: "100%", maxWidth: 360, display: "flex", flexDirection: "column", gap: 12 }}>
+        {links.map((link, i) => (
+          <button
+            key={link.dest}
+            onClick={() => setSection(link.dest)}
+            style={{
+              width: "100%",
+              background: `${link.color}08`,
+              border: `1px solid ${link.color}25`,
+              borderRadius: 2,
+              padding: "16px 20px",
+              cursor: "pointer",
+              display: "flex", alignItems: "center", justifyContent: "space-between",
+              transition: "all 0.3s ease",
+              opacity: 0,
+              animation: `fadeSlideIn 0.4s ease ${i * 0.06}s forwards`,
+            }}
+          >
+            <div style={{ textAlign: "left" }}>
+              <div style={{
+                fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 4,
+                color: link.color, textTransform: "uppercase", fontWeight: 600,
+              }}>{link.label}</div>
+              <div style={{
+                fontFamily: "'Georgia', serif", fontSize: 10, color: P.bone, opacity: 0.35,
+                marginTop: 4,
+              }}>{link.desc}</div>
+            </div>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke={link.color} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.4 }}>
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+          </button>
+        ))}
+      </div>
+
+      {/* Cart link */}
+      {cartCount > 0 && (
+        <button
+          onClick={() => setSection("cart")}
+          style={{
+            marginTop: 20, width: "100%", maxWidth: 360,
+            background: `${P.gold}10`, border: `1px solid ${P.gold}30`,
+            borderRadius: 2, padding: "14px 20px", cursor: "pointer",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+          }}
+        >
+          <span style={{
+            fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 4,
+            color: P.gold, textTransform: "uppercase",
+          }}>Cart ({cartCount})</span>
+        </button>
+      )}
+
+      {/* Divider */}
+      <div style={{ width: 40, height: 1, background: `${P.steel}22`, margin: "32px 0 20px" }} />
+
+      {/* Social / secondary links */}
+      <div style={{ display: "flex", gap: 20, opacity: 0.35 }}>
+        {["Privacy", "Terms", "Shipping"].map(s => (
+          <button key={s} onClick={() => setSection(s.toLowerCase())} style={{
+            background: "none", border: "none", color: P.bone, cursor: "pointer",
+            fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3,
+            textTransform: "uppercase",
+          }}>{s}</button>
+        ))}
+      </div>
+    </div>
+  );
+};
+
 // ─── 404 PAGE ───────────────────────────────────────────
 const NotFound = ({ setSection }) => (
   <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", paddingTop: 80 }}>
@@ -2386,6 +2511,7 @@ const loadLocal = (key, fallback) => { try { const v = localStorage.getItem(`rg_
 
 // ���══════════════════════════════════════════════
 export default function App() {
+  const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [section, setSection] = useState(() => {
     const saved = loadLocal("section", "hero");
@@ -2444,11 +2570,50 @@ export default function App() {
     <div style={{ minHeight: "100vh", background: P.abyss, color: P.ghost, position: "relative" }}>
       <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Sans';src:url('/fonts/Geist-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}@font-face{font-family:'Geist Mono';src:url('/fonts/GeistMono-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}:root{--pf1:'Geist Pixel Square',monospace;--pf2:'Geist Pixel Grid',monospace;--pf3:'Geist Pixel Circle',monospace;--pf4:'Geist Pixel Triangle',monospace;--pf5:'Geist Pixel Line',monospace;--ss1:normal;--ss2:normal;--ss3:normal;--ss4:normal;--ss5:normal}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0;font-family:'Geist Pixel Square',monospace}body:not([data-calm]) *:nth-child(5n+1):not([data-morph]){font-family:var(--pf1)!important;font-feature-settings:var(--ss1)}body:not([data-calm]) *:nth-child(5n+2):not([data-morph]){font-family:var(--pf2)!important;font-feature-settings:var(--ss2)}body:not([data-calm]) *:nth-child(5n+3):not([data-morph]){font-family:var(--pf3)!important;font-feature-settings:var(--ss3)}body:not([data-calm]) *:nth-child(5n+4):not([data-morph]){font-family:var(--pf4)!important;font-feature-settings:var(--ss4)}body:not([data-calm]) *:nth-child(5n):not([data-morph]){font-family:var(--pf5)!important;font-feature-settings:var(--ss5)}body[data-calm]{font-family:'Geist Sans',sans-serif!important}body[data-calm] *:not([data-morph]){font-family:inherit!important;animation:none!important;transition:none!important}body[data-calm] [style*="Courier"],body[data-calm] [style*="monospace"]{font-family:'Geist Mono',monospace!important}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(0.82)}}@keyframes morphBreathStrong{0%,100%{filter:brightness(1)}50%{filter:brightness(0.7)}}@keyframes morphBreathSoft{0%,100%{filter:brightness(1)}50%{filter:brightness(0.85)}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}@keyframes twinkle{0%,100%{opacity:inherit}50%{opacity:0.02}}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}@keyframes fractalPulse{0%,100%{transform:scale(1);opacity:inherit}50%{transform:scale(1.04);opacity:0.6}}@keyframes fractalFloat{0%,100%{transform:translateY(0) rotate(0deg)}25%{transform:translateY(-8px) rotate(2deg)}50%{transform:translateY(0) rotate(0deg)}75%{transform:translateY(8px) rotate(-2deg)}}`}</style>
       {loading && <Preloader onComplete={() => setLoading(false)} />}
-      <Particles />
-      <Nav section={section} setSection={setSection} cartCount={cart.length} />
-      <div style={{ position: "relative", zIndex: 2, animation: "morphBreath 1.5s ease-in-out infinite", willChange: "filter" }} data-protected>
+      {!isMobile && <Particles />}
+      {!isMobile && <Nav section={section} setSection={setSection} cartCount={cart.length} />}
+      {/* Mobile: minimal sticky header for inner pages */}
+      {isMobile && section !== "hero" && (
+        <nav style={{
+          position: "fixed", top: 0, left: 0, right: 0, zIndex: 100,
+          padding: "12px 20px",
+          display: "flex", justifyContent: "space-between", alignItems: "center",
+          background: `${P.abyss}f0`, backdropFilter: "blur(12px)",
+          borderBottom: `1px solid ${P.steel}15`,
+        }}>
+          <button onClick={() => setSection("hero")} style={{
+            background: "none", border: "none", cursor: "pointer",
+            display: "flex", alignItems: "center", gap: 8,
+            color: P.cyan, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 3,
+          }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            HUB
+          </button>
+          <div style={{
+            fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4,
+            color: P.bone, textTransform: "uppercase", opacity: 0.5,
+          }}>{section === "the-work" ? "The Work" : section}</div>
+          <div onClick={() => setSection("cart")} style={{
+            cursor: "pointer", position: "relative", color: P.bone,
+            fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2,
+          }}>
+            CART{cart.length > 0 && <span style={{
+              position: "absolute", top: -6, right: -10,
+              background: P.magenta, color: "#fff", fontSize: 7, fontWeight: 700,
+              width: 12, height: 12, borderRadius: "50%",
+              display: "flex", alignItems: "center", justifyContent: "center",
+            }}>{cart.length}</span>}
+          </div>
+        </nav>
+      )}
+      <div style={{ position: "relative", zIndex: 2, animation: isMobile ? "none" : "morphBreath 1.5s ease-in-out infinite", willChange: isMobile ? "auto" : "filter" }} data-protected>
         {is404 && <NotFound setSection={setSection} />}
-        {section === "hero" && <Hero setSection={setSection} />}
+        {section === "hero" && (isMobile
+          ? <MobileHub setSection={setSection} cartCount={cart.length} />
+          : <Hero setSection={setSection} />
+        )}
         {section === "portfolio" && <Portfolio setSection={setSection} setSelected={setSelected} setDesignProject={setDesignProject} addToCart={addToCart} portfolioTab={portfolioTab} setPortfolioTab={setPortfolioTab} />}
         {section === "showcase" && <ShowcaseDetail piece={selected} setSection={setSection} addToCart={addToCart} portfolioTab={portfolioTab} />}
         {section === "case-study" && <CaseStudyDetail project={designProject} setSection={setSection} portfolioTab={portfolioTab} />}
