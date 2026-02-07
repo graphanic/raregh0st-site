@@ -1337,57 +1337,378 @@ const Cart = ({ cart, removeFromCart }) => {
 };
 
 // ─── HERO (v4: Moon + Logo + Parallax) ──────────────────
+// ─── PARALLAX HERO — Destiny-style Director HUD Map ─────────
+// Circular navigation nodes connected by geometric grid lines,
+// layered with parallax depth. Mouse-driven "window" effect.
 const Hero = ({ setSection }) => {
   const [vis, setVis] = useState(false);
   const [logoGlow, setLogoGlow] = useState(0);
+  const [hoveredNode, setHoveredNode] = useState(null);
+  const containerRef = useRef(null);
+  const layerRefs = useRef([]);
+  const mouse = useRef({ x: 0, y: 0 });
+  const smoothed = useRef({ x: 0, y: 0 });
+  const raf = useRef(null);
+
+  // L0:cosmos L1:stars L2:grid L3:connections L3.5:moon L4:nodes+center L5:vignette
+  const depths = [0.02, 0.04, 0.05, 0.035, 0.03, 0.015, 0.07];
+  const maxShift = 40;
+
   useEffect(() => { setTimeout(() => setVis(true), 100); }, []);
   useEffect(() => {
     const interval = setInterval(() => setLogoGlow(g => (g + 1) % 360), 50);
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    const onMove = (e) => {
+      const rect = el.getBoundingClientRect();
+      mouse.current.x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
+      mouse.current.y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
+    };
+    el.addEventListener("mousemove", onMove);
+    return () => el.removeEventListener("mousemove", onMove);
+  }, []);
+
+  useEffect(() => {
+    const ease = 0.08;
+    const tick = () => {
+      smoothed.current.x += (mouse.current.x - smoothed.current.x) * ease;
+      smoothed.current.y += (mouse.current.y - smoothed.current.y) * ease;
+      const sx = smoothed.current.x;
+      const sy = smoothed.current.y;
+      for (let i = 0; i < layerRefs.current.length; i++) {
+        const layer = layerRefs.current[i];
+        if (!layer) continue;
+        const d = depths[i] || 0.02;
+        const tx = sx * maxShift * (d / 0.04);
+        const ty = sy * maxShift * (d / 0.04);
+        layer.style.transform = `translate3d(${-tx}px, ${-ty}px, 0)`;
+      }
+      raf.current = requestAnimationFrame(tick);
+    };
+    raf.current = requestAnimationFrame(tick);
+    return () => { if (raf.current) cancelAnimationFrame(raf.current); };
+  }, []);
+
+  const [stars] = useState(() =>
+    Array.from({ length: 80 }, (_, i) => ({
+      id: i, x: Math.random() * 100, y: Math.random() * 100,
+      size: Math.random() * 1.8 + 0.3,
+      opacity: Math.random() * 0.5 + 0.1,
+      color: [P.ghost, P.cyan, P.magenta][Math.floor(Math.random() * 3)],
+      delay: Math.random() * 6,
+    }))
+  );
+
+  const setLayerRef = (i) => (el) => { layerRefs.current[i] = el; };
+  const layerBase = { position: "absolute", inset: -60, pointerEvents: "none", willChange: "transform" };
+
+  // ── Navigation nodes — positioned like planets on a star chart ──
+  // x,y are percentages from center (0,0). Radius is the node circle size.
+  const nodes = [
+    { label: "Portfolio", dest: "portfolio", color: P.cyan,    x: -28, y: -22, radius: 52, ringCount: 3, desc: "Curated Works" },
+    { label: "Shop",      dest: "shop",      color: P.gold,    x: 30,  y: -18, radius: 44, ringCount: 2, desc: "Prints & Originals" },
+    { label: "Media",     dest: "media",     color: P.magenta, x: -32, y: 24,  radius: 40, ringCount: 2, desc: "Motion & Sound" },
+    { label: "The Work",  dest: "the-work",  color: P.purple,  x: 26,  y: 28,  radius: 46, ringCount: 3, desc: "Process & Philosophy" },
+    { label: "Now",       dest: "now",       color: P.green,   x: 0,   y: -36, radius: 34, ringCount: 2, desc: "Current Status" },
+  ];
+
   return (
-    <div style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", position: "relative", overflow: "hidden" }}>
-      {/* Moon - dark radial, future True3D parallax canvas */}
-      <div style={{
-        position: "absolute",
-        width: "clamp(400px, 50vw, 650px)", height: "clamp(400px, 50vw, 650px)",
-        borderRadius: "50%",
-        background: `radial-gradient(circle at 50% 40%, #1e1e2e 0%, #141420 45%, #0c0c16 70%, ${P.abyss} 100%)`,
-        boxShadow: `0 0 120px 40px ${P.abyss}, inset 0 0 80px rgba(0,0,0,0.4)`,
-        opacity: vis ? 1 : 0,
-        transition: "opacity 2.5s cubic-bezier(0.16,1,0.3,1)",
-        zIndex: 0,
-      }} />
-      {/* Logo - above title, in flow */}
-      <div style={{
-        opacity: vis ? 1 : 0,
-        transition: "opacity 2s cubic-bezier(0.16,1,0.3,1) 0.3s",
-        zIndex: 2,
-        marginBottom: 24,
-      }}>
-        <img src={LOGO_IMG} alt="RareGh0st" style={{
-          width: "clamp(100px, 15vw, 160px)", height: "clamp(100px, 15vw, 160px)",
-          filter: `brightness(1.1) drop-shadow(0 0 24px hsl(${logoGlow}, 100%, 50%, 0.25)) drop-shadow(0 0 48px hsl(${(logoGlow + 180) % 360}, 100%, 50%, 0.12))`,
-          animation: "breathe 4s ease-in-out infinite",
+    <div ref={containerRef} style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", position: "relative", overflow: "hidden" }}>
+
+      {/* L0: Deep cosmos background */}
+      <div ref={setLayerRef(0)} style={{ ...layerBase, zIndex: 0 }}>
+        <div style={{
+          position: "absolute", inset: 0,
+          background: `
+            radial-gradient(ellipse 80% 60% at 50% 45%, #12121e 0%, ${P.abyss} 70%),
+            radial-gradient(circle at 25% 30%, ${P.cyan}08 0%, transparent 50%),
+            radial-gradient(circle at 75% 65%, ${P.magenta}06 0%, transparent 50%)
+          `,
+          opacity: vis ? 1 : 0, transition: "opacity 3s cubic-bezier(0.16,1,0.3,1)",
         }} />
       </div>
-      {/* Title - below logo */}
-      <div style={{ textAlign: "center", opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(28px)", transition: "all 1.5s cubic-bezier(0.16,1,0.3,1)", zIndex: 2 }}>
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 8, color: P.cyan, marginBottom: 22, textTransform: "uppercase", opacity: 0.85, textShadow: `0 0 20px ${P.cyan}25` }}><MorphText speed={80}>The Art of</MorphText></div>
-        <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(48px, 10vw, 110px)", fontWeight: 400, color: P.ghost, margin: 0, lineHeight: 0.9, letterSpacing: -2 }}>
-          <span style={{ color: P.cyan }}><MorphText speed={90}>Rare</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>Gh</MorphText></span><span style={{ color: P.steel, opacity: 0.45 }}><MorphText speed={90}>0</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>st</MorphText></span>
-        </h1>
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.bone, marginTop: 28, opacity: 0.6, textTransform: "uppercase", textShadow: `0 0 16px ${P.abyss}` }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
-      </div>
-      {/* CTAs */}
-      <div style={{ display: "flex", gap: 14, marginTop: 36, zIndex: 2, flexWrap: "wrap", justifyContent: "center" }}>
-        {[{ label: "Portfolio", dest: "portfolio", color: P.cyan }, { label: "Shop", dest: "shop", color: P.gold }, { label: "Media", dest: "media", color: P.magenta }, { label: "The Work", dest: "the-work", color: P.purple }, { label: "Now", dest: "now", color: P.green }].map(({ label, dest, color }) => (
-          <button key={dest} onClick={() => setSection(dest)} style={{ background: `${color}18`, border: `1px solid ${color}35`, color, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 5, padding: "12px 26px", cursor: "pointer", textTransform: "uppercase", opacity: vis ? 1 : 0, transition: "all 1.5s ease, background 0.3s, border-color 0.3s, box-shadow 0.3s" }}
-            onMouseEnter={(e) => { e.target.style.background = `${color}28`; e.target.style.borderColor = `${color}55`; e.target.style.boxShadow = `0 0 18px ${color}15`; }}
-            onMouseLeave={(e) => { e.target.style.background = `${color}18`; e.target.style.borderColor = `${color}35`; e.target.style.boxShadow = "none"; }}
-          ><HoverMorphText>{label}</HoverMorphText></button>
+
+      {/* L1: Stars field */}
+      <div ref={setLayerRef(1)} style={{ ...layerBase, zIndex: 1 }}>
+        {stars.map(s => (
+          <div key={s.id} style={{
+            position: "absolute", left: `${s.x}%`, top: `${s.y}%`,
+            width: s.size, height: s.size, borderRadius: "50%", background: s.color,
+            opacity: vis ? s.opacity : 0,
+            boxShadow: `0 0 ${s.size * 3}px ${s.color}`,
+            transition: `opacity 2.5s ease ${0.5 + s.delay * 0.15}s`,
+            animation: `twinkle ${3 + s.delay}s ease-in-out ${s.delay}s infinite`,
+          }} />
         ))}
+      </div>
+
+      {/* L2: HUD grid overlay — radiating lines + concentric circles, extends far off-screen */}
+      <div ref={setLayerRef(2)} style={{ ...layerBase, zIndex: 2 }}>
+        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, overflow: "visible", opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
+          <g opacity="0.14">
+            {/* Concentric circles from center — extending well past viewport */}
+            {[100, 180, 280, 400, 540, 700, 880, 1100, 1400, 1800].map((r, i) => (
+              <circle key={`cc-${i}`} cx="960" cy="540" r={r} fill="none" stroke={P.cyan} strokeWidth={i < 4 ? "0.6" : "0.4"} opacity={0.7 - i * 0.05} strokeDasharray={i % 2 === 0 ? "none" : "4 8"} />
+            ))}
+            {/* Radial lines from center — every 15 degrees, extending 2500px from center (well off-screen) */}
+            {Array.from({ length: 24 }, (_, i) => {
+              const angle = (i / 24) * Math.PI * 2;
+              const x2 = 960 + Math.cos(angle) * 2500;
+              const y2 = 540 + Math.sin(angle) * 2500;
+              return <line key={`rl-${i}`} x1="960" y1="540" x2={x2} y2={y2} stroke={P.cyan} strokeWidth="0.4" opacity={i % 3 === 0 ? 0.5 : 0.2} />;
+            })}
+            {/* Rectangular grid — extends full viewport and beyond */}
+            {Array.from({ length: 30 }, (_, i) => (
+              <line key={`gh-${i}`} x1="-200" y1={i * 54 - 200} x2="2120" y2={i * 54 - 200} stroke={P.steel} strokeWidth="0.3" opacity="0.25" />
+            ))}
+            {Array.from({ length: 30 }, (_, i) => (
+              <line key={`gv-${i}`} x1={i * 80 - 200} y1="-200" x2={i * 80 - 200} y2="1280" stroke={P.steel} strokeWidth="0.3" opacity="0.25" />
+            ))}
+          </g>
+          {/* Slowly spinning outer ring markers */}
+          <g opacity="0.1" style={{ transformOrigin: "960px 540px", animation: "spin 180s linear infinite" }}>
+            {Array.from({ length: 36 }, (_, i) => {
+              const angle = (i / 36) * Math.PI * 2;
+              const inner = 480;
+              const outer = 500;
+              return <line key={`tick-${i}`} x1={960 + Math.cos(angle) * inner} y1={540 + Math.sin(angle) * inner} x2={960 + Math.cos(angle) * outer} y2={540 + Math.sin(angle) * outer} stroke={P.cyan} strokeWidth={i % 3 === 0 ? "2" : "0.8"} />;
+            })}
+          </g>
+        </svg>
+      </div>
+
+      {/* L3: Connection lines — from center through nodes, extending off-screen */}
+      <div ref={setLayerRef(3)} style={{ ...layerBase, zIndex: 3 }}>
+        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, overflow: "visible", opacity: vis ? 1 : 0, transition: "opacity 2.5s ease 1s" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
+          {nodes.map((node, i) => {
+            const nx = 960 + (node.x / 100) * 1920;
+            const ny = 540 + (node.y / 100) * 1080;
+            const isHovered = hoveredNode === i;
+            // Extend line from center through node and far off-screen
+            const dx = nx - 960;
+            const dy = ny - 540;
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            const ex = 960 + (dx / len) * 2500;
+            const ey = 540 + (dy / len) * 2500;
+            return (
+              <g key={`conn-${i}`}>
+                {/* Extended connection line — through node to edge of space */}
+                <line x1="960" y1="540" x2={ex} y2={ey}
+                  stroke={node.color} strokeWidth={isHovered ? "1" : "0.5"}
+                  opacity={isHovered ? 0.4 : 0.12}
+                  style={{ transition: "all 0.5s ease", filter: isHovered ? `drop-shadow(0 0 6px ${node.color})` : "none" }}
+                />
+                {/* Brighter segment from center to node */}
+                <line x1="960" y1="540" x2={nx} y2={ny}
+                  stroke={node.color} strokeWidth={isHovered ? "1.4" : "0.7"}
+                  opacity={isHovered ? 0.6 : 0.2}
+                  style={{ transition: "all 0.5s ease" }}
+                />
+                {/* Mid-point diamond marker */}
+                <g transform={`translate(${(960 + nx) / 2},${(540 + ny) / 2}) rotate(45)`}>
+                  <rect x="-3" y="-3" width="6" height="6" fill="none" stroke={node.color} strokeWidth="0.6" opacity={isHovered ? 0.6 : 0.25} />
+                </g>
+                {/* Cross-connections between adjacent nodes */}
+                {i < nodes.length - 1 && (() => {
+                  const next = nodes[i + 1];
+                  const nnx = 960 + (next.x / 100) * 1920;
+                  const nny = 540 + (next.y / 100) * 1080;
+                  return <line x1={nx} y1={ny} x2={nnx} y2={nny} stroke={P.steel} strokeWidth="0.4" opacity="0.12" strokeDasharray="6 12" />;
+                })()}
+              </g>
+            );
+          })}
+          {/* Close the loop: last to first */}
+          {(() => {
+            const first = nodes[0];
+            const last = nodes[nodes.length - 1];
+            const fx = 960 + (first.x / 100) * 1920;
+            const fy = 540 + (first.y / 100) * 1080;
+            const lx = 960 + (last.x / 100) * 1920;
+            const ly = 540 + (last.y / 100) * 1080;
+            return <line x1={lx} y1={ly} x2={fx} y2={fy} stroke={P.steel} strokeWidth="0.4" opacity="0.12" strokeDasharray="6 12" />;
+          })()}
+        </svg>
+      </div>
+
+      {/* L4: Moon — central celestial body behind text */}
+      <div ref={setLayerRef(4)} style={{ ...layerBase, zIndex: 4, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{
+          width: "clamp(350px, 45vw, 580px)", height: "clamp(350px, 45vw, 580px)",
+          borderRadius: "50%",
+          background: `radial-gradient(circle at 50% 40%, #1e1e2e 0%, #141420 45%, #0c0c16 70%, ${P.abyss} 100%)`,
+          boxShadow: `0 0 120px 40px ${P.abyss}, inset 0 0 80px rgba(0,0,0,0.4), 0 0 200px 60px ${P.cyan}08`,
+          opacity: vis ? 1 : 0,
+          transition: "opacity 2.5s cubic-bezier(0.16,1,0.3,1)",
+        }} />
+      </div>
+
+      {/* L5: Center hub + navigation nodes — interactive */}
+      <div ref={setLayerRef(5)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
+        {/* ── Center hub: logo + title ── */}
+        <div style={{
+          position: "absolute", left: "50%", top: "50%",
+          transform: "translate(-50%, -50%)",
+          display: "flex", flexDirection: "column", alignItems: "center",
+          pointerEvents: "auto",
+        }}>
+          {/* Concentric rings around center */}
+          {[90, 120, 160].map((size, i) => (
+            <div key={`hub-ring-${i}`} style={{
+              position: "absolute",
+              width: size, height: size,
+              borderRadius: "50%",
+              border: `1px solid ${P.cyan}`,
+              opacity: vis ? [0.2, 0.12, 0.07][i] : 0,
+              transition: `opacity 2s ease ${1 + i * 0.2}s`,
+              animation: `fractalPulse ${8 + i * 2}s ease-in-out ${i * 0.3}s infinite`,
+              boxShadow: `0 0 12px ${P.cyan}15, inset 0 0 8px ${P.cyan}08`,
+            }} />
+          ))}
+          {/* Logo */}
+          <div style={{ opacity: vis ? 1 : 0, transition: "opacity 2s cubic-bezier(0.16,1,0.3,1) 0.3s", marginBottom: 16 }}>
+            <img src={LOGO_IMG} alt="RareGh0st" style={{
+              width: "clamp(100px, 15vw, 160px)", height: "clamp(100px, 15vw, 160px)",
+              filter: `brightness(1.1) drop-shadow(0 0 24px hsl(${logoGlow}, 100%, 50%, 0.25)) drop-shadow(0 0 48px hsl(${(logoGlow + 180) % 360}, 100%, 50%, 0.12))`,
+              animation: "breathe 4s ease-in-out infinite",
+            }} />
+          </div>
+          {/* Title — original full size */}
+          <div style={{ textAlign: "center", opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(28px)", transition: "all 1.5s cubic-bezier(0.16,1,0.3,1)" }}>
+            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 8, color: P.cyan, marginBottom: 22, textTransform: "uppercase", opacity: 0.85, textShadow: `0 0 20px ${P.cyan}25` }}><MorphText speed={80}>The Art of</MorphText></div>
+            <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(48px, 10vw, 110px)", fontWeight: 400, color: P.ghost, margin: 0, lineHeight: 0.9, letterSpacing: -2 }}>
+              <span style={{ color: P.cyan }}><MorphText speed={90}>Rare</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>Gh</MorphText></span><span style={{ color: P.steel, opacity: 0.45 }}><MorphText speed={90}>0</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>st</MorphText></span>
+            </h1>
+            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.bone, marginTop: 28, opacity: 0.6, textTransform: "uppercase", textShadow: `0 0 16px ${P.abyss}` }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
+          </div>
+        </div>
+
+        {/* ── Navigation nodes — circular destinations ── */}
+        {nodes.map((node, i) => {
+          const isHovered = hoveredNode === i;
+          return (
+            <div key={node.dest} style={{
+              position: "absolute",
+              left: `${50 + node.x}%`,
+              top: `${50 + node.y}%`,
+              transform: "translate(-50%, -50%)",
+              pointerEvents: "auto",
+              cursor: "pointer",
+              zIndex: 15,
+            }}
+              onClick={() => setSection(node.dest)}
+              onMouseEnter={() => setHoveredNode(i)}
+              onMouseLeave={() => setHoveredNode(null)}
+            >
+              {/* Outer rings */}
+              {Array.from({ length: node.ringCount }, (_, ri) => (
+                <div key={ri} style={{
+                  position: "absolute",
+                  left: "50%", top: "50%",
+                  width: node.radius * 2 + ri * 20 + 10,
+                  height: node.radius * 2 + ri * 20 + 10,
+                  marginLeft: -(node.radius + ri * 10 + 5),
+                  marginTop: -(node.radius + ri * 10 + 5),
+                  borderRadius: "50%",
+                  border: `${ri === 0 ? 1.5 : 0.5}px solid ${node.color}`,
+                  opacity: vis ? (isHovered ? 0.5 - ri * 0.12 : 0.18 - ri * 0.05) : 0,
+                  transition: `opacity 0.5s ease, box-shadow 0.5s ease`,
+                  boxShadow: isHovered ? `0 0 ${16 + ri * 4}px ${node.color}30, inset 0 0 ${8 + ri * 2}px ${node.color}15` : "none",
+                  animation: `fractalPulse ${6 + ri * 2}s ease-in-out ${ri * 0.5 + i * 0.3}s infinite`,
+                }} />
+              ))}
+              {/* Dotted ring (innermost detail) */}
+              <div style={{
+                position: "absolute",
+                left: "50%", top: "50%",
+                width: node.radius * 2 - 8,
+                height: node.radius * 2 - 8,
+                marginLeft: -(node.radius - 4),
+                marginTop: -(node.radius - 4),
+                borderRadius: "50%",
+                border: `1px dashed ${node.color}`,
+                opacity: vis ? (isHovered ? 0.4 : 0.1) : 0,
+                transition: "opacity 0.5s ease",
+                animation: `spin ${30 + i * 10}s linear infinite ${i % 2 === 0 ? "" : "reverse"}`,
+              }} />
+              {/* Inner glow disc */}
+              <div style={{
+                width: node.radius * 2,
+                height: node.radius * 2,
+                borderRadius: "50%",
+                background: `radial-gradient(circle, ${node.color}${isHovered ? "18" : "08"} 0%, transparent 70%)`,
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                transition: "background 0.5s ease",
+              }}>
+                {/* Label */}
+                <div style={{
+                  fontFamily: "'Courier New', monospace",
+                  fontSize: 10,
+                  letterSpacing: 4,
+                  color: node.color,
+                  textTransform: "uppercase",
+                  opacity: vis ? (isHovered ? 1 : 0.7) : 0,
+                  transition: "opacity 0.4s ease",
+                  textShadow: isHovered ? `0 0 12px ${node.color}` : "none",
+                  textAlign: "center",
+                  lineHeight: 1.4,
+                }}>
+                  <HoverMorphText>{node.label}</HoverMorphText>
+                </div>
+                {/* Description — shows on hover */}
+                <div style={{
+                  fontFamily: "'Georgia', serif",
+                  fontSize: 9,
+                  color: P.bone,
+                  opacity: isHovered ? 0.5 : 0,
+                  transition: "opacity 0.4s ease 0.1s",
+                  marginTop: 4,
+                  textAlign: "center",
+                  letterSpacing: 1,
+                }}>
+                  {node.desc}
+                </div>
+              </div>
+              {/* Tick marks around node — like a compass */}
+              <svg style={{
+                position: "absolute",
+                left: "50%", top: "50%",
+                width: node.radius * 2 + 30,
+                height: node.radius * 2 + 30,
+                marginLeft: -(node.radius + 15),
+                marginTop: -(node.radius + 15),
+                opacity: vis ? (isHovered ? 0.5 : 0.12) : 0,
+                transition: "opacity 0.5s ease",
+                pointerEvents: "none",
+              }} viewBox={`0 0 ${node.radius * 2 + 30} ${node.radius * 2 + 30}`}>
+                {Array.from({ length: 12 }, (_, ti) => {
+                  const angle = (ti / 12) * Math.PI * 2;
+                  const cx = node.radius + 15;
+                  const cy = node.radius + 15;
+                  const inner = node.radius + 2;
+                  const outer = node.radius + (ti % 3 === 0 ? 10 : 5);
+                  return <line key={ti}
+                    x1={cx + Math.cos(angle) * inner} y1={cy + Math.sin(angle) * inner}
+                    x2={cx + Math.cos(angle) * outer} y2={cy + Math.sin(angle) * outer}
+                    stroke={node.color} strokeWidth={ti % 3 === 0 ? "1.2" : "0.5"} />;
+                })}
+              </svg>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* L6: Vignette — softened so grid lines show through more */}
+      <div ref={setLayerRef(6)} style={{ ...layerBase, zIndex: 20, pointerEvents: "none" }}>
+        <div style={{
+          position: "absolute", inset: 0,
+          background: `radial-gradient(ellipse 100% 95% at 50% 50%, transparent 35%, ${P.abyss}44 60%, ${P.abyss}88 80%, ${P.abyss}cc 95%)`,
+          opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s",
+        }} />
       </div>
     </div>
   );
@@ -1874,7 +2195,7 @@ const CookieConsent = () => {
 const saveLocal = (key, val) => { try { localStorage.setItem(`rg_${key}`, JSON.stringify(val)); } catch(e) {} };
 const loadLocal = (key, fallback) => { try { const v = localStorage.getItem(`rg_${key}`); return v ? JSON.parse(v) : fallback; } catch(e) { return fallback; } };
 
-// ═══════════════════════════════════════════════
+// ���══════════════════════════════════════════════
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [section, setSection] = useState(() => {
@@ -1932,7 +2253,7 @@ export default function App() {
   return (
     <CalmContext.Provider value={calm}>
     <div style={{ minHeight: "100vh", background: P.abyss, color: P.ghost, position: "relative" }}>
-      <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Sans';src:url('/fonts/Geist-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}@font-face{font-family:'Geist Mono';src:url('/fonts/GeistMono-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}:root{--pf1:'Geist Pixel Square',monospace;--pf2:'Geist Pixel Grid',monospace;--pf3:'Geist Pixel Circle',monospace;--pf4:'Geist Pixel Triangle',monospace;--pf5:'Geist Pixel Line',monospace;--ss1:normal;--ss2:normal;--ss3:normal;--ss4:normal;--ss5:normal}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0;font-family:'Geist Pixel Square',monospace}body:not([data-calm]) *:nth-child(5n+1):not([data-morph]){font-family:var(--pf1)!important;font-feature-settings:var(--ss1)}body:not([data-calm]) *:nth-child(5n+2):not([data-morph]){font-family:var(--pf2)!important;font-feature-settings:var(--ss2)}body:not([data-calm]) *:nth-child(5n+3):not([data-morph]){font-family:var(--pf3)!important;font-feature-settings:var(--ss3)}body:not([data-calm]) *:nth-child(5n+4):not([data-morph]){font-family:var(--pf4)!important;font-feature-settings:var(--ss4)}body:not([data-calm]) *:nth-child(5n):not([data-morph]){font-family:var(--pf5)!important;font-feature-settings:var(--ss5)}body[data-calm]{font-family:'Geist Sans',sans-serif!important}body[data-calm] *:not([data-morph]){font-family:inherit!important;animation:none!important;transition:none!important}body[data-calm] [style*="Courier"],body[data-calm] [style*="monospace"]{font-family:'Geist Mono',monospace!important}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(0.82)}}@keyframes morphBreathStrong{0%,100%{filter:brightness(1)}50%{filter:brightness(0.7)}}@keyframes morphBreathSoft{0%,100%{filter:brightness(1)}50%{filter:brightness(0.85)}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}}`}</style>
+      <style>{`@font-face{font-family:'Geist Pixel Square';src:url('/fonts/GeistPixel-Square.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Grid';src:url('/fonts/GeistPixel-Grid.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Circle';src:url('/fonts/GeistPixel-Circle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Triangle';src:url('/fonts/GeistPixel-Triangle.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Pixel Line';src:url('/fonts/GeistPixel-Line.woff2') format('woff2');font-display:swap}@font-face{font-family:'Geist Sans';src:url('/fonts/Geist-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}@font-face{font-family:'Geist Mono';src:url('/fonts/GeistMono-Variable.woff2') format('woff2');font-weight:100 900;font-display:swap}:root{--pf1:'Geist Pixel Square',monospace;--pf2:'Geist Pixel Grid',monospace;--pf3:'Geist Pixel Circle',monospace;--pf4:'Geist Pixel Triangle',monospace;--pf5:'Geist Pixel Line',monospace;--ss1:normal;--ss2:normal;--ss3:normal;--ss4:normal;--ss5:normal}*{box-sizing:border-box;margin:0;padding:0}body{background:${P.abyss};margin:0;font-family:'Geist Pixel Square',monospace}body:not([data-calm]) *:nth-child(5n+1):not([data-morph]){font-family:var(--pf1)!important;font-feature-settings:var(--ss1)}body:not([data-calm]) *:nth-child(5n+2):not([data-morph]){font-family:var(--pf2)!important;font-feature-settings:var(--ss2)}body:not([data-calm]) *:nth-child(5n+3):not([data-morph]){font-family:var(--pf3)!important;font-feature-settings:var(--ss3)}body:not([data-calm]) *:nth-child(5n+4):not([data-morph]){font-family:var(--pf4)!important;font-feature-settings:var(--ss4)}body:not([data-calm]) *:nth-child(5n):not([data-morph]){font-family:var(--pf5)!important;font-feature-settings:var(--ss5)}body[data-calm]{font-family:'Geist Sans',sans-serif!important}body[data-calm] *:not([data-morph]){font-family:inherit!important;animation:none!important;transition:none!important}body[data-calm] [style*="Courier"],body[data-calm] [style*="monospace"]{font-family:'Geist Mono',monospace!important}::selection{background:${P.cyan}22;color:${P.ghost}}::-webkit-scrollbar{display:none}img{-webkit-user-drag:none;user-select:none;-webkit-touch-callout:none;pointer-events:none}img[data-clickable]{pointer-events:auto}[data-protected]{-webkit-touch-callout:none;-webkit-user-select:none;user-select:none}@keyframes pulseH{0%,100%{transform:scale(1);opacity:.22}50%{transform:scale(1.03);opacity:.38}}@keyframes floatP{0%,100%{transform:translate(0,0)}25%{transform:translate(7px,-14px)}50%{transform:translate(-3px,-28px)}75%{transform:translate(9px,-14px)}}@keyframes fadeSlideIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}@keyframes toastIn{from{transform:translateX(-50%) translateY(12px);opacity:0}to{transform:translateX(-50%) translateY(0);opacity:1}}@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.04)}}@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}@keyframes morphBreath{0%,100%{filter:brightness(1)}50%{filter:brightness(0.82)}}@keyframes morphBreathStrong{0%,100%{filter:brightness(1)}50%{filter:brightness(0.7)}}@keyframes morphBreathSoft{0%,100%{filter:brightness(1)}50%{filter:brightness(0.85)}}@media(max-width:768px){.nav-desktop{display:none!important}.nav-mobile-btns{display:flex!important}.showcase-grid{grid-template-columns:1fr!important;gap:24px!important}.casestudy-grid{grid-template-columns:1fr!important;gap:20px!important}.detail-closeups{grid-template-columns:1fr 1fr!important}.portfolio-tabs{gap:2px!important}.portfolio-tabs button{padding:8px 10px!important;font-size:9px!important;letter-spacing:1px!important}@keyframes twinkle{0%,100%{opacity:inherit}50%{opacity:0.02}}@keyframes spin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}@keyframes fractalPulse{0%,100%{transform:scale(1);opacity:inherit}50%{transform:scale(1.04);opacity:0.6}}@keyframes fractalFloat{0%,100%{transform:translateY(0) rotate(0deg)}25%{transform:translateY(-8px) rotate(2deg)}50%{transform:translateY(0) rotate(0deg)}75%{transform:translateY(8px) rotate(-2deg)}}`}</style>
       {loading && <Preloader onComplete={() => setLoading(false)} />}
       <Particles />
       <Nav section={section} setSection={setSection} cartCount={cart.length} />
