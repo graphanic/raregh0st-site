@@ -1775,23 +1775,16 @@ const Hero = ({ setSection }) => {
         ctx.fillStyle = "hsl(0, 5%, 50%)";
         ctx.fillRect(-r, -r, moonSize, moonSize);
         ctx.globalCompositeOperation = "source-over";
-        // Edge fade
-        const grad = ctx.createRadialGradient(0, -r * 0.1, r * 0.55, 0, 0, r);
+        // Edge fade — full dissolve, no visible rim
+        const grad = ctx.createRadialGradient(0, -r * 0.1, r * 0.35, 0, 0, r);
         grad.addColorStop(0, "transparent");
-        grad.addColorStop(0.78, "rgba(6,6,12,0.13)");
-        grad.addColorStop(1, "rgba(6,6,12,0.53)");
+        grad.addColorStop(0.6, "rgba(6,6,12,0.2)");
+        grad.addColorStop(0.78, "rgba(6,6,12,0.55)");
+        grad.addColorStop(0.9, "rgba(6,6,12,0.85)");
+        grad.addColorStop(1, "rgba(6,6,12,1)");
         ctx.fillStyle = grad;
         ctx.fillRect(-r, -r, moonSize, moonSize);
         ctx.restore();
-        // Outer glow
-        ctx.globalAlpha = a * 0.06;
-        const glow = ctx.createRadialGradient(0, 0, r, 0, 0, r * 1.4);
-        glow.addColorStop(0, P.cyan);
-        glow.addColorStop(1, "transparent");
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(0, 0, r * 1.4, 0, Math.PI * 2);
-        ctx.fill();
       }
 
       // ── Orbit tracks ──
