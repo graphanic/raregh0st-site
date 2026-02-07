@@ -1350,8 +1350,8 @@ const Hero = ({ setSection }) => {
   const smoothed = useRef({ x: 0, y: 0 });
   const raf = useRef(null);
 
-  // L0:cosmos L1:stars L2:grid L3:connections L4:nodes+center L5:vignette
-  const depths = [0.02, 0.04, 0.05, 0.035, 0.015, 0.07];
+  // L0:cosmos L1:stars L2:grid L3:connections L3.5:moon L4:nodes+center L5:vignette
+  const depths = [0.02, 0.04, 0.05, 0.035, 0.03, 0.015, 0.07];
   const maxShift = 40;
 
   useEffect(() => { setTimeout(() => setVis(true), 100); }, []);
@@ -1446,38 +1446,31 @@ const Hero = ({ setSection }) => {
         ))}
       </div>
 
-      {/* L2: HUD grid overlay — radiating lines + concentric circles from center */}
+      {/* L2: HUD grid overlay — radiating lines + concentric circles, extends far off-screen */}
       <div ref={setLayerRef(2)} style={{ ...layerBase, zIndex: 2 }}>
-        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
-          <defs>
-            <radialGradient id="gridFade" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stopColor="white" stopOpacity="1" />
-              <stop offset="70%" stopColor="white" stopOpacity="0.3" />
-              <stop offset="100%" stopColor="white" stopOpacity="0" />
-            </radialGradient>
-          </defs>
-          <g mask="url(#gridMask)" opacity="0.12">
-            {/* Concentric circles from center */}
-            {[120, 200, 300, 420, 560, 720, 900].map((r, i) => (
-              <circle key={`cc-${i}`} cx="960" cy="540" r={r} fill="none" stroke={P.cyan} strokeWidth="0.5" opacity={0.6 - i * 0.06} strokeDasharray={i % 2 === 0 ? "none" : "4 8"} />
+        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, overflow: "visible", opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
+          <g opacity="0.14">
+            {/* Concentric circles from center — extending well past viewport */}
+            {[100, 180, 280, 400, 540, 700, 880, 1100, 1400, 1800].map((r, i) => (
+              <circle key={`cc-${i}`} cx="960" cy="540" r={r} fill="none" stroke={P.cyan} strokeWidth={i < 4 ? "0.6" : "0.4"} opacity={0.7 - i * 0.05} strokeDasharray={i % 2 === 0 ? "none" : "4 8"} />
             ))}
-            {/* Radial lines from center — every 15 degrees */}
+            {/* Radial lines from center — every 15 degrees, extending 2500px from center (well off-screen) */}
             {Array.from({ length: 24 }, (_, i) => {
               const angle = (i / 24) * Math.PI * 2;
-              const x2 = 960 + Math.cos(angle) * 960;
-              const y2 = 540 + Math.sin(angle) * 960;
+              const x2 = 960 + Math.cos(angle) * 2500;
+              const y2 = 540 + Math.sin(angle) * 2500;
               return <line key={`rl-${i}`} x1="960" y1="540" x2={x2} y2={y2} stroke={P.cyan} strokeWidth="0.4" opacity={i % 3 === 0 ? 0.5 : 0.2} />;
             })}
-            {/* Subtle rectangular grid overlay */}
-            {Array.from({ length: 20 }, (_, i) => (
-              <line key={`gh-${i}`} x1="0" y1={i * 54} x2="1920" y2={i * 54} stroke={P.steel} strokeWidth="0.3" opacity="0.3" />
+            {/* Rectangular grid — extends full viewport and beyond */}
+            {Array.from({ length: 30 }, (_, i) => (
+              <line key={`gh-${i}`} x1="-200" y1={i * 54 - 200} x2="2120" y2={i * 54 - 200} stroke={P.steel} strokeWidth="0.3" opacity="0.25" />
             ))}
-            {Array.from({ length: 20 }, (_, i) => (
-              <line key={`gv-${i}`} x1={i * 96} y1="0" x2={i * 96} y2="1080" stroke={P.steel} strokeWidth="0.3" opacity="0.3" />
+            {Array.from({ length: 30 }, (_, i) => (
+              <line key={`gv-${i}`} x1={i * 80 - 200} y1="-200" x2={i * 80 - 200} y2="1280" stroke={P.steel} strokeWidth="0.3" opacity="0.25" />
             ))}
           </g>
           {/* Slowly spinning outer ring markers */}
-          <g opacity="0.08" style={{ transformOrigin: "960px 540px", animation: "spin 180s linear infinite" }}>
+          <g opacity="0.1" style={{ transformOrigin: "960px 540px", animation: "spin 180s linear infinite" }}>
             {Array.from({ length: 36 }, (_, i) => {
               const angle = (i / 36) * Math.PI * 2;
               const inner = 480;
@@ -1488,31 +1481,43 @@ const Hero = ({ setSection }) => {
         </svg>
       </div>
 
-      {/* L3: Connection lines between center and each node */}
+      {/* L3: Connection lines — from center through nodes, extending off-screen */}
       <div ref={setLayerRef(3)} style={{ ...layerBase, zIndex: 3 }}>
-        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, opacity: vis ? 1 : 0, transition: "opacity 2.5s ease 1s" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
+        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, overflow: "visible", opacity: vis ? 1 : 0, transition: "opacity 2.5s ease 1s" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
           {nodes.map((node, i) => {
             const nx = 960 + (node.x / 100) * 1920;
             const ny = 540 + (node.y / 100) * 1080;
             const isHovered = hoveredNode === i;
+            // Extend line from center through node and far off-screen
+            const dx = nx - 960;
+            const dy = ny - 540;
+            const len = Math.sqrt(dx * dx + dy * dy) || 1;
+            const ex = 960 + (dx / len) * 2500;
+            const ey = 540 + (dy / len) * 2500;
             return (
               <g key={`conn-${i}`}>
-                {/* Main connection line */}
-                <line x1="960" y1="540" x2={nx} y2={ny}
-                  stroke={node.color} strokeWidth={isHovered ? "1.2" : "0.6"}
-                  opacity={isHovered ? 0.5 : 0.15}
+                {/* Extended connection line — through node to edge of space */}
+                <line x1="960" y1="540" x2={ex} y2={ey}
+                  stroke={node.color} strokeWidth={isHovered ? "1" : "0.5"}
+                  opacity={isHovered ? 0.4 : 0.12}
                   style={{ transition: "all 0.5s ease", filter: isHovered ? `drop-shadow(0 0 6px ${node.color})` : "none" }}
+                />
+                {/* Brighter segment from center to node */}
+                <line x1="960" y1="540" x2={nx} y2={ny}
+                  stroke={node.color} strokeWidth={isHovered ? "1.4" : "0.7"}
+                  opacity={isHovered ? 0.6 : 0.2}
+                  style={{ transition: "all 0.5s ease" }}
                 />
                 {/* Mid-point diamond marker */}
                 <g transform={`translate(${(960 + nx) / 2},${(540 + ny) / 2}) rotate(45)`}>
-                  <rect x="-3" y="-3" width="6" height="6" fill="none" stroke={node.color} strokeWidth="0.5" opacity={isHovered ? 0.6 : 0.2} />
+                  <rect x="-3" y="-3" width="6" height="6" fill="none" stroke={node.color} strokeWidth="0.6" opacity={isHovered ? 0.6 : 0.25} />
                 </g>
                 {/* Cross-connections between adjacent nodes */}
                 {i < nodes.length - 1 && (() => {
                   const next = nodes[i + 1];
                   const nnx = 960 + (next.x / 100) * 1920;
                   const nny = 540 + (next.y / 100) * 1080;
-                  return <line x1={nx} y1={ny} x2={nnx} y2={nny} stroke={P.steel} strokeWidth="0.3" opacity="0.08" strokeDasharray="6 12" />;
+                  return <line x1={nx} y1={ny} x2={nnx} y2={nny} stroke={P.steel} strokeWidth="0.4" opacity="0.12" strokeDasharray="6 12" />;
                 })()}
               </g>
             );
@@ -1525,13 +1530,25 @@ const Hero = ({ setSection }) => {
             const fy = 540 + (first.y / 100) * 1080;
             const lx = 960 + (last.x / 100) * 1920;
             const ly = 540 + (last.y / 100) * 1080;
-            return <line x1={lx} y1={ly} x2={fx} y2={fy} stroke={P.steel} strokeWidth="0.3" opacity="0.08" strokeDasharray="6 12" />;
+            return <line x1={lx} y1={ly} x2={fx} y2={fy} stroke={P.steel} strokeWidth="0.4" opacity="0.12" strokeDasharray="6 12" />;
           })()}
         </svg>
       </div>
 
-      {/* L4: Center hub + navigation nodes — interactive */}
-      <div ref={setLayerRef(4)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
+      {/* L4: Moon — central celestial body behind text */}
+      <div ref={setLayerRef(4)} style={{ ...layerBase, zIndex: 4, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div style={{
+          width: "clamp(350px, 45vw, 580px)", height: "clamp(350px, 45vw, 580px)",
+          borderRadius: "50%",
+          background: `radial-gradient(circle at 50% 40%, #1e1e2e 0%, #141420 45%, #0c0c16 70%, ${P.abyss} 100%)`,
+          boxShadow: `0 0 120px 40px ${P.abyss}, inset 0 0 80px rgba(0,0,0,0.4), 0 0 200px 60px ${P.cyan}08`,
+          opacity: vis ? 1 : 0,
+          transition: "opacity 2.5s cubic-bezier(0.16,1,0.3,1)",
+        }} />
+      </div>
+
+      {/* L5: Center hub + navigation nodes — interactive */}
+      <div ref={setLayerRef(5)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
         {/* ── Center hub: logo + title ── */}
         <div style={{
           position: "absolute", left: "50%", top: "50%",
@@ -1555,17 +1572,18 @@ const Hero = ({ setSection }) => {
           {/* Logo */}
           <div style={{ opacity: vis ? 1 : 0, transition: "opacity 2s cubic-bezier(0.16,1,0.3,1) 0.3s", marginBottom: 16 }}>
             <img src={LOGO_IMG} alt="RareGh0st" style={{
-              width: "clamp(64px, 10vw, 100px)", height: "clamp(64px, 10vw, 100px)",
+              width: "clamp(100px, 15vw, 160px)", height: "clamp(100px, 15vw, 160px)",
               filter: `brightness(1.1) drop-shadow(0 0 24px hsl(${logoGlow}, 100%, 50%, 0.25)) drop-shadow(0 0 48px hsl(${(logoGlow + 180) % 360}, 100%, 50%, 0.12))`,
               animation: "breathe 4s ease-in-out infinite",
             }} />
           </div>
-          {/* Title */}
-          <div style={{ textAlign: "center", opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(16px)", transition: "all 1.5s cubic-bezier(0.16,1,0.3,1)" }}>
-            <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 5vw, 56px)", fontWeight: 400, color: P.ghost, margin: 0, lineHeight: 0.9, letterSpacing: -1 }}>
+          {/* Title — original full size */}
+          <div style={{ textAlign: "center", opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(28px)", transition: "all 1.5s cubic-bezier(0.16,1,0.3,1)" }}>
+            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 8, color: P.cyan, marginBottom: 22, textTransform: "uppercase", opacity: 0.85, textShadow: `0 0 20px ${P.cyan}25` }}><MorphText speed={80}>The Art of</MorphText></div>
+            <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(48px, 10vw, 110px)", fontWeight: 400, color: P.ghost, margin: 0, lineHeight: 0.9, letterSpacing: -2 }}>
               <span style={{ color: P.cyan }}><MorphText speed={90}>Rare</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>Gh</MorphText></span><span style={{ color: P.steel, opacity: 0.45 }}><MorphText speed={90}>0</MorphText></span><span style={{ color: P.magenta }}><MorphText speed={90}>st</MorphText></span>
             </h1>
-            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 5, color: P.bone, marginTop: 10, opacity: 0.5, textTransform: "uppercase" }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
+            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.bone, marginTop: 28, opacity: 0.6, textTransform: "uppercase", textShadow: `0 0 16px ${P.abyss}` }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
           </div>
         </div>
 
@@ -1684,11 +1702,11 @@ const Hero = ({ setSection }) => {
         })}
       </div>
 
-      {/* L5: Vignette + edge glow */}
-      <div ref={setLayerRef(5)} style={{ ...layerBase, zIndex: 20, pointerEvents: "none" }}>
+      {/* L6: Vignette — softened so grid lines show through more */}
+      <div ref={setLayerRef(6)} style={{ ...layerBase, zIndex: 20, pointerEvents: "none" }}>
         <div style={{
           position: "absolute", inset: 0,
-          background: `radial-gradient(ellipse 90% 85% at 50% 50%, transparent 30%, ${P.abyss}66 65%, ${P.abyss}cc 85%, ${P.abyss} 100%)`,
+          background: `radial-gradient(ellipse 100% 95% at 50% 50%, transparent 35%, ${P.abyss}44 60%, ${P.abyss}88 80%, ${P.abyss}cc 95%)`,
           opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s",
         }} />
       </div>
