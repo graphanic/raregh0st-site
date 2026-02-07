@@ -1633,12 +1633,23 @@ const Hero = ({ setSection }) => {
           transform: "translate(-50%, -50%)",
           width: "clamp(350px, 45vw, 580px)", height: "clamp(350px, 45vw, 580px)",
           borderRadius: "50%",
-          background: `radial-gradient(circle at 50% 40%, #1e1e2e 0%, #141420 45%, #0c0c16 70%, ${P.abyss} 100%)`,
-          boxShadow: `0 0 120px 40px ${P.abyss}, inset 0 0 80px rgba(0,0,0,0.4), 0 0 200px 60px ${P.cyan}08`,
+          overflow: "hidden",
+          boxShadow: `0 0 120px 40px ${P.abyss}, 0 0 200px 60px ${P.cyan}08`,
           opacity: vis ? 1 : 0,
           transition: "opacity 2.5s cubic-bezier(0.16,1,0.3,1)",
           zIndex: 1,
-        }} />
+        }}>
+          <img src="/images/moon.png" alt="" style={{
+            width: "100%", height: "100%", objectFit: "cover",
+            filter: "brightness(0.45) contrast(1.1) saturate(0.3)",
+            mixBlendMode: "luminosity",
+          }} />
+          {/* Dark overlay to blend moon into the abyss */}
+          <div style={{
+            position: "absolute", inset: 0, borderRadius: "50%",
+            background: `radial-gradient(circle at 50% 40%, ${P.abyss}40 0%, ${P.abyss}90 60%, ${P.abyss}cc 100%)`,
+          }} />
+        </div>
         {/* ── Center hub: logo + title (sits on the moon) ── */}
         <div style={{
           position: "absolute", left: "50%", top: "50%",
