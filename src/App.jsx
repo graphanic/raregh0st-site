@@ -1431,13 +1431,39 @@ const Hero = ({ setSection }) => {
   const moonAnglesRef = useRef(allMoons.map(m => m.startAngle));
 
   // Stars (generated once, drawn every frame — trivial in canvas)
-  const starsData = useRef(Array.from({ length: 80 }, () => ({
+  // ── Three-tier starfield ──
+  // Layer 0: Deep dust (far background, tiny, slow parallax)
+  const starsDust = useRef(Array.from({ length: 200 }, () => ({
     x: Math.random(), y: Math.random(),
-    size: Math.random() * 1.8 + 0.3,
-    opacity: Math.random() * 0.5 + 0.1,
-    color: [P.ghost, P.cyan, P.magenta][Math.floor(Math.random() * 3)],
+    size: Math.random() * 0.8 + 0.2,
+    opacity: Math.random() * 0.3 + 0.05,
+    color: ["#ffffff", "#e8e8ff", "#d0e8ff", P.ghost][Math.floor(Math.random() * 4)],
     phase: Math.random() * Math.PI * 2,
-    twinkleSpeed: Math.random() * 0.8 + 0.4,
+    twinkleSpeed: Math.random() * 0.3 + 0.1,
+  })));
+  // Layer 1: Mid-field glow stars (soft halo, moderate parallax)
+  const starsMid = useRef(Array.from({ length: 60 }, () => {
+    const bright = Math.random();
+    return {
+      x: Math.random(), y: Math.random(),
+      size: bright < 0.1 ? Math.random() * 3 + 2 : Math.random() * 1.5 + 0.5,
+      haloSize: bright < 0.1 ? Math.random() * 12 + 8 : Math.random() * 6 + 3,
+      opacity: bright < 0.1 ? Math.random() * 0.6 + 0.3 : Math.random() * 0.4 + 0.1,
+      color: [P.ghost, "#e0f0ff", P.cyan, "#ffe8d0", "#ffd0e8"][Math.floor(Math.random() * 5)],
+      phase: Math.random() * Math.PI * 2,
+      twinkleSpeed: Math.random() * 0.6 + 0.2,
+    };
+  }));
+  // Layer 2: Foreground brilliant stars (diffraction spikes, rare, bright)
+  const starsFG = useRef(Array.from({ length: 12 }, () => ({
+    x: Math.random(), y: Math.random(),
+    size: Math.random() * 2.5 + 1.5,
+    spikeLen: Math.random() * 18 + 10,
+    opacity: Math.random() * 0.5 + 0.3,
+    color: [P.cyan, "#ffffff", "#e0f0ff", "#ff7eb3"][Math.floor(Math.random() * 4)],
+    phase: Math.random() * Math.PI * 2,
+    twinkleSpeed: Math.random() * 1.2 + 0.5,
+    rotation: Math.random() * Math.PI / 6, // slight tilt to spikes
   })));
 
   // Moon image preload
@@ -1586,7 +1612,7 @@ const Hero = ({ setSection }) => {
 
       // Parallax CSS layers
       if (bgRef.current) {
-        bgRef.current.style.transform = `translate3d(${-sx * 20}px, ${-sy * 20}px, 0)`;
+        bgRef.current.style.transform = `translate3d(${-sx * 20 + panCurrent.current.x * 0.05}px, ${-sy * 20 + panCurrent.current.y * 0.05}px, 0)`;
       }
       if (vigRef.current) {
         vigRef.current.style.transform = `translate3d(${-sx * 70}px, ${-sy * 70}px, 0)`;
@@ -1643,17 +1669,41 @@ const Hero = ({ setSection }) => {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cw, ch);
 
-      // ── Stars (L1 parallax) ──
-      const starOx = sx * 40;
-      const starOy = sy * 40;
-      for (const s of starsData.current) {
-        const x = s.x * cw - starOx;
-        const y = s.y * ch - starOy;
-        const twinkle = 0.5 + 0.5 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
-        ctx.globalAlpha = a * s.opacity * twinkle;
+      // ── Stars Layer 0: Deep dust (very slow parallax, slight pan tracking) ──
+      const dustOx = sx * 12 - fpx * 0.08;
+      const dustOy = sy * 12 - fpy * 0.08;
+      for (const s of starsDust.current) {
+        const x = s.x * cw - dustOx;
+        const y = s.y * ch - dustOy;
+        const tw = 0.6 + 0.4 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
+        ctx.globalAlpha = a * s.opacity * tw;
         ctx.fillStyle = s.color;
         ctx.beginPath();
         ctx.arc(x, y, s.size, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      // ── Stars Layer 1: Mid-field glow stars (pan-tracked) ──
+      const starOx = sx * 40 - fpx * 0.25;
+      const starOy = sy * 40 - fpy * 0.25;
+      for (const s of starsMid.current) {
+        const x = s.x * cw - starOx;
+        const y = s.y * ch - starOy;
+        const tw = 0.5 + 0.5 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
+        const opac = a * s.opacity * tw;
+        // Soft halo glow
+        const halo = ctx.createRadialGradient(x, y, 0, x, y, s.haloSize * tw);
+        halo.addColorStop(0, s.color);
+        halo.addColorStop(0.3, s.color + "40");
+        halo.addColorStop(1, "transparent");
+        ctx.globalAlpha = opac * 0.4;
+        ctx.fillStyle = halo;
+        ctx.fillRect(x - s.haloSize, y - s.haloSize, s.haloSize * 2, s.haloSize * 2);
+        // Bright core
+        ctx.globalAlpha = opac;
+        ctx.fillStyle = s.color;
+        ctx.beginPath();
+        ctx.arc(x, y, s.size * tw, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -2004,6 +2054,58 @@ const Hero = ({ setSection }) => {
       }
 
       ctx.restore(); // field transform
+
+      // ── Stars Layer 2: Foreground brilliant stars (diffraction spikes, pan-tracked) ──
+      const fgOx = sx * 60 - fpx * 0.5;
+      const fgOy = sy * 60 - fpy * 0.5;
+      for (const s of starsFG.current) {
+        const x = s.x * cw - fgOx;
+        const y = s.y * ch - fgOy;
+        const tw = 0.5 + 0.5 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
+        const opac = a * s.opacity * tw;
+        // Outer bloom
+        const bloom = ctx.createRadialGradient(x, y, 0, x, y, s.spikeLen * 0.8);
+        bloom.addColorStop(0, s.color + "30");
+        bloom.addColorStop(1, "transparent");
+        ctx.globalAlpha = opac * 0.5;
+        ctx.fillStyle = bloom;
+        ctx.beginPath();
+        ctx.arc(x, y, s.spikeLen * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+        // Diffraction spikes (4-point cross)
+        ctx.save();
+        ctx.translate(x, y);
+        ctx.rotate(s.rotation);
+        ctx.strokeStyle = s.color;
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = opac * 0.7;
+        const sl = s.spikeLen * tw;
+        ctx.beginPath();
+        ctx.moveTo(-sl, 0); ctx.lineTo(sl, 0);
+        ctx.moveTo(0, -sl); ctx.lineTo(0, sl);
+        ctx.stroke();
+        // Secondary spikes (45° rotated, shorter, dimmer)
+        ctx.globalAlpha = opac * 0.25;
+        ctx.lineWidth = 0.5;
+        const sl2 = sl * 0.5;
+        ctx.beginPath();
+        ctx.moveTo(-sl2, -sl2); ctx.lineTo(sl2, sl2);
+        ctx.moveTo(sl2, -sl2); ctx.lineTo(-sl2, sl2);
+        ctx.stroke();
+        ctx.restore();
+        // Bright core
+        ctx.globalAlpha = opac;
+        ctx.fillStyle = "#ffffff";
+        ctx.beginPath();
+        ctx.arc(x, y, s.size * tw, 0, Math.PI * 2);
+        ctx.fill();
+        // Color core (slightly larger, tinted)
+        ctx.globalAlpha = opac * 0.6;
+        ctx.fillStyle = s.color;
+        ctx.beginPath();
+        ctx.arc(x, y, s.size * tw * 1.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
 
       // Update hover ref (no setState — avoids re-render)
       hoveredRef.current = newHovered;
