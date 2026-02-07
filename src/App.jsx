@@ -1361,19 +1361,35 @@ const Hero = ({ setSection }) => {
   const dragStart = useRef({ x: 0, y: 0 });
   const dragPanStart = useRef({ x: 0, y: 0 });
 
-  // L0:cosmos L1:stars L2:grid L3:field(moon+center+nodes) L4:vignette
-  const depths = [0.02, 0.04, 0.05, 0.015, 0.07];
+  // L0:cosmos L1:stars L2:field(grid+moon+center+nodes) L3:vignette
+  const depths = [0.02, 0.04, 0.015, 0.07];
   const maxShift = 40;
 
   // ── Navigation nodes — orbiting the central moon ──
   // Wider orbits so they spread across the viewport. Farther = slower.
+  // Nodes can have `moons` — sub-items that orbit the node itself.
   const nodes = [
-    { label: "Portfolio", dest: "portfolio", color: P.cyan,    orbitRadius: 380, speed: 200, startAngle: 200, radius: 52, ringCount: 3, desc: "Curated Works" },
-    { label: "Shop",      dest: "shop",      color: P.gold,    orbitRadius: 480, speed: 280, startAngle: 340, radius: 44, ringCount: 2, desc: "Prints & Originals" },
-    { label: "Media",     dest: "media",     color: P.magenta, orbitRadius: 340, speed: 180, startAngle: 130, radius: 40, ringCount: 2, desc: "Motion & Sound" },
-    { label: "The Work",  dest: "the-work",  color: P.purple,  orbitRadius: 540, speed: 340, startAngle: 50,  radius: 46, ringCount: 3, desc: "Process & Philosophy" },
-    { label: "Now",       dest: "now",       color: P.green,   orbitRadius: 260, speed: 140, startAngle: 270, radius: 34, ringCount: 2, desc: "Current Status" },
+    { label: "Portfolio", dest: "portfolio", color: P.cyan,    orbitRadius: 480, speed: 200, startAngle: 200, radius: 52, ringCount: 3, desc: "Curated Works" },
+    { label: "Shop",      dest: "shop",      color: P.gold,    orbitRadius: 620, speed: 280, startAngle: 340, radius: 54, ringCount: 2, desc: "Prints & Originals", moons: [
+      { label: "Apparel",     orbitRadius: 70,  speed: 18, startAngle: 0,   size: 18 },
+      { label: "Accessories", orbitRadius: 90,  speed: 24, startAngle: 72,  size: 16 },
+      { label: "Art Prints",  orbitRadius: 110, speed: 30, startAngle: 144, size: 20 },
+      { label: "Digital",     orbitRadius: 130, speed: 36, startAngle: 216, size: 15 },
+      { label: "Courses",     orbitRadius: 150, speed: 42, startAngle: 288, size: 17 },
+    ]},
+    { label: "Media",     dest: "media",     color: P.magenta, orbitRadius: 420, speed: 180, startAngle: 130, radius: 40, ringCount: 2, desc: "Motion & Sound" },
+    { label: "The Work",  dest: "the-work",  color: P.purple,  orbitRadius: 720, speed: 340, startAngle: 50,  radius: 46, ringCount: 3, desc: "Process & Philosophy" },
+    { label: "Now",       dest: "now",       color: P.green,   orbitRadius: 340, speed: 140, startAngle: 270, radius: 34, ringCount: 2, desc: "Current Status" },
   ];
+
+  // Build flat list of all sub-moons for RAF tracking
+  const allMoons = [];
+  nodes.forEach((node, ni) => {
+    if (node.moons) node.moons.forEach((moon, mi) => {
+      allMoons.push({ nodeIndex: ni, moonIndex: mi, ...moon });
+    });
+  });
+  const moonRefs = useRef([]);
 
   useEffect(() => { setTimeout(() => setVis(true), 100); }, []);
   useEffect(() => {
@@ -1384,14 +1400,11 @@ const Hero = ({ setSection }) => {
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    const edgeZone = 60; // px from edge where auto-pan activates
-    const edgeSpeed = 400; // px per second pan speed at the very edge
 
     const onMove = (e) => {
       const rect = el.getBoundingClientRect();
       mouse.current.x = ((e.clientX - rect.left) / rect.width - 0.5) * 2;
       mouse.current.y = ((e.clientY - rect.top) / rect.height - 0.5) * 2;
-      // Store raw pixel position for edge detection
       mouse.current.px = e.clientX - rect.left;
       mouse.current.py = e.clientY - rect.top;
       mouse.current.w = rect.width;
@@ -1405,7 +1418,6 @@ const Hero = ({ setSection }) => {
       }
     };
     const onDown = (e) => {
-      // Only drag on left click, not on interactive elements
       if (e.button !== 0) return;
       isDragging.current = true;
       dragStart.current = { x: e.clientX, y: e.clientY };
@@ -1418,12 +1430,19 @@ const Hero = ({ setSection }) => {
     };
     const onWheel = (e) => {
       e.preventDefault();
+      const rect = el.getBoundingClientRect();
+      // Mouse position relative to viewport center
+      const mx = e.clientX - rect.left - rect.width / 2;
+      const my = e.clientY - rect.top - rect.height / 2;
+      const oldZoom = zoomTarget.current;
       const delta = e.deltaY > 0 ? -0.08 : 0.08;
-      zoomTarget.current = Math.max(0.3, Math.min(2.5, zoomTarget.current + delta));
+      const newZoom = Math.max(0.3, Math.min(2.5, oldZoom + delta));
+      // Adjust pan so the point under the mouse stays fixed
+      const factor = 1 - newZoom / oldZoom;
+      panTarget.current.x += (mx - panTarget.current.x) * factor;
+      panTarget.current.y += (my - panTarget.current.y) * factor;
+      zoomTarget.current = newZoom;
     };
-    // Store edgeZone + edgeSpeed on the ref for the RAF loop
-    mouse.current.edgeZone = edgeZone;
-    mouse.current.edgeSpeed = edgeSpeed;
     el.addEventListener("mousemove", onMove);
     el.addEventListener("mousedown", onDown);
     window.addEventListener("mouseup", onUp);
@@ -1438,6 +1457,7 @@ const Hero = ({ setSection }) => {
 
   // Orbit angles stored in a ref so they persist across frames
   const orbitAngles = useRef(nodes.map(n => n.startAngle));
+  const moonAngles = useRef(allMoons.map(m => m.startAngle));
 
   useEffect(() => {
     const ease = 0.08;
@@ -1461,30 +1481,26 @@ const Hero = ({ setSection }) => {
         layer.style.transform = `translate3d(${-tx}px, ${-ty}px, 0)`;
       }
 
-      // Edge-of-screen auto-panning (only when not dragging)
-      if (!isDragging.current && mouse.current.w) {
-        const { px, py, w, h, edgeZone, edgeSpeed } = mouse.current;
-        let ex = 0, ey = 0;
-        if (px < edgeZone) ex = (1 - px / edgeZone) * edgeSpeed * dt;
-        else if (px > w - edgeZone) ex = -((1 - (w - px) / edgeZone) * edgeSpeed * dt);
-        if (py < edgeZone) ey = (1 - py / edgeZone) * edgeSpeed * dt;
-        else if (py > h - edgeZone) ey = -((1 - (h - py) / edgeZone) * edgeSpeed * dt);
-        panTarget.current.x += ex;
-        panTarget.current.y += ey;
-      }
+      // Clamp pan — brand can reach corners but never fully disappear
+      const vw = mouse.current.w || window.innerWidth;
+      const vh = mouse.current.h || window.innerHeight;
+      const maxPanX = vw * 0.35;
+      const maxPanY = vh * 0.35;
+      panTarget.current.x = Math.max(-maxPanX, Math.min(maxPanX, panTarget.current.x));
+      panTarget.current.y = Math.max(-maxPanY, Math.min(maxPanY, panTarget.current.y));
 
       // Smooth pan + zoom
       panCurrent.current.x += (panTarget.current.x - panCurrent.current.x) * 0.1;
       panCurrent.current.y += (panTarget.current.y - panCurrent.current.y) * 0.1;
       zoomCurrent.current += (zoomTarget.current - zoomCurrent.current) * 0.08;
       const z = zoomCurrent.current;
-      const px = panCurrent.current.x;
-      const py = panCurrent.current.y;
+      const fpx = panCurrent.current.x;
+      const fpy = panCurrent.current.y;
       if (fieldRef.current) {
-        fieldRef.current.style.transform = `translate(${px}px, ${py}px) scale(${z})`;
+        fieldRef.current.style.transform = `translate(${fpx}px, ${fpy}px) scale(${z})`;
       }
 
-      // Orbit each node
+      // Orbit each node around the sun
       for (let i = 0; i < nodes.length; i++) {
         const node = nodes[i];
         const el = nodeRefs.current[i];
@@ -1495,6 +1511,19 @@ const Hero = ({ setSection }) => {
         const ox = Math.cos(rad) * node.orbitRadius;
         const oy = Math.sin(rad) * node.orbitRadius;
         el.style.transform = `translate(${ox}px, ${oy}px)`;
+      }
+
+      // Orbit each sub-moon around its parent node
+      for (let m = 0; m < allMoons.length; m++) {
+        const moon = allMoons[m];
+        const el = moonRefs.current[m];
+        if (!el) continue;
+        const degreesPerSec = 360 / moon.speed;
+        moonAngles.current[m] = (moonAngles.current[m] + degreesPerSec * dt) % 360;
+        const rad = (moonAngles.current[m] * Math.PI) / 180;
+        const mx = Math.cos(rad) * moon.orbitRadius;
+        const my = Math.sin(rad) * moon.orbitRadius;
+        el.style.transform = `translate(${mx}px, ${my}px)`;
       }
 
       raf.current = requestAnimationFrame(tick);
@@ -1546,22 +1575,21 @@ const Hero = ({ setSection }) => {
         ))}
       </div>
 
-      {/* L2: HUD grid overlay — radiating lines + concentric circles, extends far off-screen */}
-      <div ref={setLayerRef(2)} style={{ ...layerBase, zIndex: 2 }}>
-        <svg width="100%" height="100%" style={{ position: "absolute", inset: 0, overflow: "visible", opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
+      {/* L2: Zoom field — the entire solar system (grid + moon + title + orbiting nodes) */}
+      <div ref={setLayerRef(2)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
+        <div ref={fieldRef} style={{ position: "absolute", inset: 0, willChange: "transform", transformOrigin: "50% 50%" }}>
+        {/* HUD grid — anchored behind the moon, moves with zoom/pan */}
+        <svg width="100%" height="100%" style={{ position: "absolute", inset: -60, overflow: "visible", opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s", pointerEvents: "none" }} preserveAspectRatio="xMidYMid slice" viewBox="0 0 1920 1080">
           <g opacity="0.14">
-            {/* Concentric circles from center — extending well past viewport */}
             {[100, 180, 280, 400, 540, 700, 880, 1100, 1400, 1800].map((r, i) => (
               <circle key={`cc-${i}`} cx="960" cy="540" r={r} fill="none" stroke={P.cyan} strokeWidth={i < 4 ? "0.6" : "0.4"} opacity={0.7 - i * 0.05} strokeDasharray={i % 2 === 0 ? "none" : "4 8"} />
             ))}
-            {/* Radial lines from center — every 15 degrees, extending 2500px from center (well off-screen) */}
             {Array.from({ length: 24 }, (_, i) => {
               const angle = (i / 24) * Math.PI * 2;
               const x2 = 960 + Math.cos(angle) * 2500;
               const y2 = 540 + Math.sin(angle) * 2500;
               return <line key={`rl-${i}`} x1="960" y1="540" x2={x2} y2={y2} stroke={P.cyan} strokeWidth="0.4" opacity={i % 3 === 0 ? 0.5 : 0.2} />;
             })}
-            {/* Rectangular grid — extends full viewport and beyond */}
             {Array.from({ length: 30 }, (_, i) => (
               <line key={`gh-${i}`} x1="-200" y1={i * 54 - 200} x2="2120" y2={i * 54 - 200} stroke={P.steel} strokeWidth="0.3" opacity="0.25" />
             ))}
@@ -1569,7 +1597,6 @@ const Hero = ({ setSection }) => {
               <line key={`gv-${i}`} x1={i * 80 - 200} y1="-200" x2={i * 80 - 200} y2="1280" stroke={P.steel} strokeWidth="0.3" opacity="0.25" />
             ))}
           </g>
-          {/* Slowly spinning outer ring markers */}
           <g opacity="0.1" style={{ transformOrigin: "960px 540px", animation: "spin 180s linear infinite" }}>
             {Array.from({ length: 36 }, (_, i) => {
               const angle = (i / 36) * Math.PI * 2;
@@ -1579,19 +1606,14 @@ const Hero = ({ setSection }) => {
             })}
           </g>
         </svg>
-      </div>
-
-      {/* L3: Zoom field — the entire solar system (moon + title + orbiting nodes) */}
-      <div ref={setLayerRef(3)} style={{ position: "absolute", inset: 0, zIndex: 10, pointerEvents: "none", willChange: "transform" }}>
-        <div ref={fieldRef} style={{ position: "absolute", inset: 0, willChange: "transform", transformOrigin: "50% 50%" }}>
         {/* ── Moon — gravitational center, anchored to the brand identity ── */}
         <div style={{
           position: "absolute", left: "50%", top: "50%",
           transform: "translate(-50%, -50%)",
-          width: 280, height: 280,
+          width: "clamp(350px, 45vw, 580px)", height: "clamp(350px, 45vw, 580px)",
           borderRadius: "50%",
           background: `radial-gradient(circle at 50% 40%, #1e1e2e 0%, #141420 45%, #0c0c16 70%, ${P.abyss} 100%)`,
-          boxShadow: `0 0 80px 30px ${P.abyss}, inset 0 0 60px rgba(0,0,0,0.4), 0 0 160px 50px ${P.cyan}06`,
+          boxShadow: `0 0 120px 40px ${P.abyss}, inset 0 0 80px rgba(0,0,0,0.4), 0 0 200px 60px ${P.cyan}08`,
           opacity: vis ? 1 : 0,
           transition: "opacity 2.5s cubic-bezier(0.16,1,0.3,1)",
           zIndex: 1,
@@ -1738,20 +1760,129 @@ const Hero = ({ setSection }) => {
                     stroke={node.color} strokeWidth={ti % 3 === 0 ? "1.2" : "0.5"} />;
                 })}
               </svg>
+              {/* ── Sub-moons orbiting this node ── */}
+              {node.moons && node.moons.map((moon, mi) => {
+                // Find the flat index in allMoons
+                const flatIdx = allMoons.findIndex(m => m.nodeIndex === i && m.moonIndex === mi);
+                return (
+                  <div key={`moon-${mi}`} style={{ contents: "initial", display: "contents" }}>
+                    {/* Moon orbit track */}
+                    <div style={{
+                      position: "absolute",
+                      left: "50%", top: "50%",
+                      width: moon.orbitRadius * 2, height: moon.orbitRadius * 2,
+                      marginLeft: -moon.orbitRadius, marginTop: -moon.orbitRadius,
+                      borderRadius: "50%",
+                      border: `0.5px dashed ${node.color}`,
+                      opacity: vis ? 0.08 : 0,
+                      transition: "opacity 2s ease",
+                      pointerEvents: "none",
+                    }} />
+                    {/* Moon body */}
+                    <div
+                      ref={(el) => { moonRefs.current[flatIdx] = el; }}
+                      style={{
+                        position: "absolute",
+                        left: "50%", top: "50%",
+                        marginLeft: -(moon.size / 2),
+                        marginTop: -(moon.size / 2),
+                        width: moon.size, height: moon.size,
+                        willChange: "transform",
+                        pointerEvents: "auto",
+                        cursor: "pointer",
+                      }}
+                    >
+                      {/* Moon glow disc */}
+                      <div style={{
+                        width: moon.size, height: moon.size,
+                        borderRadius: "50%",
+                        border: `1px solid ${node.color}`,
+                        background: `radial-gradient(circle, ${node.color}15 0%, transparent 70%)`,
+                        display: "flex", alignItems: "center", justifyContent: "center",
+                        opacity: vis ? 0.7 : 0,
+                        transition: "opacity 0.4s ease",
+                        boxShadow: `0 0 8px ${node.color}20`,
+                      }}>
+                        <div style={{
+                          width: moon.size * 0.4, height: moon.size * 0.4,
+                          borderRadius: "50%",
+                          background: node.color,
+                          opacity: 0.5,
+                        }} />
+                      </div>
+                      {/* Moon label */}
+                      <div style={{
+                        position: "absolute",
+                        top: moon.size + 4,
+                        left: "50%",
+                        transform: "translateX(-50%)",
+                        fontFamily: "'Courier New', monospace",
+                        fontSize: 7, letterSpacing: 2,
+                        color: node.color,
+                        textTransform: "uppercase",
+                        whiteSpace: "nowrap",
+                        opacity: vis ? 0.5 : 0,
+                        textAlign: "center",
+                      }}>
+                        {moon.label}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           );
         })}
         </div>{/* end zoom field */}
-      </div>{/* end L3 */}
+      </div>{/* end L2 */}
 
-      {/* L4: Vignette — softened so grid lines show through more */}
-      <div ref={setLayerRef(4)} style={{ ...layerBase, zIndex: 20, pointerEvents: "none" }}>
+      {/* L3: Vignette — softened so grid lines show through more */}
+      <div ref={setLayerRef(3)} style={{ ...layerBase, zIndex: 20, pointerEvents: "none" }}>
         <div style={{
           position: "absolute", inset: 0,
           background: `radial-gradient(ellipse 100% 95% at 50% 50%, transparent 35%, ${P.abyss}44 60%, ${P.abyss}88 80%, ${P.abyss}cc 95%)`,
           opacity: vis ? 1 : 0, transition: "opacity 3s ease 0.5s",
         }} />
       </div>
+
+      {/* Home button — resets pan/zoom to center */}
+      <button
+        onClick={() => {
+          panTarget.current = { x: 0, y: 0 };
+          zoomTarget.current = 1;
+        }}
+        style={{
+          position: "absolute",
+          bottom: 24, left: 24,
+          zIndex: 30,
+          width: 40, height: 40,
+          borderRadius: "50%",
+          border: `1px solid ${P.cyan}40`,
+          background: `${P.abyss}cc`,
+          color: P.cyan,
+          cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          opacity: vis ? 0.7 : 0,
+          transition: "opacity 0.4s ease, border-color 0.3s ease, box-shadow 0.3s ease",
+          backdropFilter: "blur(8px)",
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.opacity = "1";
+          e.currentTarget.style.borderColor = P.cyan;
+          e.currentTarget.style.boxShadow = `0 0 12px ${P.cyan}40`;
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.opacity = "0.7";
+          e.currentTarget.style.borderColor = `${P.cyan}40`;
+          e.currentTarget.style.boxShadow = "none";
+        }}
+        aria-label="Return to center"
+      >
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+          <polyline points="9 22 9 12 15 12 15 22" />
+        </svg>
+      </button>
     </div>
   );
 };
