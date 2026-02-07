@@ -1350,8 +1350,8 @@ const Hero = ({ setSection }) => {
   const smoothed = useRef({ x: 0, y: 0 });
   const raf = useRef(null);
 
-  // L0:cosmos L1:stars L2:grid L3:connections L3.5:moon L4:nodes+center L5:vignette
-  const depths = [0.02, 0.04, 0.05, 0.035, 0.03, 0.015, 0.07];
+  // L0:cosmos L1:stars L2:grid L3:moon L4:nodes+connections+center L5:vignette
+  const depths = [0.02, 0.04, 0.05, 0.03, 0.015, 0.07];
   const maxShift = 40;
 
   useEffect(() => { setTimeout(() => setVis(true), 100); }, []);
