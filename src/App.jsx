@@ -2240,16 +2240,18 @@ const Hero = ({ setSection }) => {
           octx.globalCompositeOperation = "source-over";
         }
 
-        // Single large overlay — moves OPPOSITE to cursor (lens simulation)
+        // Single large overlay — world-space: fills viewport at zoom-out, zooms into it
         ctx.save();
         ctx.globalCompositeOperation = "screen";
         ctx.globalAlpha = a * 0.10;
-        const dustSz = 5000;
-        // Cursor-opposite: smoothed mouse is -1 to 1, invert it so dust drifts away from cursor
+        // Base size covers viewport at min zoom (0.3), then scales with zoom
+        const dustBase = Math.max(cw, ch) * 1.4 / 0.3;
+        const dustSz = dustBase * zoom;
+        // Cursor-opposite drift + pan tracking (dust is in the world)
         const dustDriftX = smoothed.current.x * -80;
         const dustDriftY = smoothed.current.y * -80;
-        const dx = cw / 2 - dustSz / 2 + dustDriftX;
-        const dy = ch / 2 - dustSz / 2 + dustDriftY;
+        const dx = cw / 2 - dustSz / 2 + dustDriftX + fpx * 0.5;
+        const dy = ch / 2 - dustSz / 2 + dustDriftY + fpy * 0.5;
         ctx.drawImage(oc, dx, dy, dustSz, dustSz);
         ctx.globalCompositeOperation = "source-over";
         ctx.restore();
