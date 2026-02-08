@@ -1,40 +1,31 @@
 export const config = { runtime: 'nodejs' };
 
 export default async function handler(request) {
+  const headers = { 'Content-Type': 'application/json' };
+
   if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
   }
 
   try {
-    const { password } = await request.json();
-    const valid = password === process.env.ADMIN_PASSWORD;
+    const body = await request.json();
+    const submitted = (body.password || "").trim();
+    const expected = (process.env.ADMIN_PASSWORD || "").trim();
 
-    if (!valid) {
-      return new Response(JSON.stringify({ error: 'Invalid password' }), {
-        status: 401,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    if (!expected) {
+      return new Response(JSON.stringify({ error: 'ADMIN_PASSWORD not configured on server' }), { status: 500, headers });
     }
 
-    // Return a simple session token (hash of password + date for daily rotation)
-    const today = new Date().toISOString().split('T')[0];
-    const encoder = new TextEncoder();
-    const data = encoder.encode(password + today + process.env.ADMIN_PASSWORD);
-    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const token = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    if (submitted !== expected) {
+      return new Response(JSON.stringify({ error: 'Invalid password' }), { status: 401, headers });
+    }
 
-    return new Response(JSON.stringify({ success: true, token }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    // Simple token: base64 of password + today's date
+    const today = new Date().toISOString().split('T')[0];
+    const token = Buffer.from(submitted + ':' + today).toString('base64');
+
+    return new Response(JSON.stringify({ success: true, token }), { status: 200, headers });
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Auth failed' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return new Response(JSON.stringify({ error: 'Auth failed: ' + error.message }), { status: 500, headers });
   }
 }

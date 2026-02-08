@@ -302,6 +302,8 @@ export const UploadAdmin = () => {
   const [activeView, setActiveView] = useState("new");
   const [filterCat, setFilterCat] = useState("all");
   const [searchTerm, setSearchTerm] = useState("");
+  const [expandedId, setExpandedId] = useState(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
   const [uploadedResults, setUploadedResults] = useState([]);
@@ -350,6 +352,12 @@ export const UploadAdmin = () => {
       setAuthError("Connection failed");
     }
     setAuthLoading(false);
+  };
+
+  /* delete a live item */
+  const handleDeleteLive = (id) => {
+    setLiveItems(prev => prev.filter(item => item.id !== id));
+    setConfirmDeleteId(null);
   };
 
   // ─── Add files as staged items with thumbnails ─────
@@ -554,18 +562,25 @@ export const UploadAdmin = () => {
             {filteredLive.length === 0 ? (
               <div style={{ ...cardStyle, textAlign: "center", padding: "40px" }}><p style={{ color: P.steel }}>No items match your filter</p></div>
             ) : (
-              filteredLive.map((item, i) => (
-                <div key={item.id} style={{ ...cardStyle, border: `1px solid ${P.cyan}20` }}>
-                  <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
+              filteredLive.map((item) => {
+                const isExpanded = expandedId === item.id;
+                const isConfirming = confirmDeleteId === item.id;
+                return (
+                <div key={item.id} style={{ ...cardStyle, border: `1px solid ${isExpanded ? P.cyan : P.cyan + "20"}`, transition: "border-color 0.2s" }}>
+                  {/* Row header -- clickable to expand */}
+                  <div style={{ display: "flex", gap: "16px", alignItems: "flex-start", cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : item.id)}>
                     {item.img && (
-                      <div style={{ width: "100px", height: "100px", borderRadius: "6px", overflow: "hidden", flexShrink: 0, border: `1px solid ${P.steel}40` }}>
+                      <div style={{ width: "80px", height: "80px", borderRadius: "6px", overflow: "hidden", flexShrink: 0, border: `1px solid ${P.steel}40` }}>
                         <img src={item.img} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       </div>
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
                         <h3 style={{ color: P.ghost, fontSize: "1rem", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</h3>
-                        <span style={{ background: `${P.cyan}15`, color: P.cyan, padding: "2px 10px", borderRadius: "10px", fontSize: "0.7rem", flexShrink: 0 }}>LIVE</span>
+                        <div style={{ display: "flex", gap: "6px", alignItems: "center", flexShrink: 0 }}>
+                          <span style={{ background: `${P.cyan}15`, color: P.cyan, padding: "2px 10px", borderRadius: "10px", fontSize: "0.7rem" }}>LIVE</span>
+                          <span style={{ color: P.steel, fontSize: "0.85rem" }}>{isExpanded ? "\u25B2" : "\u25BC"}</span>
+                        </div>
                       </div>
                       <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "6px" }}>
                         <span style={{ color: P.steel, fontSize: "0.8rem" }}>{CATEGORIES[item.category]?.label || item.category}</span>
@@ -573,22 +588,82 @@ export const UploadAdmin = () => {
                         {item.year && <span style={{ color: P.steel, fontSize: "0.8rem" }}>{item.year}</span>}
                         {item.role && <span style={{ color: P.steel, fontSize: "0.8rem" }}>{item.role}</span>}
                       </div>
-                      {item.description && <p style={{ color: P.steel, fontSize: "0.8rem", margin: 0, lineHeight: 1.4 }}>{item.description.length > 120 ? item.description.slice(0, 120) + "..." : item.description}</p>}
-                      {item.tags.length > 0 && (
-                        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "8px" }}>
-                          {item.tags.map((t, j) => <span key={j} style={{ background: `${P.cyan}12`, color: P.cyan, padding: "2px 8px", borderRadius: "10px", fontSize: "0.7rem" }}>{t}</span>)}
+                      {!isExpanded && item.description && <p style={{ color: P.steel, fontSize: "0.8rem", margin: 0, lineHeight: 1.4 }}>{item.description.length > 120 ? item.description.slice(0, 120) + "..." : item.description}</p>}
+                    </div>
+                  </div>
+
+                  {/* Expanded detail */}
+                  {isExpanded && (
+                    <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: `1px solid ${P.steel}20` }}>
+                      {/* Full image preview */}
+                      {item.img && (
+                        <div style={{ marginBottom: "16px", borderRadius: "6px", overflow: "hidden", maxHeight: "300px" }}>
+                          <img src={item.img} alt={item.title} style={{ width: "100%", height: "auto", maxHeight: "300px", objectFit: "contain", display: "block" }} />
                         </div>
                       )}
-                    </div>
-                    {/* Color dots */}
-                    {item.colors.length > 0 && (
-                      <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
-                        {item.colors.map((c, j) => <div key={j} style={{ width: "16px", height: "16px", borderRadius: "50%", background: COLOR_MAP[c] || c, border: `1px solid ${P.steel}40` }} />)}
+
+                      {/* Detail grid */}
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "12px", marginBottom: "16px" }}>
+                        {item.description && <div style={{ gridColumn: "1 / -1" }}><span style={{ color: P.steel, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Description</span><p style={{ color: P.ghost, fontSize: "0.85rem", margin: "4px 0 0", lineHeight: 1.5 }}>{item.description}</p></div>}
+                        {item.brief && <div><span style={{ color: P.steel, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Brief</span><p style={{ color: P.ghost, fontSize: "0.85rem", margin: "4px 0 0", lineHeight: 1.5 }}>{item.brief}</p></div>}
+                        {item.approach && <div><span style={{ color: P.steel, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Approach</span><p style={{ color: P.ghost, fontSize: "0.85rem", margin: "4px 0 0", lineHeight: 1.5 }}>{item.approach}</p></div>}
+                        {item.process && <div><span style={{ color: P.steel, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Process</span><p style={{ color: P.ghost, fontSize: "0.85rem", margin: "4px 0 0" }}>{item.process}</p></div>}
+                        {item.duration && <div><span style={{ color: P.steel, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Duration</span><p style={{ color: P.ghost, fontSize: "0.85rem", margin: "4px 0 0" }}>{item.duration}</p></div>}
+                        {item.type && <div><span style={{ color: P.steel, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Type</span><p style={{ color: P.ghost, fontSize: "0.85rem", margin: "4px 0 0" }}>{item.type}</p></div>}
                       </div>
-                    )}
-                  </div>
+
+                      {/* Tags */}
+                      {item.tags.length > 0 && (
+                        <div style={{ marginBottom: "16px" }}>
+                          <span style={{ color: P.steel, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Tags</span>
+                          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "6px" }}>
+                            {item.tags.map((t, j) => <span key={j} style={{ background: `${P.cyan}12`, color: P.cyan, padding: "3px 10px", borderRadius: "10px", fontSize: "0.75rem" }}>{t}</span>)}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Deliverables */}
+                      {item.deliverables && item.deliverables.length > 0 && (
+                        <div style={{ marginBottom: "16px" }}>
+                          <span style={{ color: P.steel, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Deliverables</span>
+                          <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "6px" }}>
+                            {item.deliverables.map((d, j) => <span key={j} style={{ background: `${P.green}12`, color: P.green, padding: "3px 10px", borderRadius: "10px", fontSize: "0.75rem" }}>{d}</span>)}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Colors */}
+                      {item.colors.length > 0 && (
+                        <div style={{ marginBottom: "16px" }}>
+                          <span style={{ color: P.steel, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Colors</span>
+                          <div style={{ display: "flex", gap: "6px", marginTop: "6px" }}>
+                            {item.colors.map((c, j) => <div key={j} style={{ width: "24px", height: "24px", borderRadius: "50%", background: COLOR_MAP[c] || c, border: `1px solid ${P.steel}40` }} />)}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Actions */}
+                      <div style={{ display: "flex", gap: "10px", justifyContent: "flex-end", marginTop: "16px", paddingTop: "12px", borderTop: `1px solid ${P.steel}20` }}>
+                        {!isConfirming ? (
+                          <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(item.id); }} style={{ background: "none", border: `1px solid ${P.magenta}40`, color: P.magenta, padding: "8px 18px", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem" }}>
+                            Delete Item
+                          </button>
+                        ) : (
+                          <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+                            <span style={{ color: P.magenta, fontSize: "0.85rem" }}>Are you sure?</span>
+                            <button onClick={(e) => { e.stopPropagation(); handleDeleteLive(item.id); }} style={{ background: P.magenta, color: P.abyss, border: "none", padding: "8px 18px", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem", fontWeight: "600" }}>
+                              Yes, Delete
+                            </button>
+                            <button onClick={(e) => { e.stopPropagation(); setConfirmDeleteId(null); }} style={{ background: "none", border: `1px solid ${P.steel}40`, color: P.steel, padding: "8px 18px", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem" }}>
+                              Cancel
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-              ))
+              );})
             )}
           </div>
         )}
