@@ -29,6 +29,7 @@ import { Contact } from "./pages/Contact";
 import { Cart } from "./pages/Cart";
 import { LegalPage } from "./pages/LegalPage";
 import { NotFound } from "./pages/NotFound";
+import { UploadAdmin } from "./pages/UploadAdmin";
 
 // Styles
 import "./styles/global.css";
@@ -305,10 +306,11 @@ export default function App() {
               path="/cart"
               element={<Cart cart={cart} removeFromCart={removeFromCart} />}
             />
-            <Route path="/privacy" element={<LegalPage page="privacy" />} />
-            <Route path="/terms" element={<LegalPage page="terms" />} />
-            <Route path="/shipping" element={<LegalPage page="shipping" />} />
-            <Route path="*" element={<NotFound />} />
+          <Route path="/privacy" element={<LegalPage page="privacy" />} />
+          <Route path="/terms" element={<LegalPage page="terms" />} />
+          <Route path="/shipping" element={<LegalPage page="shipping" />} />
+          <Route path="/admin/upload" element={<UploadAdmin />} />
+          <Route path="*" element={<NotFound />} />
           </Routes>
           <Footer />
         </div>
