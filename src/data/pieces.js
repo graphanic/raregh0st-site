@@ -1,4 +1,5 @@
-import { P, ART_IMGS } from "./palette";
+import { P, ART_IMGS, LOGO_IMG } from "./palette";
+export { LOGO_IMG, ART_IMGS };
 
 export const PIECES = [
   { id: 1, title: "Sanity Is In Rare Supply", year: "2024", series: "Kaleidoscope", medium: "Digital Collage / Photoshop + AI Composite", description: "A fractal meditation on consciousness under pressure. The skull sees everything; the dice ask: who needs luck when you have vision?", price: 250, edition: "1/1 Original + 10 Prints", colors: [P.cyan, P.magenta], tags: ["skull", "consciousness", "collage"], img: ART_IMGS[0] },
