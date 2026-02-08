@@ -1712,37 +1712,39 @@ const Hero = ({ setSection }) => {
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, cw, ch);
 
-      // ── Helper: draw star (sprite if loaded, canvas fallback with blue glow) ──
-      const drawStar = (x, y, s, tw, opac) => {
+      // ── Helper: draw star (tw controls SCALE, opacity always full) ──
+      const drawStar = (x, y, s, tw, baseAlpha) => {
+        const scale = tw; // 0 = invisible, 1 = full size
+        if (scale < 0.02) return; // skip near-zero stars
         const sprite = starSprites.current[s.sprite];
         if (sprite) {
-          const sz = s.spriteSize * (0.7 + 0.3 * tw);
-          ctx.globalAlpha = opac;
+          const sz = s.spriteSize * scale;
+          ctx.globalAlpha = baseAlpha;
           ctx.drawImage(sprite, x - sz / 2, y - sz / 2, sz, sz);
         } else {
-          // Outer glow halo
-          const glowR = (s.haloSize || s.spikeLen || s.size * 6) * (0.6 + 0.4 * tw);
+          // Outer glow halo (scales with tw)
+          const glowR = (s.haloSize || s.spikeLen || s.size * 6) * scale;
           if (glowR > 0.5) {
             const glow = ctx.createRadialGradient(x, y, 0, x, y, glowR);
             glow.addColorStop(0, s.color);
             glow.addColorStop(0.15, s.color + "60");
             glow.addColorStop(0.5, "#4488ff20");
             glow.addColorStop(1, "transparent");
-            ctx.globalAlpha = opac * 0.3;
+            ctx.globalAlpha = baseAlpha * 0.6;
             ctx.fillStyle = glow;
             ctx.fillRect(x - glowR, y - glowR, glowR * 2, glowR * 2);
           }
-          // Diffraction spikes for bright stars
+          // Diffraction spikes (scale with tw)
           if (s.spikeLen) {
             ctx.strokeStyle = s.color;
             ctx.lineWidth = 1;
-            ctx.globalAlpha = opac * 0.4;
-            const sl = s.spikeLen * tw;
+            ctx.globalAlpha = baseAlpha * 0.7;
+            const sl = s.spikeLen * scale;
             ctx.beginPath();
             ctx.moveTo(x - sl, y); ctx.lineTo(x + sl, y);
             ctx.moveTo(x, y - sl); ctx.lineTo(x, y + sl);
             ctx.stroke();
-            ctx.globalAlpha = opac * 0.12;
+            ctx.globalAlpha = baseAlpha * 0.3;
             ctx.lineWidth = 0.5;
             const sl2 = sl * 0.5;
             ctx.beginPath();
@@ -1750,17 +1752,17 @@ const Hero = ({ setSection }) => {
             ctx.moveTo(x + sl2, y - sl2); ctx.lineTo(x - sl2, y + sl2);
             ctx.stroke();
           }
-          // White-hot core
-          ctx.globalAlpha = opac;
+          // White-hot core (scales)
+          ctx.globalAlpha = baseAlpha;
           ctx.fillStyle = "#ffffff";
           ctx.beginPath();
-          ctx.arc(x, y, Math.max(s.size * tw, 0.1), 0, Math.PI * 2);
+          ctx.arc(x, y, Math.max(s.size * scale, 0.05), 0, Math.PI * 2);
           ctx.fill();
-          // Color halo ring
-          ctx.globalAlpha = opac * 0.3;
+          // Color halo ring (scales)
+          ctx.globalAlpha = baseAlpha * 0.6;
           ctx.fillStyle = s.color;
           ctx.beginPath();
-          ctx.arc(x, y, Math.max(s.size * tw * 1.8, 0.2), 0, Math.PI * 2);
+          ctx.arc(x, y, Math.max(s.size * scale * 1.8, 0.1), 0, Math.PI * 2);
           ctx.fill();
         }
       };
@@ -1773,7 +1775,7 @@ const Hero = ({ setSection }) => {
         const x = Math.cos(s.angle) * s.dist;
         const y = Math.sin(s.angle) * s.dist;
         const tw = 0.5 + 0.5 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
-        drawStar(x, y, s, tw, a * s.opacity * tw);
+        drawStar(x, y, s, tw, a);
       }
       ctx.restore();
 
@@ -1785,7 +1787,7 @@ const Hero = ({ setSection }) => {
         const x = Math.cos(s.angle) * s.dist;
         const y = Math.sin(s.angle) * s.dist;
         const tw = 0.5 + 0.5 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
-        drawStar(x, y, s, tw, a * s.opacity * tw);
+        drawStar(x, y, s, tw, a);
       }
       ctx.restore();
 
@@ -1797,7 +1799,7 @@ const Hero = ({ setSection }) => {
         const x = Math.cos(s.angle) * s.dist;
         const y = Math.sin(s.angle) * s.dist;
         const tw = 0.5 + 0.5 * Math.sin(timestamp * 0.001 * s.twinkleSpeed + s.phase);
-        drawStar(x, y, s, tw, a * s.opacity * tw);
+        drawStar(x, y, s, tw, a);
       }
       ctx.restore();
 
