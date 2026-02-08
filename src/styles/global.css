@@ -1,0 +1,103 @@
+/* ─── FONT FACES ─────────────────────────────────────── */
+@font-face { font-family: 'Geist Pixel Square'; src: url('/fonts/GeistPixel-Square.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Geist Pixel Grid'; src: url('/fonts/GeistPixel-Grid.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Geist Pixel Circle'; src: url('/fonts/GeistPixel-Circle.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Geist Pixel Triangle'; src: url('/fonts/GeistPixel-Triangle.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Geist Pixel Line'; src: url('/fonts/GeistPixel-Line.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Geist Sans'; src: url('/fonts/Geist-Variable.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+@font-face { font-family: 'Geist Mono'; src: url('/fonts/GeistMono-Variable.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }
+
+/* ─── CSS VARIABLES ──────────────────────────────────── */
+:root {
+  --pf1: 'Geist Pixel Square', monospace;
+  --pf2: 'Geist Pixel Grid', monospace;
+  --pf3: 'Geist Pixel Circle', monospace;
+  --pf4: 'Geist Pixel Triangle', monospace;
+  --pf5: 'Geist Pixel Line', monospace;
+  --ss1: normal; --ss2: normal; --ss3: normal; --ss4: normal; --ss5: normal;
+}
+
+/* ─── RESET ──────────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #06060c; margin: 0; font-family: 'Geist Pixel Square', monospace; }
+
+/* ─── FONT RIVER (ambient nth-child morph) ───────────── */
+body:not([data-calm]) *:nth-child(5n+1):not([data-morph]) { font-family: var(--pf1) !important; font-feature-settings: var(--ss1); }
+body:not([data-calm]) *:nth-child(5n+2):not([data-morph]) { font-family: var(--pf2) !important; font-feature-settings: var(--ss2); }
+body:not([data-calm]) *:nth-child(5n+3):not([data-morph]) { font-family: var(--pf3) !important; font-feature-settings: var(--ss3); }
+body:not([data-calm]) *:nth-child(5n+4):not([data-morph]) { font-family: var(--pf4) !important; font-feature-settings: var(--ss4); }
+body:not([data-calm]) *:nth-child(5n):not([data-morph]) { font-family: var(--pf5) !important; font-feature-settings: var(--ss5); }
+
+/* ─── CALM MODE OVERRIDES ────────────────────────────── */
+body[data-calm] { font-family: 'Geist Sans', sans-serif !important; }
+body[data-calm] *:not([data-morph]) { font-family: inherit !important; animation: none !important; transition: none !important; }
+
+/* ─── SCROLLBAR ──────────────────────────────────────── */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2a2a3a; border-radius: 2px; }
+
+/* ─── KEYFRAMES ──────────────────────────────────────── */
+@keyframes floatP {
+  0%, 100% { transform: translateY(0) translateX(0); }
+  33% { transform: translateY(-30px) translateX(10px); }
+  66% { transform: translateY(15px) translateX(-8px); }
+}
+
+@keyframes morphBreath {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.97; }
+}
+
+@keyframes morphBreathSoft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.92; }
+}
+
+@keyframes morphBreathStrong {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(10px); }
+  to { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+
+@keyframes breathe {
+  0%, 100% { transform: scale(1); opacity: 0.85; }
+  50% { transform: scale(1.04); opacity: 1; }
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; box-shadow: 0 0 12px #00e67655; }
+  50% { opacity: 0.6; box-shadow: 0 0 6px #00e67622; }
+}
+
+@keyframes logoHueShift {
+  0% { filter: brightness(1.1) hue-rotate(0deg) drop-shadow(0 0 24px #00e5ff40) drop-shadow(0 0 48px #ff006620); }
+  33% { filter: brightness(1.15) hue-rotate(8deg) drop-shadow(0 0 28px #00e5ff50) drop-shadow(0 0 52px #ff006630); }
+  66% { filter: brightness(1.1) hue-rotate(-4deg) drop-shadow(0 0 22px #00e5ff35) drop-shadow(0 0 44px #ff006618); }
+  100% { filter: brightness(1.1) hue-rotate(0deg) drop-shadow(0 0 24px #00e5ff40) drop-shadow(0 0 48px #ff006620); }
+}
+
+@keyframes crtScan {
+  from { background-position: 0 0; }
+  to { background-position: 0 -200px; }
+}
+
+/* ─── RESPONSIVE ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  .nav-desktop { display: none !important; }
+  .nav-mobile-btns { display: flex !important; }
+  .showcase-grid { grid-template-columns: 1fr !important; }
+  .casestudy-grid { grid-template-columns: 1fr !important; }
+  .detail-closeups { grid-template-columns: 1fr 1fr !important; }
+  .portfolio-tabs { gap: 2px !important; }
+  .portfolio-tabs button { padding: 8px 10px !important; font-size: 9px !important; letter-spacing: 2px !important; }
+}
