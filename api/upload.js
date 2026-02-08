@@ -1,46 +1,34 @@
-import { put } from '@vercel/blob';
+import { handleUpload } from '@vercel/blob/client';
 
 export const config = {
   runtime: 'nodejs',
-  maxDuration: 60,
 };
 
 export default async function handler(request) {
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-      status: 405,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
   try {
-    const formData = await request.formData();
-    const file = formData.get('file');
-
-    if (!file) {
-      return new Response(JSON.stringify({ error: 'No file provided' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
-    }
-
-    // Upload to Vercel Blob
-    const blob = await put(file.name, file, {
-      access: 'public',
+    const jsonResponse = await handleUpload({
+      request,
+      onBeforeGenerateToken: async (pathname) => {
+        // You can add authentication/validation here
+        console.log('[v0] Generating token for:', pathname);
+        return {
+          allowedContentTypes: ['image/jpeg', 'image/png', 'image/gif', 'image/webp'],
+          tokenPayload: JSON.stringify({}),
+        };
+      },
+      onUploadCompleted: async ({ blob, tokenPayload }) => {
+        console.log('[v0] Upload completed:', blob.url);
+      },
       token: process.env.BLOB_READ_WRITE_TOKEN,
     });
 
-    return new Response(JSON.stringify({
-      url: blob.url,
-      filename: file.name,
-      size: file.size,
-    }), {
+    return new Response(JSON.stringify(jsonResponse), {
       status: 200,
       headers: { 'Content-Type': 'application/json' },
     });
   } catch (error) {
     console.error('[v0] Upload error:', error);
-    return new Response(JSON.stringify({ error: 'Upload failed', details: error.message }), {
+    return new Response(JSON.stringify({ error: error.message }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' },
     });
