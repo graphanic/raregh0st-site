@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { P } from "../data/palette";
 import { DESIGN_PROJECTS } from "../data/portfolio";
 import { PortfolioPlaceholder } from "../components/PortfolioPlaceholder";
-import SEO from "../components/SEO";
+import { SEO } from "../components/SEO";
 
 const CaseStudyDetail = () => {
   const navigate = useNavigate();

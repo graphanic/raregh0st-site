@@ -1,4 +1,4 @@
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { P } from "../data/palette";
 import { SEO } from "../components/SEO";
 
@@ -38,8 +38,7 @@ const PAGES = {
   },
 };
 
-export const LegalPage = () => {
-  const { page } = useParams();
+export const LegalPage = ({ page }) => {
   const navigate = useNavigate();
   const mono = { fontFamily: "'Courier New', monospace" };
   const body = { ...mono, fontSize: 12, color: P.bone, opacity: 0.6, lineHeight: 1.8 };

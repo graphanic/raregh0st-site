@@ -4,7 +4,7 @@ import { P } from "../data/palette";
 import { PIECES } from "../data/pieces";
 import { ScrollMorphText } from "../components/MorphText";
 import { PortfolioPlaceholder } from "../components/PortfolioPlaceholder";
-import SEO from "../components/SEO";
+import { SEO } from "../components/SEO";
 
 const ShowcaseDetail = ({ addToCart }) => {
   const navigate = useNavigate();

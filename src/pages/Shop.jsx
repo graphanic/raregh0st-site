@@ -2,7 +2,7 @@ import { useState } from "react";
 import { P } from "../data/palette";
 import { SHOP_CATEGORIES, SHOP_PRODUCTS, ALL_ITEM_TAGS } from "../data/shop";
 import { HoverMorphText, ScrollMorphText } from "../components/MorphText";
-import SEO from "../components/SEO";
+import { SEO } from "../components/SEO";
 
 const ShopCard = ({ product, onAdd }) => {
   const [h, setH] = useState(false);

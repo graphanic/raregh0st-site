@@ -6,7 +6,7 @@ import { PORTFOLIO_TABS, DESIGN_PROJECTS, PHOTO_GALLERY, AI_WORKS, MOTION_WORKS 
 import { HoverMorphText, ScrollMorphText } from "../components/MorphText";
 import { HScrollRow } from "../components/HScrollRow";
 import { PortfolioPlaceholder, Lightbox } from "../components/PortfolioPlaceholder";
-import SEO from "../components/SEO";
+import { SEO } from "../components/SEO";
 
 const CuratedCard = ({ piece, onClick }) => {
   const [hov, setHov] = useState(false);
