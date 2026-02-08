@@ -1384,9 +1384,11 @@ const Hero = ({ setSection }) => {
   const zoomCurrent = useRef(1);
   const panTarget = useRef({ x: 0, y: 0 });
   const panCurrent = useRef({ x: 0, y: 0 });
+  const panVelocity = useRef({ x: 0, y: 0 }); // momentum
   const isDragging = useRef(false);
   const dragStart = useRef({ x: 0, y: 0 });
   const dragPanStart = useRef({ x: 0, y: 0 });
+  const dragLast = useRef({ x: 0, y: 0, t: 0 }); // for velocity calc
   const fieldAngle = useRef(0); // unified rotation for entire celestial system
   const hoveredRef = useRef(-1);
   const nodeScreenPos = useRef([]);
@@ -1541,6 +1543,16 @@ const Hero = ({ setSection }) => {
       if (isDragging.current) {
         panTarget.current.x = dragPanStart.current.x + (e.clientX - dragStart.current.x);
         panTarget.current.y = dragPanStart.current.y + (e.clientY - dragStart.current.y);
+        // Track velocity from recent movement
+        const now = performance.now();
+        const elapsed = now - dragLast.current.t;
+        if (elapsed > 0 && elapsed < 100) {
+          const vx = (e.clientX - dragLast.current.x) / elapsed * 16; // px per frame
+          const vy = (e.clientY - dragLast.current.y) / elapsed * 16;
+          panVelocity.current.x = vx;
+          panVelocity.current.y = vy;
+        }
+        dragLast.current = { x: e.clientX, y: e.clientY, t: now };
       }
     };
 
@@ -1577,17 +1589,27 @@ const Hero = ({ setSection }) => {
       const rect = el.getBoundingClientRect();
       if (checkNodeClick(e.clientX - rect.left, e.clientY - rect.top)) return;
       isDragging.current = true;
+      panVelocity.current = { x: 0, y: 0 }; // kill existing momentum
       dragStart.current = { x: e.clientX, y: e.clientY };
+      dragLast.current = { x: e.clientX, y: e.clientY, t: performance.now() };
       dragPanStart.current = { x: panTarget.current.x, y: panTarget.current.y };
     };
-    const onUp = () => { isDragging.current = false; };
+    const onUp = () => {
+      // If mouse hasn't moved recently, kill velocity (user paused before releasing)
+      if (performance.now() - dragLast.current.t > 80) {
+        panVelocity.current = { x: 0, y: 0 };
+      }
+      isDragging.current = false;
+    };
 
     const onTouchStart = (e) => {
       const t = e.touches[0];
       const rect = el.getBoundingClientRect();
       if (checkNodeClick(t.clientX - rect.left, t.clientY - rect.top)) return;
       isDragging.current = true;
+      panVelocity.current = { x: 0, y: 0 };
       dragStart.current = { x: t.clientX, y: t.clientY };
+      dragLast.current = { x: t.clientX, y: t.clientY, t: performance.now() };
       dragPanStart.current = { x: panTarget.current.x, y: panTarget.current.y };
     };
     const onTouchMove = (e) => {
@@ -1600,9 +1622,21 @@ const Hero = ({ setSection }) => {
       if (isDragging.current) {
         panTarget.current.x = dragPanStart.current.x + (t.clientX - dragStart.current.x);
         panTarget.current.y = dragPanStart.current.y + (t.clientY - dragStart.current.y);
+        const now = performance.now();
+        const elapsed = now - dragLast.current.t;
+        if (elapsed > 0 && elapsed < 100) {
+          panVelocity.current.x = (t.clientX - dragLast.current.x) / elapsed * 16;
+          panVelocity.current.y = (t.clientY - dragLast.current.y) / elapsed * 16;
+        }
+        dragLast.current = { x: t.clientX, y: t.clientY, t: now };
       }
     };
-    const onTouchEnd = () => { isDragging.current = false; };
+    const onTouchEnd = () => {
+      if (performance.now() - dragLast.current.t > 80) {
+        panVelocity.current = { x: 0, y: 0 };
+      }
+      isDragging.current = false;
+    };
 
     el.addEventListener("mousemove", onMove);
     el.addEventListener("wheel", onWheel, { passive: false });
@@ -1666,6 +1700,22 @@ const Hero = ({ setSection }) => {
       const maxPY = vh * 0.35 * bScale;
       panTarget.current.x = Math.max(-maxPX, Math.min(maxPX, panTarget.current.x));
       panTarget.current.y = Math.max(-maxPY, Math.min(maxPY, panTarget.current.y));
+
+      // Momentum: apply velocity when not dragging, decay with friction
+      if (!isDragging.current) {
+        const vx = panVelocity.current.x;
+        const vy = panVelocity.current.y;
+        if (Math.abs(vx) > 0.1 || Math.abs(vy) > 0.1) {
+          panTarget.current.x += vx;
+          panTarget.current.y += vy;
+          // Friction: ~0.95 per frame = smooth coast, stops in ~2-3 seconds
+          panVelocity.current.x *= 0.95;
+          panVelocity.current.y *= 0.95;
+        } else {
+          panVelocity.current.x = 0;
+          panVelocity.current.y = 0;
+        }
+      }
 
       // Smooth zoom/pan
       panCurrent.current.x += (panTarget.current.x - panCurrent.current.x) * 0.1;
