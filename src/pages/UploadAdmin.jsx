@@ -8,6 +8,7 @@ export const UploadAdmin = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadedUrls, setUploadedUrls] = useState([]);
   const [category, setCategory] = useState("design");
+  const [uploadProgress, setUploadProgress] = useState([]);
 
   const handleFileChange = (e) => {
     const selectedFiles = Array.from(e.target.files);
@@ -19,18 +20,43 @@ export const UploadAdmin = () => {
 
     setUploading(true);
     const results = [];
+    
+    // Initialize progress tracking
+    const initialProgress = files.map(f => ({
+      filename: f.name,
+      status: 'pending',
+      progress: 0
+    }));
+    setUploadProgress(initialProgress);
 
-    for (const file of files) {
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
       try {
+        // Update status to uploading
+        setUploadProgress(prev => prev.map((p, idx) => 
+          idx === i ? { ...p, status: 'uploading', progress: 0 } : p
+        ));
+
         console.log("[v0] Uploading:", file.name, "Size:", file.size);
         
         // Direct client-side upload to Blob (bypasses serverless function size limits)
         const blob = await upload(file.name, file, {
           access: "public",
           handleUploadUrl: "/api/upload",
+          onUploadProgress: ({ percentage }) => {
+            setUploadProgress(prev => prev.map((p, idx) => 
+              idx === i ? { ...p, progress: Math.round(percentage) } : p
+            ));
+          },
         });
 
         console.log("[v0] Upload successful:", blob.url);
+
+        // Update status to complete
+        setUploadProgress(prev => prev.map((p, idx) => 
+          idx === i ? { ...p, status: 'complete', progress: 100 } : p
+        ));
 
         results.push({
           filename: file.name,
@@ -39,6 +65,12 @@ export const UploadAdmin = () => {
         });
       } catch (error) {
         console.error("[v0] Upload error:", error);
+        
+        // Update status to error
+        setUploadProgress(prev => prev.map((p, idx) => 
+          idx === i ? { ...p, status: 'error', progress: 0 } : p
+        ));
+        
         results.push({
           filename: file.name,
           error: error.message,
@@ -50,6 +82,7 @@ export const UploadAdmin = () => {
     setUploadedUrls([...uploadedUrls, ...results]);
     setUploading(false);
     setFiles([]);
+    setTimeout(() => setUploadProgress([]), 1000);
   };
 
   const generateCode = () => {
@@ -150,6 +183,46 @@ export const UploadAdmin = () => {
             {uploading ? "Uploading..." : `Upload ${files.length} file(s)`}
           </button>
         </div>
+
+        {uploadProgress.length > 0 && (
+          <div style={{ background: P.cardBg, padding: "30px", borderRadius: "8px", border: `1px solid ${P.cyan}40`, marginBottom: "30px" }}>
+            <h2 style={{ color: P.cyan, marginBottom: "20px", fontSize: "1.5rem" }}>Upload Progress</h2>
+            <div style={{ maxHeight: "400px", overflow: "auto" }}>
+              {uploadProgress.map((item, i) => (
+                <div key={i} style={{ marginBottom: "20px" }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", marginBottom: "8px", fontSize: "0.9rem" }}>
+                    <span style={{ color: P.text, fontWeight: "500" }}>{item.filename}</span>
+                    <span style={{ 
+                      color: item.status === 'complete' ? P.green : 
+                             item.status === 'error' ? P.magenta : 
+                             item.status === 'uploading' ? P.cyan : P.textDim
+                    }}>
+                      {item.status === 'complete' ? '✓ Complete' : 
+                       item.status === 'error' ? '✗ Error' : 
+                       item.status === 'uploading' ? `${item.progress}%` : 'Pending'}
+                    </span>
+                  </div>
+                  <div style={{ 
+                    width: "100%", 
+                    height: "8px", 
+                    background: P.bg, 
+                    borderRadius: "4px",
+                    overflow: "hidden"
+                  }}>
+                    <div style={{ 
+                      width: `${item.progress}%`, 
+                      height: "100%", 
+                      background: item.status === 'error' ? P.magenta : 
+                                  item.status === 'complete' ? P.green : P.cyan,
+                      transition: "width 0.3s ease",
+                      borderRadius: "4px"
+                    }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
 
         {uploadedUrls.length > 0 && (
           <>
