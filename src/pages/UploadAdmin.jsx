@@ -1,7 +1,9 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { upload } from "@vercel/blob/client";
 import { SEO } from "../components/SEO";
 import { P } from "../data/palette";
+import { DESIGN_PROJECTS, PHOTO_GALLERY, AI_WORKS, MOTION_WORKS } from "../data/portfolio";
+import { PIECES } from "../data/pieces";
 
 // ─── Category / Subcategory map ─────────────────────────
 const CATEGORIES = {
@@ -259,10 +261,47 @@ const ItemEditor = ({ item, index, onUpdate, onRemove, categoryConfig }) => {
   );
 };
 
+// ─── Map existing data into uniform shape ───────────────
+function mapExisting(items, cat, label) {
+  return items.map((item, i) => ({
+    id: item.id || `${cat}-existing-${i}`,
+    title: item.title || item.name || "Untitled",
+    category: cat,
+    subcategory: item.category || item.type || item.series || "",
+    description: item.description || item.desc || "",
+    brief: item.brief || "",
+    approach: item.approach || "",
+    deliverables: item.deliverables || [],
+    tags: item.tags || [],
+    year: item.year || "",
+    role: item.role || "",
+    process: item.process || "",
+    duration: item.duration || "",
+    type: item.type || "",
+    colors: (item.colors || []).map(c => {
+      const found = AVAILABLE_COLORS.find(ac => COLOR_MAP[ac.value] === c);
+      return found ? found.value : null;
+    }).filter(Boolean),
+    img: item.img || item.src || "",
+    isLive: true,
+  }));
+}
+
 // ─── Main Component ─────────────────────────────────────
 export const UploadAdmin = () => {
+  /* auth state */
+  const [authed, setAuthed] = useState(false);
+  const [password, setPassword] = useState("");
+  const [authError, setAuthError] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+
+  /* content state */
   const [category, setCategory] = useState("design");
   const [items, setItems] = useState([]);
+  const [liveItems, setLiveItems] = useState([]);
+  const [activeView, setActiveView] = useState("new");
+  const [filterCat, setFilterCat] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState({});
   const [uploadedResults, setUploadedResults] = useState([]);
@@ -270,6 +309,48 @@ export const UploadAdmin = () => {
   const fileInputRef = useRef(null);
 
   const categoryConfig = CATEGORIES[category];
+
+  /* check stored session */
+  useEffect(() => {
+    const token = sessionStorage.getItem("admin_token");
+    if (token) setAuthed(true);
+  }, []);
+
+  /* load existing data once authed */
+  useEffect(() => {
+    if (!authed) return;
+    const all = [
+      ...mapExisting(PIECES, "curated", "Curated Works"),
+      ...mapExisting(DESIGN_PROJECTS, "design", "Design"),
+      ...mapExisting(PHOTO_GALLERY, "photography", "Photography"),
+      ...mapExisting(AI_WORKS, "ai-human", "AI x Human"),
+      ...mapExisting(MOTION_WORKS, "motion", "Motion"),
+    ];
+    setLiveItems(all);
+  }, [authed]);
+
+  /* login */
+  const handleLogin = async () => {
+    setAuthLoading(true);
+    setAuthError("");
+    try {
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json();
+      if (res.ok && data.token) {
+        sessionStorage.setItem("admin_token", data.token);
+        setAuthed(true);
+      } else {
+        setAuthError(data.error || "Invalid password");
+      }
+    } catch {
+      setAuthError("Connection failed");
+    }
+    setAuthLoading(false);
+  };
 
   // ─── Add files as staged items with thumbnails ─────
   const handleFileSelect = (e) => {
@@ -389,6 +470,39 @@ export const UploadAdmin = () => {
   const stagedCount = items.filter(it => !it.uploaded).length;
   const uploadedCount = items.filter(it => it.uploaded).length;
 
+  const filteredLive = liveItems.filter(item => {
+    if (filterCat !== "all" && item.category !== filterCat) return false;
+    if (searchTerm && !item.title.toLowerCase().includes(searchTerm.toLowerCase())) return false;
+    return true;
+  });
+
+  /* ── LOGIN GATE ── */
+  if (!authed) {
+    return (
+      <div style={{ background: P.abyss, color: P.ghost, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <SEO title="Admin Login | RareGh0st" description="Restricted access" />
+        <div style={{ ...cardStyle, maxWidth: "400px", width: "100%", textAlign: "center" }}>
+          <h1 style={{ color: P.cyan, fontSize: "1.6rem", marginBottom: "8px" }}>Admin Access</h1>
+          <p style={{ color: P.steel, marginBottom: "24px", fontSize: "0.9rem" }}>Enter password to continue</p>
+          <input
+            type="password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={e => { if (e.key === "Enter") handleLogin(); }}
+            placeholder="Password"
+            style={{ ...inputStyle, textAlign: "center", fontSize: "1rem", marginBottom: "16px" }}
+            autoFocus
+          />
+          {authError && <p style={{ color: P.magenta, fontSize: "0.85rem", marginBottom: "12px" }}>{authError}</p>}
+          <button onClick={handleLogin} disabled={authLoading} style={{ ...btnPrimary(authLoading), width: "100%" }}>
+            {authLoading ? "Verifying..." : "Enter"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  /* ── MAIN ADMIN ── */
   return (
     <div style={{ background: P.abyss, color: P.ghost, minHeight: "100vh", padding: "40px 20px" }}>
       <SEO title="Content Manager - RareGh0st" description="Portfolio content management" />
@@ -400,27 +514,103 @@ export const UploadAdmin = () => {
             <h1 style={{ color: P.cyan, fontSize: "2rem", marginBottom: "6px" }}>Content Manager</h1>
             <p style={{ color: P.steel, fontSize: "0.9rem" }}>Upload, tag, describe, and generate portfolio code.</p>
           </div>
-          <div style={{ display: "flex", gap: "12px", fontSize: "0.85rem" }}>
+          <div style={{ display: "flex", gap: "12px", alignItems: "center", fontSize: "0.85rem" }}>
             {stagedCount > 0 && <span style={{ color: P.amber }}>{stagedCount} staged</span>}
             {uploadedCount > 0 && <span style={{ color: P.green }}>{uploadedCount} uploaded</span>}
+            <button onClick={() => { sessionStorage.removeItem("admin_token"); setAuthed(false); }} style={{ background: "none", border: `1px solid ${P.magenta}40`, color: P.magenta, padding: "6px 14px", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem" }}>Logout</button>
           </div>
         </div>
 
-        {/* Category selector + file input */}
-        <div style={{ ...cardStyle, display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-end" }}>
-          <div style={{ flex: "1 1 200px" }}>
-            <label style={labelStyle}>Category</label>
-            <select value={category} onChange={e => setCategory(e.target.value)} style={inputStyle}>
-              {Object.entries(CATEGORIES).map(([key, val]) => (
-                <option key={key} value={key}>{val.label}</option>
-              ))}
-            </select>
-          </div>
-          <div style={{ flex: "2 1 300px" }}>
-            <label style={labelStyle}>Add Images</label>
-            <input ref={fileInputRef} type="file" multiple accept="image/*,video/*" onChange={handleFileSelect} style={inputStyle} />
-          </div>
+        {/* Stats bar */}
+        <div style={{ ...cardStyle, display: "flex", gap: "30px", flexWrap: "wrap", padding: "16px 24px", marginBottom: "20px" }}>
+          <div><span style={{ color: P.steel, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Live Items</span><div style={{ color: P.cyan, fontSize: "1.3rem", fontWeight: "700" }}>{liveItems.length}</div></div>
+          <div><span style={{ color: P.steel, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>New Uploads</span><div style={{ color: P.green, fontSize: "1.3rem", fontWeight: "700" }}>{uploadedCount}</div></div>
+          <div><span style={{ color: P.steel, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Pending</span><div style={{ color: P.amber, fontSize: "1.3rem", fontWeight: "700" }}>{stagedCount}</div></div>
         </div>
+
+        {/* View tabs + filter bar */}
+        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap", marginBottom: "20px", alignItems: "center" }}>
+          <button onClick={() => setActiveView("live")} style={{ background: activeView === "live" ? P.cyan : "transparent", color: activeView === "live" ? P.abyss : P.steel, border: `1px solid ${activeView === "live" ? P.cyan : P.steel}40`, borderRadius: "4px", padding: "8px 18px", cursor: "pointer", fontWeight: "600", fontSize: "0.85rem" }}>
+            Live ({liveItems.length})
+          </button>
+          <button onClick={() => setActiveView("new")} style={{ background: activeView === "new" ? P.cyan : "transparent", color: activeView === "new" ? P.abyss : P.steel, border: `1px solid ${activeView === "new" ? P.cyan : P.steel}40`, borderRadius: "4px", padding: "8px 18px", cursor: "pointer", fontWeight: "600", fontSize: "0.85rem" }}>
+            New ({items.length})
+          </button>
+          <div style={{ flex: 1 }} />
+          {activeView === "live" && (
+            <>
+              <select value={filterCat} onChange={e => setFilterCat(e.target.value)} style={{ ...inputStyle, width: "auto" }}>
+                <option value="all">All Categories</option>
+                {Object.entries(CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+              </select>
+              <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search..." style={{ ...inputStyle, width: "160px" }} />
+            </>
+          )}
+        </div>
+
+        {/* ── LIVE ITEMS VIEW ── */}
+        {activeView === "live" && (
+          <div style={{ marginBottom: "30px" }}>
+            {filteredLive.length === 0 ? (
+              <div style={{ ...cardStyle, textAlign: "center", padding: "40px" }}><p style={{ color: P.steel }}>No items match your filter</p></div>
+            ) : (
+              filteredLive.map((item, i) => (
+                <div key={item.id} style={{ ...cardStyle, border: `1px solid ${P.cyan}20` }}>
+                  <div style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}>
+                    {item.img && (
+                      <div style={{ width: "100px", height: "100px", borderRadius: "6px", overflow: "hidden", flexShrink: 0, border: `1px solid ${P.steel}40` }}>
+                        <img src={item.img} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      </div>
+                    )}
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "4px" }}>
+                        <h3 style={{ color: P.ghost, fontSize: "1rem", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.title}</h3>
+                        <span style={{ background: `${P.cyan}15`, color: P.cyan, padding: "2px 10px", borderRadius: "10px", fontSize: "0.7rem", flexShrink: 0 }}>LIVE</span>
+                      </div>
+                      <div style={{ display: "flex", gap: "8px", flexWrap: "wrap", marginBottom: "6px" }}>
+                        <span style={{ color: P.steel, fontSize: "0.8rem" }}>{CATEGORIES[item.category]?.label || item.category}</span>
+                        {item.subcategory && <span style={{ color: P.cyan, fontSize: "0.8rem" }}>{item.subcategory}</span>}
+                        {item.year && <span style={{ color: P.steel, fontSize: "0.8rem" }}>{item.year}</span>}
+                        {item.role && <span style={{ color: P.steel, fontSize: "0.8rem" }}>{item.role}</span>}
+                      </div>
+                      {item.description && <p style={{ color: P.steel, fontSize: "0.8rem", margin: 0, lineHeight: 1.4 }}>{item.description.length > 120 ? item.description.slice(0, 120) + "..." : item.description}</p>}
+                      {item.tags.length > 0 && (
+                        <div style={{ display: "flex", gap: "4px", flexWrap: "wrap", marginTop: "8px" }}>
+                          {item.tags.map((t, j) => <span key={j} style={{ background: `${P.cyan}12`, color: P.cyan, padding: "2px 8px", borderRadius: "10px", fontSize: "0.7rem" }}>{t}</span>)}
+                        </div>
+                      )}
+                    </div>
+                    {/* Color dots */}
+                    {item.colors.length > 0 && (
+                      <div style={{ display: "flex", gap: "4px", flexShrink: 0 }}>
+                        {item.colors.map((c, j) => <div key={j} style={{ width: "16px", height: "16px", borderRadius: "50%", background: COLOR_MAP[c] || c, border: `1px solid ${P.steel}40` }} />)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {/* ── NEW ITEMS VIEW ── */}
+        {activeView === "new" && (
+          <>
+            {/* Category selector + file input */}
+            <div style={{ ...cardStyle, display: "flex", gap: "16px", flexWrap: "wrap", alignItems: "flex-end" }}>
+              <div style={{ flex: "1 1 200px" }}>
+                <label style={labelStyle}>Category</label>
+                <select value={category} onChange={e => setCategory(e.target.value)} style={inputStyle}>
+                  {Object.entries(CATEGORIES).map(([key, val]) => (
+                    <option key={key} value={key}>{val.label}</option>
+                  ))}
+                </select>
+              </div>
+              <div style={{ flex: "2 1 300px" }}>
+                <label style={labelStyle}>Add Images</label>
+                <input ref={fileInputRef} type="file" multiple accept="image/*,video/*" onChange={handleFileSelect} style={inputStyle} />
+              </div>
+            </div>
 
         {/* Staged items */}
         {items.length > 0 && (
@@ -483,6 +673,8 @@ export const UploadAdmin = () => {
               <code>{generateCode()}</code>
             </pre>
           </div>
+        )}
+          </>
         )}
       </div>
     </div>
