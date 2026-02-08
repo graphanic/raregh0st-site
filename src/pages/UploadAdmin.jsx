@@ -336,20 +336,33 @@ export const UploadAdmin = () => {
     setAuthLoading(true);
     setAuthError("");
     try {
+      console.log("[v0] Attempting login to /api/auth");
       const res = await fetch("/api/auth", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ password }),
       });
-      const data = await res.json();
+      console.log("[v0] Response status:", res.status);
+      const text = await res.text();
+      console.log("[v0] Response body:", text);
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch {
+        console.log("[v0] Response is NOT JSON, got:", text.substring(0, 200));
+        setAuthError("Server returned non-JSON. API route may not be deployed.");
+        setAuthLoading(false);
+        return;
+      }
       if (res.ok && data.token) {
         sessionStorage.setItem("admin_token", data.token);
         setAuthed(true);
       } else {
         setAuthError(data.error || "Invalid password");
       }
-    } catch {
-      setAuthError("Connection failed");
+    } catch (err) {
+      console.log("[v0] Fetch error:", err);
+      setAuthError("Connection failed: " + err.message);
     }
     setAuthLoading(false);
   };
