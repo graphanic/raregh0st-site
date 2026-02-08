@@ -29,6 +29,7 @@ const Hero = () => {
   const dragLast = useRef({ x: 0, y: 0, t: 0 });
   const fieldAngle = useRef(0);
   const hoveredRef = useRef(-1);
+  const hoveredMoonRef = useRef(-1);
   const nodeScreenPos = useRef([]);
   const moonScreenPos = useRef([]);
   const visRef = useRef(false);
@@ -73,7 +74,7 @@ const Hero = () => {
   });
 
   const orbitAngles = useRef(nodes.map(n => n.startAngle));
-  const moonAnglesRef = useRef(allMoons.map(m => m.startAngle));
+  const moonAnglesRef = useRef(allMoons.map(() => Math.random() * 360));
 
   const starSprites = useRef({});
   const STAR_TIERS = ["tiny", "small", "medium", "large", "xlarge", "xxlarge"];
@@ -614,7 +615,9 @@ const Hero = () => {
 
       // Nodes + Sub-moons
       let newHovered = -1;
+      let newHoveredMoon = -1;
       nodeScreenPos.current = [];
+      moonScreenPos.current = [];
       const t = timestamp * 0.001;
 
       for (let i = 0; i < nodes.length; i++) {
@@ -752,6 +755,14 @@ const Hero = () => {
             const hitMR = (moon.size / 2) * zoom;
             moonScreenPos.current[flatIdx] = { x: screenMX, y: screenMY, r: hitMR };
 
+            // Check if moon is hovered
+            const mpx = mouse.current.px;
+            const mpy = mouse.current.py;
+            const isMoonHovered = mpx && mpy && Math.hypot(mpx - screenMX, mpy - screenMY) < hitMR;
+            if (isMoonHovered) {
+              newHoveredMoon = flatIdx;
+            }
+
             ctx.setLineDash([2, 4]);
             ctx.strokeStyle = node.color;
             ctx.lineWidth = 0.5;
@@ -761,9 +772,22 @@ const Hero = () => {
             ctx.stroke();
             ctx.setLineDash([]);
 
+            // Hover glow effect
+            if (isMoonHovered) {
+              const glowGrad = ctx.createRadialGradient(mx, my, 0, mx, my, moon.size * 2.5);
+              glowGrad.addColorStop(0, node.color + "60");
+              glowGrad.addColorStop(0.5, node.color + "20");
+              glowGrad.addColorStop(1, "transparent");
+              ctx.fillStyle = glowGrad;
+              ctx.globalAlpha = a * 0.8;
+              ctx.beginPath();
+              ctx.arc(mx, my, moon.size * 2.5, 0, Math.PI * 2);
+              ctx.fill();
+            }
+
             ctx.strokeStyle = node.color;
-            ctx.lineWidth = 1;
-            ctx.globalAlpha = a * 0.7;
+            ctx.lineWidth = isMoonHovered ? 1.5 : 1;
+            ctx.globalAlpha = a * (isMoonHovered ? 0.9 : 0.7);
             ctx.beginPath();
             ctx.arc(mx, my, moon.size / 2, 0, Math.PI * 2);
             ctx.stroke();
@@ -858,9 +882,11 @@ const Hero = () => {
       }
 
       hoveredRef.current = newHovered;
+      hoveredMoonRef.current = newHoveredMoon;
 
       if (canvasRef.current) {
-        canvasRef.current.style.cursor = newHovered >= 0 ? "pointer" : (isDragging.current ? "grabbing" : "default");
+        const isHoveringClickable = newHovered >= 0 || newHoveredMoon >= 0;
+        canvasRef.current.style.cursor = isHoveringClickable ? "pointer" : (isDragging.current ? "grabbing" : "default");
       }
 
       if (overlayRef.current) {
