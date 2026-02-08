@@ -30,6 +30,7 @@ const Hero = () => {
   const fieldAngle = useRef(0);
   const hoveredRef = useRef(-1);
   const nodeScreenPos = useRef([]);
+  const moonScreenPos = useRef([]);
   const visRef = useRef(false);
   const fadeIn = useRef(0);
 
@@ -50,7 +51,16 @@ const Hero = () => {
       { label: "Digital", orbitRadius: 130, speed: 36, startAngle: 216, size: 15 },
       { label: "Courses", orbitRadius: 150, speed: 42, startAngle: 288, size: 17 },
     ]},
-    { label: "Media", dest: "/media", color: P.magenta, orbitRadius: 420, speed: 180, startAngle: 130, radius: 40, ringCount: 2, desc: "Motion & Sound" },
+    { label: "Media", dest: "/media", color: P.magenta, orbitRadius: 420, speed: 180, startAngle: 130, radius: 40, ringCount: 2, desc: "Motion & Sound", moons: [
+      { label: "YouTube", url: "https://www.youtube.com/@RareGh0stArchitect", orbitRadius: 65, speed: 16, startAngle: 0, size: 18 },
+      { label: "X", url: "https://x.com/RareGh0st", orbitRadius: 85, speed: 22, startAngle: 45, size: 16 },
+      { label: "TikTok", url: "https://www.tiktok.com/@raregh0st", orbitRadius: 105, speed: 28, startAngle: 90, size: 17 },
+      { label: "Facebook", url: "https://www.facebook.com/RageGh0st", orbitRadius: 125, speed: 34, startAngle: 135, size: 15 },
+      { label: "Instagram", url: "https://www.instagram.com/raregh0st/", orbitRadius: 145, speed: 40, startAngle: 180, size: 19 },
+      { label: "Twitch", url: "https://www.twitch.tv/raregh0stgames", orbitRadius: 165, speed: 46, startAngle: 225, size: 18 },
+      { label: "Reddit", url: "https://www.reddit.com/user/RareGh0st/", orbitRadius: 185, speed: 52, startAngle: 270, size: 16 },
+      { label: "Threads", url: "https://www.threads.com/@raregh0st", orbitRadius: 205, speed: 58, startAngle: 315, size: 17 },
+    ]},
     { label: "The Work", dest: "/the-work", color: P.purple, orbitRadius: 720, speed: 340, startAngle: 50, radius: 46, ringCount: 3, desc: "Process & Philosophy" },
     { label: "Now", dest: "/now", color: P.green, orbitRadius: 340, speed: 140, startAngle: 270, radius: 34, ringCount: 2, desc: "Current Status" },
   ];
@@ -193,17 +203,30 @@ const Hero = () => {
       zoomTarget.current = newZ;
     };
 
-    const checkNodeClick = (mx, my) => {
-      for (let i = 0; i < nodeScreenPos.current.length; i++) {
-        const np = nodeScreenPos.current[i];
-        if (!np) continue;
-        if (Math.hypot(mx - np.x, my - np.y) < np.r) {
-          navigate(nodes[i].dest);
-          return true;
+  const checkNodeClick = (mx, my) => {
+    // Check moons first (smaller targets, higher priority)
+    for (let m = 0; m < moonScreenPos.current.length; m++) {
+      const mp = moonScreenPos.current[m];
+      if (!mp) continue;
+      if (Math.hypot(mx - mp.x, my - mp.y) < mp.r) {
+        const moon = allMoons[m];
+        if (moon.url) {
+          window.open(moon.url, '_blank', 'noopener,noreferrer');
         }
+        return true;
       }
-      return false;
-    };
+    }
+    // Then check nodes
+    for (let i = 0; i < nodeScreenPos.current.length; i++) {
+      const np = nodeScreenPos.current[i];
+      if (!np) continue;
+      if (Math.hypot(mx - np.x, my - np.y) < np.r) {
+        navigate(nodes[i].dest);
+        return true;
+      }
+    }
+    return false;
+  };
 
     const onDown = (e) => {
       const rect = el.getBoundingClientRect();
@@ -490,7 +513,7 @@ const Hero = () => {
       ctx.lineWidth = 0.5;
       ctx.globalAlpha = a * 0.14;
       const gridSpacing = 86;
-      const halfExtent = Math.sqrt((cw / zoom) * (cw / zoom) + (ch / zoom) * (ch / zoom)) / 2 + 300;
+      const halfExtent = Math.sqrt((cw / zoom) * (cw / zoom) + (ch / zoom) * (ch / zoom)) / 2 + 1200;
       const gridLeft = Math.floor((-halfExtent) / gridSpacing) * gridSpacing;
       const gridRight = Math.ceil((halfExtent) / gridSpacing) * gridSpacing;
       const gridTop = Math.floor((-halfExtent) / gridSpacing) * gridSpacing;
@@ -509,7 +532,7 @@ const Hero = () => {
       ctx.save();
       ctx.rotate(faL);
       ctx.strokeStyle = P.cyan;
-      const circleR = [80, 160, 260, 380, 520, 680, 860, 1080, 1350, 1700, 2100, 2600, 3200];
+      const circleR = [80, 160, 260, 380, 520, 680, 860, 1080, 1350, 1700, 2100, 2600, 3200, 3900, 4700, 5600];
       for (let i = 0; i < circleR.length; i++) {
         ctx.lineWidth = i < 3 ? 1 : i < 6 ? 0.7 : 0.5;
         ctx.globalAlpha = a * (0.32 - i * 0.02);
@@ -531,7 +554,7 @@ const Hero = () => {
       for (let i = 0; i < 24; i += 6) {
         const ang = (i / 24) * Math.PI * 2;
         ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(ang) * 5000, Math.sin(ang) * 5000);
+        ctx.lineTo(Math.cos(ang) * 8000, Math.sin(ang) * 8000);
       }
       ctx.stroke();
       ctx.lineWidth = 0.4;
@@ -541,7 +564,7 @@ const Hero = () => {
         if (i % 6 === 0) continue;
         const ang = (i / 24) * Math.PI * 2;
         ctx.moveTo(0, 0);
-        ctx.lineTo(Math.cos(ang) * 5000, Math.sin(ang) * 5000);
+        ctx.lineTo(Math.cos(ang) * 8000, Math.sin(ang) * 8000);
       }
       ctx.stroke();
       ctx.restore();
@@ -722,6 +745,12 @@ const Hero = () => {
             const mrad = moonAnglesRef.current[flatIdx] * Math.PI / 180;
             const mx = nx + Math.cos(mrad) * moon.orbitRadius;
             const my = ny + Math.sin(mrad) * moon.orbitRadius;
+
+            // Store moon screen position for click detection
+            const screenMX = mx * zoom + cx;
+            const screenMY = my * zoom + cy;
+            const hitMR = (moon.size / 2) * zoom;
+            moonScreenPos.current[flatIdx] = { x: screenMX, y: screenMY, r: hitMR };
 
             ctx.setLineDash([2, 4]);
             ctx.strokeStyle = node.color;
