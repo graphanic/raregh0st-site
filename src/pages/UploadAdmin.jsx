@@ -29,7 +29,19 @@ export const UploadAdmin = () => {
           body: formData,
         });
 
-        const data = await response.json();
+        console.log("[v0] Response status:", response.status);
+        console.log("[v0] Response headers:", response.headers.get("content-type"));
+        
+        const responseText = await response.text();
+        console.log("[v0] Response body:", responseText);
+        
+        let data;
+        try {
+          data = JSON.parse(responseText);
+        } catch (parseError) {
+          console.error("[v0] Failed to parse JSON:", parseError);
+          throw new Error(`Server returned non-JSON: ${responseText.substring(0, 100)}...`);
+        }
 
         if (response.ok) {
           results.push({
