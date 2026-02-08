@@ -2234,7 +2234,7 @@ const Hero = ({ setSection }) => {
           octx.globalCompositeOperation = "source-over";
           octx.globalAlpha = 1;
           octx.drawImage(lensDustImg.current, 0, 0, oc.width, oc.height);
-          octx.globalCompositeOperation = "color";
+          octx.globalCompositeOperation = "source-atop";
           octx.fillStyle = `hsl(${roundedHue}, 70%, 50%)`;
           octx.fillRect(0, 0, oc.width, oc.height);
           octx.globalCompositeOperation = "source-over";
