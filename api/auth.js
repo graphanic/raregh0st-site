@@ -1,31 +1,27 @@
-export const config = { runtime: 'nodejs' };
+export default function handler(req, res) {
+  res.setHeader('Content-Type', 'application/json');
 
-export default async function handler(request) {
-  const headers = { 'Content-Type': 'application/json' };
-
-  if (request.method !== 'POST') {
-    return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405, headers });
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
   }
 
   try {
-    const body = await request.json();
-    const submitted = (body.password || "").trim();
+    const submitted = (req.body?.password || "").trim();
     const expected = (process.env.ADMIN_PASSWORD || "").trim();
 
     if (!expected) {
-      return new Response(JSON.stringify({ error: 'ADMIN_PASSWORD not configured on server' }), { status: 500, headers });
+      return res.status(500).json({ error: 'ADMIN_PASSWORD not configured on server' });
     }
 
     if (submitted !== expected) {
-      return new Response(JSON.stringify({ error: 'Invalid password' }), { status: 401, headers });
+      return res.status(401).json({ error: 'Invalid password' });
     }
 
-    // Simple token: base64 of password + today's date
     const today = new Date().toISOString().split('T')[0];
     const token = Buffer.from(submitted + ':' + today).toString('base64');
 
-    return new Response(JSON.stringify({ success: true, token }), { status: 200, headers });
+    return res.status(200).json({ success: true, token });
   } catch (error) {
-    return new Response(JSON.stringify({ error: 'Auth failed: ' + error.message }), { status: 500, headers });
+    return res.status(500).json({ error: 'Auth failed: ' + error.message });
   }
 }
