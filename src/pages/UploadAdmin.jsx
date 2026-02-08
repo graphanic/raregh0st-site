@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { upload } from "@vercel/blob/client";
 import { SEO } from "../components/SEO";
 import { P } from "../data/palette";
 
@@ -21,42 +22,23 @@ export const UploadAdmin = () => {
 
     for (const file of files) {
       try {
-        const formData = new FormData();
-        formData.append("file", file);
-
-        const response = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
+        console.log("[v0] Uploading:", file.name, "Size:", file.size);
+        
+        // Direct client-side upload to Blob (bypasses serverless function size limits)
+        const blob = await upload(file.name, file, {
+          access: "public",
+          handleUploadUrl: "/api/upload",
         });
 
-        console.log("[v0] Response status:", response.status);
-        console.log("[v0] Response headers:", response.headers.get("content-type"));
-        
-        const responseText = await response.text();
-        console.log("[v0] Response body:", responseText);
-        
-        let data;
-        try {
-          data = JSON.parse(responseText);
-        } catch (parseError) {
-          console.error("[v0] Failed to parse JSON:", parseError);
-          throw new Error(`Server returned non-JSON: ${responseText.substring(0, 100)}...`);
-        }
+        console.log("[v0] Upload successful:", blob.url);
 
-        if (response.ok) {
-          results.push({
-            filename: file.name,
-            url: data.url,
-            success: true,
-          });
-        } else {
-          results.push({
-            filename: file.name,
-            error: data.error,
-            success: false,
-          });
-        }
+        results.push({
+          filename: file.name,
+          url: blob.url,
+          success: true,
+        });
       } catch (error) {
+        console.error("[v0] Upload error:", error);
         results.push({
           filename: file.name,
           error: error.message,
