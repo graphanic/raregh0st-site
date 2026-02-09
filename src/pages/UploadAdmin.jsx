@@ -70,8 +70,11 @@ const btnPrimary = (disabled) => ({
 const TagInput = ({ tags, onChange }) => {
   const [input, setInput] = useState("");
   const add = () => {
-    const val = input.trim().toLowerCase();
-    if (val && !tags.includes(val)) { onChange([...tags, val]); }
+    const newTags = input
+      .split(",")
+      .map(t => t.trim().toLowerCase())
+      .filter(t => t && !tags.includes(t));
+    if (newTags.length > 0) { onChange([...tags, ...newTags]); }
     setInput("");
   };
   return (
@@ -85,7 +88,7 @@ const TagInput = ({ tags, onChange }) => {
         ))}
       </div>
       <div style={{ display: "flex", gap: "8px" }}>
-        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), add())} placeholder="Add tag..." style={{ ...inputStyle, flex: 1 }} />
+        <input value={input} onChange={e => setInput(e.target.value)} onKeyDown={e => e.key === "Enter" && (e.preventDefault(), add())} placeholder="Add tags (comma separated)..." style={{ ...inputStyle, flex: 1 }} />
         <button onClick={add} type="button" style={{ ...btnPrimary(false), padding: "10px 16px", fontSize: "0.85rem" }}>+</button>
       </div>
     </div>
