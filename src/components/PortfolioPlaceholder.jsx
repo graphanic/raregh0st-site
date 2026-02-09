@@ -17,7 +17,11 @@ export const Lightbox = ({ item, onClose }) => {
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, background: `${P.abyss}f0`, backdropFilter: "blur(20px)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", animation: "fadeSlideIn 0.2s ease" }}>
       <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: 800, width: "90%", cursor: "default" }}>
-        <PortfolioPlaceholder colors={item.colors} aspect="1" />
+        {item.img ? (
+          <img src={item.img} alt={item.title} style={{ width: "100%", maxHeight: "70vh", objectFit: "contain", display: "block" }} />
+        ) : (
+          <PortfolioPlaceholder colors={item.colors} aspect="1" />
+        )}
         <div style={{ marginTop: 20, textAlign: "center" }}>
           <div style={{ fontFamily: "'Georgia', serif", fontSize: 18, color: P.ghost }}>{item.title}</div>
           {item.process && <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: item.colors[0], letterSpacing: 3, marginTop: 8 }}>{item.process}</div>}

@@ -52,7 +52,11 @@ const GridItem = ({ item, onClick, showProcess }) => {
     <div onClick={() => onClick(item)} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ cursor: "pointer", position: "relative", overflow: "hidden" }}>
       <div style={{ overflow: "hidden", border: `1px solid ${hov ? item.colors[0] + "22" : "transparent"}`, transition: "all 0.3s" }}>
         <div style={{ transform: hov ? "scale(1.05)" : "scale(1)", transition: "transform 0.5s cubic-bezier(0.16,1,0.3,1)" }}>
-          <PortfolioPlaceholder colors={item.colors} aspect="1" />
+          {item.img ? (
+            <img src={item.img} alt={item.title} style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }} />
+          ) : (
+            <PortfolioPlaceholder colors={item.colors} aspect="1" />
+          )}
         </div>
       </div>
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "30px 12px 10px", background: `linear-gradient(to top, ${P.abyss}cc, transparent)`, opacity: hov ? 1 : 0, transition: "opacity 0.3s" }}>
