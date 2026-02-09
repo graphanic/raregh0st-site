@@ -70,14 +70,43 @@ const getLightboxUrl = (url) => {
 const GridItem = ({ item, onClick, showProcess, index = 0 }) => {
   const [hov, setHov] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  // Prioritize loading first 12 images
+  const videoRef = useRef(null);
   const isPriority = index < 12;
+  const isVideo = item.mediaType === "video" && item.img;
+
+  useEffect(() => {
+    if (!isVideo || !videoRef.current) return;
+    if (hov) {
+      videoRef.current.play().catch(() => {});
+    } else {
+      videoRef.current.pause();
+    }
+  }, [hov, isVideo]);
 
   return (
     <div onClick={() => onClick(item)} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ cursor: "pointer", position: "relative", overflow: "hidden" }}>
       <div style={{ overflow: "hidden", border: `1px solid ${hov ? item.colors[0] + "22" : "transparent"}`, transition: "all 0.3s" }}>
         <div style={{ transform: hov ? "scale(1.05)" : "scale(1)", transition: "transform 0.5s cubic-bezier(0.16,1,0.3,1)" }}>
-          {item.img ? (
+          {isVideo ? (
+            <div style={{ position: "relative", width: "100%", aspectRatio: "1", background: `linear-gradient(135deg, ${P.abyss}, ${item.colors[0]}0c, ${item.colors[1] || item.colors[0]}0e, ${P.abyss})` }}>
+              <video
+                ref={videoRef}
+                src={item.img}
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }}
+              />
+              {!hov && (
+                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", border: `2px solid ${P.ghost}44`, display: "flex", alignItems: "center", justifyContent: "center", background: `${P.abyss}88`, backdropFilter: "blur(4px)" }}>
+                    <span style={{ color: P.ghost, fontSize: 14, marginLeft: 2 }}>{"\u25B6"}</span>
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : item.img ? (
             <div style={{ position: "relative", width: "100%", aspectRatio: "1", background: `linear-gradient(135deg, ${P.abyss}, ${item.colors[0]}0c, ${item.colors[1] || item.colors[0]}0e, ${P.abyss})` }}>
               <img
                 src={getThumbnailUrl(item.img)}
@@ -105,16 +134,42 @@ const GridItem = ({ item, onClick, showProcess, index = 0 }) => {
 
 const MotionItem = ({ work, onClick }) => {
   const [hov, setHov] = useState(false);
+  const videoRef = useRef(null);
+  const isVideo = work.mediaType === "video" && work.img;
+
+  useEffect(() => {
+    if (!isVideo || !videoRef.current) return;
+    if (hov) {
+      videoRef.current.play().catch(() => {});
+    } else {
+      videoRef.current.pause();
+    }
+  }, [hov, isVideo]);
+
   return (
     <div onClick={() => onClick(work)} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ cursor: "pointer", transition: "all 0.3s" }}>
       <div style={{ position: "relative", overflow: "hidden", border: `1px solid ${hov ? work.colors[0] + "22" : P.steel + "0a"}`, transition: "all 0.3s" }}>
-        <PortfolioPlaceholder colors={work.colors} aspect="16/9" />
-        <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
-          <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px solid ${P.ghost}44`, display: "flex", alignItems: "center", justifyContent: "center", background: `${P.abyss}88`, backdropFilter: "blur(4px)", transform: hov ? "scale(1.15)" : "scale(1)", transition: "transform 0.3s" }}>
-            <span style={{ color: P.ghost, fontSize: 18, marginLeft: 3 }}>{"\u25B6"}</span>
+        {isVideo ? (
+          <video
+            ref={videoRef}
+            src={work.img}
+            muted
+            loop
+            playsInline
+            preload="metadata"
+            style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }}
+          />
+        ) : (
+          <PortfolioPlaceholder colors={work.colors} aspect="16/9" />
+        )}
+        {!hov && (
+          <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px solid ${P.ghost}44`, display: "flex", alignItems: "center", justifyContent: "center", background: `${P.abyss}88`, backdropFilter: "blur(4px)", transition: "transform 0.3s" }}>
+              <span style={{ color: P.ghost, fontSize: 18, marginLeft: 3 }}>{"\u25B6"}</span>
+            </div>
           </div>
-        </div>
-        <div style={{ position: "absolute", bottom: 8, right: 10, fontFamily: "'Courier New', monospace", fontSize: 9, color: P.ghost, opacity: 0.5, letterSpacing: 1, background: `${P.abyss}aa`, padding: "2px 8px" }}>{work.duration}</div>
+        )}
+        {work.duration && <div style={{ position: "absolute", bottom: 8, right: 10, fontFamily: "'Courier New', monospace", fontSize: 9, color: P.ghost, opacity: 0.5, letterSpacing: 1, background: `${P.abyss}aa`, padding: "2px 8px" }}>{work.duration}</div>}
         <div style={{ position: "absolute", top: 8, left: 10 }}>
           <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: work.colors[0], letterSpacing: 2, textTransform: "uppercase", background: `${P.abyss}cc`, padding: "3px 8px" }}>{work.type.replace(/-/g, " ")}</span>
         </div>
