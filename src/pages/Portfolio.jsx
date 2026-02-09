@@ -228,7 +228,7 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
 
   return (
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
-      <SEO title="Portfolio" description="Multi-disciplinary creative portfolio by RareGh0st — art, design, photography, motion, and AI collaboration." />
+      <SEO title="Portfolio" description="Multi-disciplinary creative portfolio by RareGh0st — art, design, photography, motion, and AI collaboration." path="/portfolio" />
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
         <div style={{ marginBottom: 40 }}>
           <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.cyan, textTransform: "uppercase", marginBottom: 12 }}><ScrollMorphText speed={75}>Portfolio</ScrollMorphText></div>

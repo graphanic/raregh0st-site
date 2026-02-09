@@ -25,7 +25,7 @@ const ShowcaseDetail = ({ addToCart }) => {
 
   return (
     <div style={{ minHeight: "100vh", paddingTop: 100, paddingBottom: 80 }}>
-      <SEO title={piece.title} description={piece.description} />
+      <SEO title={piece.title} description={piece.description} path={`/portfolio/${id}`} />
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
         <button onClick={() => navigate("/portfolio")} style={{ background: "none", border: "none", color: P.bone, fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 4, cursor: "pointer", opacity: 0.4, marginBottom: 32, textTransform: "uppercase" }}>&larr; Portfolio</button>
         <div style={{ opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(12px)", transition: "all 0.6s cubic-bezier(0.16,1,0.3,1)" }}>

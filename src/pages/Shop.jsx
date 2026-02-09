@@ -59,7 +59,7 @@ const Shop = ({ addToCart }) => {
 
   return (
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
-      <SEO title="Shop" description="RareGh0st shop — prints, apparel, digital assets, and creative courses." />
+      <SEO title="Shop" description="RareGh0st shop — prints, apparel, digital assets, and creative courses." path="/shop" />
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
         <div style={{ marginBottom: 40 }}>
           <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.magenta, textTransform: "uppercase", marginBottom: 12 }}><ScrollMorphText speed={75}>Shop</ScrollMorphText></div>
