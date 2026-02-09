@@ -52,6 +52,18 @@ const COLOR_MAP = {
   "P.gold": P.gold, "P.ghost": P.ghost, "P.steel": P.steel,
 };
 
+// ─── Media helpers ──────────────────────────────────────
+const VIDEO_EXTENSIONS = ["mp4", "webm", "mov", "avi", "mkv", "m4v", "ogv"];
+const isVideoFile = (filename) => {
+  if (!filename) return false;
+  const ext = filename.split(".").pop().toLowerCase();
+  return VIDEO_EXTENSIONS.includes(ext);
+};
+const isVideoUrl = (url) => {
+  if (!url) return false;
+  return VIDEO_EXTENSIONS.some(ext => url.toLowerCase().includes(`.${ext}`)) || url.includes("video");
+};
+
 // ─── Shared styles ──────────────────────────────────────
 const inputStyle = {
   background: P.abyss, color: P.ghost, border: `1px solid ${P.steel}`,
@@ -156,11 +168,21 @@ const ItemEditor = ({ item, index, onUpdate, onRemove, categoryConfig }) => {
       <div style={{ display: "flex", gap: "20px", marginBottom: "20px" }}>
         {/* Thumbnail */}
         <div style={{ flexShrink: 0 }}>
-          {item.thumbnailUrl ? (
+          {item.thumbnailUrl && item.mediaType === "video" ? (
+            <div style={{ position: "relative", width: "120px", height: "120px", borderRadius: "6px", overflow: "hidden", border: `1px solid ${P.steel}` }}>
+              <video src={item.thumbnailUrl} muted style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: `${P.abyss}55` }}>
+                <div style={{ width: 32, height: 32, borderRadius: "50%", background: `${P.abyss}99`, border: `2px solid ${P.amber}`, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  <span style={{ color: P.amber, fontSize: 13, marginLeft: 2 }}>{"\u25B6"}</span>
+                </div>
+              </div>
+              <div style={{ position: "absolute", bottom: 4, left: 4, background: `${P.amber}22`, color: P.amber, padding: "1px 6px", borderRadius: "3px", fontSize: "0.6rem", fontWeight: 700, letterSpacing: "0.05em" }}>VIDEO</div>
+            </div>
+          ) : item.thumbnailUrl ? (
             <img src={item.thumbnailUrl} alt={item.title || item.filename} style={{ width: "120px", height: "120px", objectFit: "cover", borderRadius: "6px", border: `1px solid ${P.steel}` }} />
           ) : (
             <div style={{ width: "120px", height: "120px", background: P.deep, borderRadius: "6px", display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${P.steel}`, fontSize: "0.7rem", color: P.steel, textAlign: "center", padding: "8px" }}>
-              {item.filename || "No image"}
+              {item.filename || "No media"}
             </div>
           )}
         </div>
@@ -286,6 +308,7 @@ function mapExisting(items, cat, label) {
       return found ? found.value : null;
     }).filter(Boolean),
     img: item.img || item.src || "",
+    mediaType: item.mediaType || (isVideoUrl(item.img || item.src || "") ? "video" : "image"),
     isLive: true,
   }));
 }
@@ -381,10 +404,12 @@ export const UploadAdmin = () => {
     const selectedFiles = Array.from(e.target.files);
     const newItems = selectedFiles.map(file => {
       const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").replace(/PXL \d{8} \d+/i, "Untitled");
+      const isVideo = file.type.startsWith("video/") || isVideoFile(file.name);
       return {
         file,
         filename: file.name,
         thumbnailUrl: URL.createObjectURL(file),
+        mediaType: isVideo ? "video" : "image",
         title: cleanName,
         subcategory: "",
         year: new Date().getFullYear().toString(),
@@ -472,6 +497,7 @@ export const UploadAdmin = () => {
       const tagsStr = it.tags.length > 0 ? `[${it.tags.map(t => `"${t}"`).join(", ")}]` : "[]";
 
       let obj = `  { id: "${id}", title: "${it.title}", img: "${it.uploadUrl}"`;
+      if (it.mediaType === "video") obj += `, mediaType: "video"`;
 
       if (it.subcategory) obj += `, category: "${it.subcategory}"`;
       if (it.year && categoryConfig.fields.includes("year")) obj += `, year: "${it.year}"`;
@@ -586,8 +612,18 @@ export const UploadAdmin = () => {
                   {/* Row header -- clickable to expand */}
                   <div style={{ display: "flex", gap: "16px", alignItems: "flex-start", cursor: "pointer" }} onClick={() => setExpandedId(isExpanded ? null : item.id)}>
                     {item.img && (
-                      <div style={{ width: "80px", height: "80px", borderRadius: "6px", overflow: "hidden", flexShrink: 0, border: `1px solid ${P.steel}40` }}>
-                        <img src={item.img} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <div style={{ position: "relative", width: "80px", height: "80px", borderRadius: "6px", overflow: "hidden", flexShrink: 0, border: `1px solid ${P.steel}40` }}>
+                        {item.mediaType === "video" || isVideoUrl(item.img) ? (
+                          <>
+                            <video src={item.img} muted style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: `${P.abyss}44` }}>
+                              <span style={{ color: P.amber, fontSize: 18 }}>{"\u25B6"}</span>
+                            </div>
+                            <div style={{ position: "absolute", bottom: 2, left: 2, background: `${P.amber}22`, color: P.amber, padding: "0px 4px", borderRadius: "2px", fontSize: "0.5rem", fontWeight: 700, letterSpacing: "0.04em" }}>VID</div>
+                          </>
+                        ) : (
+                          <img src={item.img} alt={item.title} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        )}
                       </div>
                     )}
                     <div style={{ flex: 1, minWidth: 0 }}>
@@ -611,10 +647,14 @@ export const UploadAdmin = () => {
                   {/* Expanded detail */}
                   {isExpanded && (
                     <div style={{ marginTop: "16px", paddingTop: "16px", borderTop: `1px solid ${P.steel}20` }}>
-                      {/* Full image preview */}
+                      {/* Full media preview */}
                       {item.img && (
                         <div style={{ marginBottom: "16px", borderRadius: "6px", overflow: "hidden", maxHeight: "300px" }}>
-                          <img src={item.img} alt={item.title} style={{ width: "100%", height: "auto", maxHeight: "300px", objectFit: "contain", display: "block" }} />
+                          {item.mediaType === "video" || isVideoUrl(item.img) ? (
+                            <video src={item.img} controls muted style={{ width: "100%", maxHeight: "300px", display: "block", background: P.abyss }} />
+                          ) : (
+                            <img src={item.img} alt={item.title} style={{ width: "100%", height: "auto", maxHeight: "300px", objectFit: "contain", display: "block" }} />
+                          )}
                         </div>
                       )}
 
@@ -698,7 +738,7 @@ export const UploadAdmin = () => {
                 </select>
               </div>
               <div style={{ flex: "2 1 300px" }}>
-                <label style={labelStyle}>Add Images</label>
+                <label style={labelStyle}>Add Images / Videos</label>
                 <input ref={fileInputRef} type="file" multiple accept="image/*,video/*" onChange={handleFileSelect} style={inputStyle} />
               </div>
             </div>
