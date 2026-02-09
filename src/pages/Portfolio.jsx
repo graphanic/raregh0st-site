@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { P } from "../data/palette";
 import { PIECES, ART_IMGS } from "../data/pieces";
@@ -108,13 +108,38 @@ const MotionItem = ({ work, onClick }) => {
   );
 };
 
+const BATCH_SIZE = 20;
+
 const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
   const navigate = useNavigate();
   const tab = portfolioTab;
   const setTab = setPortfolioTab;
   const [lightboxItem, setLightboxItem] = useState(null);
   const [tagFilter, setTagFilter] = useState(null);
+  const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
+  const loadMoreRef = useRef(null);
   const activeTab = PORTFOLIO_TABS.find(t => t.id === tab);
+
+  // Reset visible count when tab or filter changes
+  useEffect(() => {
+    setVisibleCount(BATCH_SIZE);
+  }, [tab, tagFilter]);
+
+  // Infinite scroll observer
+  useEffect(() => {
+    const el = loadMoreRef.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisibleCount(prev => prev + BATCH_SIZE);
+        }
+      },
+      { rootMargin: "200px" }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [tab, tagFilter]);
 
   const PHOTO_SUBCATEGORIES = ["landscape", "portrait", "urban", "abstract", "studio", "street", "night", "nature", "event", "editorial"];
 
@@ -179,13 +204,25 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
           </div>
         )}
 
-        {tab === "photography" && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
-            {PHOTO_GALLERY.filter(p => !tagFilter || p.category === tagFilter).map(p => (
-              <GridItem key={p.id} item={p} onClick={setLightboxItem} />
-            ))}
-          </div>
-        )}
+        {tab === "photography" && (() => {
+          const filtered = PHOTO_GALLERY.filter(p => !tagFilter || p.category === tagFilter);
+          const visible = filtered.slice(0, visibleCount);
+          const hasMore = visible.length < filtered.length;
+          return (
+            <>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
+                {visible.map(p => (
+                  <GridItem key={p.id} item={p} onClick={setLightboxItem} />
+                ))}
+              </div>
+              {hasMore && (
+                <div ref={loadMoreRef} style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+                  <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 3, color: P.bone, opacity: 0.25, textTransform: "uppercase" }}>Loading more...</div>
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {tab === "ai-human" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
