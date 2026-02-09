@@ -46,10 +46,16 @@ const CaseStudyCard = ({ project, onClick }) => {
   );
 };
 
-const getThumbnailUrl = (url) => {
-  if (!url) return null;
-  return url.includes('vercel-storage.com') ? `${url}?width=400&quality=75` : url;
+const getOptimizedUrl = (url, { width, height, quality = 75 } = {}) => {
+  if (!url || !url.includes('vercel-storage.com')) return url;
+  const params = [`quality=${quality}`];
+  if (width) params.push(`width=${width}`);
+  if (height) params.push(`height=${height}`);
+  return `${url}?${params.join('&')}`;
 };
+
+const getThumbnailUrl = (url) => getOptimizedUrl(url, { width: 400, quality: 70 });
+const getLightboxUrl = (url) => getOptimizedUrl(url, { height: 1080, quality: 85 });
 
 const GridItem = ({ item, onClick, showProcess }) => {
   const [hov, setHov] = useState(false);
