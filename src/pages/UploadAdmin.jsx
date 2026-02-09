@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from "react";
-import { upload } from "@vercel/blob/client";
 import { SEO } from "../components/SEO";
 import { P } from "../data/palette";
 import { DESIGN_PROJECTS, PHOTO_GALLERY, AI_WORKS, MOTION_WORKS } from "../data/portfolio";
@@ -11,26 +10,31 @@ const CATEGORIES = {
     label: "Design",
     subcategories: ["esports", "sports", "merch", "branding", "identity", "broadcast", "apparel", "print", "events", "web"],
     fields: ["title", "year", "role", "brief", "approach", "description", "deliverables", "tags", "colors"],
+    folder: "design",
   },
   photography: {
     label: "Photography",
     subcategories: ["landscape", "portrait", "urban", "abstract", "studio", "street", "night", "nature", "event", "editorial"],
     fields: ["title", "tags", "colors", "description"],
+    folder: "photography",
   },
   "ai-human": {
     label: "AI x Human",
     subcategories: ["ai-generated", "ai-adapted", "ai-animated", "angel-collab", "midjourney", "stable-diffusion"],
     fields: ["title", "process", "year", "description", "tags", "colors"],
+    folder: "ai",
   },
   motion: {
     label: "Motion",
     subcategories: ["animated-artwork", "video-art", "motion-design", "loop", "generative", "parallax"],
     fields: ["title", "duration", "type", "description", "tags", "colors"],
+    folder: "motion",
   },
   curated: {
     label: "Curated Works",
     subcategories: ["signature", "series", "collection"],
     fields: ["title", "description", "tags", "colors"],
+    folder: "curated",
   },
 };
 
@@ -287,7 +291,7 @@ const ItemEditor = ({ item, index, onUpdate, onRemove, categoryConfig }) => {
 };
 
 // ─── Map existing data into uniform shape ───────────────
-function mapExisting(items, cat, label) {
+function mapExisting(items, cat) {
   return items.map((item, i) => ({
     id: item.id || `${cat}-existing-${i}`,
     title: item.title || item.name || "Untitled",
@@ -313,13 +317,20 @@ function mapExisting(items, cat, label) {
   }));
 }
 
+// ─── Slugify helper ─────────────────────────────────────
+function slugify(str) {
+  return str
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/(^-|-$)/g, "");
+}
+
 // ─── Main Component ─────────────────────────────────────
 export const UploadAdmin = () => {
-  /* auth state */
+  /* auth state — simple client-side gate (no server needed) */
   const [authed, setAuthed] = useState(false);
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
-  const [authLoading, setAuthLoading] = useState(false);
 
   /* content state */
   const [category, setCategory] = useState("design");
@@ -330,10 +341,8 @@ export const UploadAdmin = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [expandedId, setExpandedId] = useState(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState(null);
-  const [uploading, setUploading] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState({});
-  const [uploadedResults, setUploadedResults] = useState([]);
   const [showCode, setShowCode] = useState(false);
+  const [copied, setCopied] = useState(false);
   const fileInputRef = useRef(null);
 
   const categoryConfig = CATEGORIES[category];
@@ -348,49 +357,27 @@ export const UploadAdmin = () => {
   useEffect(() => {
     if (!authed) return;
     const all = [
-      ...mapExisting(PIECES, "curated", "Curated Works"),
-      ...mapExisting(DESIGN_PROJECTS, "design", "Design"),
-      ...mapExisting(PHOTO_GALLERY, "photography", "Photography"),
-      ...mapExisting(AI_WORKS, "ai-human", "AI x Human"),
-      ...mapExisting(MOTION_WORKS, "motion", "Motion"),
+      ...mapExisting(PIECES, "curated"),
+      ...mapExisting(DESIGN_PROJECTS, "design"),
+      ...mapExisting(PHOTO_GALLERY, "photography"),
+      ...mapExisting(AI_WORKS, "ai-human"),
+      ...mapExisting(MOTION_WORKS, "motion"),
     ];
     setLiveItems(all);
   }, [authed]);
 
-  /* login */
-  const handleLogin = async () => {
-    setAuthLoading(true);
-    setAuthError("");
-    try {
-      console.log("[v0] Attempting login to /api/auth");
-      const res = await fetch("/api/auth", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password }),
-      });
-      console.log("[v0] Response status:", res.status);
-      const text = await res.text();
-      console.log("[v0] Response body:", text);
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        console.log("[v0] Response is NOT JSON, got:", text.substring(0, 200));
-        setAuthError("Server returned non-JSON. API route may not be deployed.");
-        setAuthLoading(false);
-        return;
-      }
-      if (res.ok && data.token) {
-        sessionStorage.setItem("admin_token", data.token);
-        setAuthed(true);
-      } else {
-        setAuthError(data.error || "Invalid password");
-      }
-    } catch (err) {
-      console.log("[v0] Fetch error:", err);
-      setAuthError("Connection failed: " + err.message);
+  /* login — client-side only, no API needed */
+  const handleLogin = () => {
+    // Simple hash check — not military-grade, but keeps random visitors out.
+    // Change this passphrase to whatever you want.
+    const ADMIN_PASS = "gh0st2024";
+    if (password === ADMIN_PASS) {
+      sessionStorage.setItem("admin_token", "local-admin");
+      setAuthed(true);
+      setAuthError("");
+    } else {
+      setAuthError("Invalid password");
     }
-    setAuthLoading(false);
   };
 
   /* delete a live item */
@@ -423,8 +410,6 @@ export const UploadAdmin = () => {
         deliverables: [],
         tags: [],
         colors: [],
-        uploaded: false,
-        uploadUrl: null,
       };
     });
     setItems(prev => [...prev, ...newItems]);
@@ -443,60 +428,25 @@ export const UploadAdmin = () => {
     });
   };
 
-  // ─── Upload all staged items ──────────────────────
-  const uploadAll = async () => {
-    const toUpload = items.filter(it => !it.uploaded && it.file);
-    if (toUpload.length === 0) return;
-
-    setUploading(true);
-    const results = [];
-
-    for (let i = 0; i < items.length; i++) {
-      const item = items[i];
-      if (item.uploaded || !item.file) continue;
-
-      try {
-        setUploadProgress(prev => ({ ...prev, [i]: { status: "uploading", progress: 0 } }));
-
-        const blob = await upload(item.file.name, item.file, {
-          access: "public",
-          handleUploadUrl: "/api/upload",
-          onUploadProgress: ({ percentage }) => {
-            setUploadProgress(prev => ({ ...prev, [i]: { status: "uploading", progress: Math.round(percentage) } }));
-          },
-        });
-
-        setUploadProgress(prev => ({ ...prev, [i]: { status: "complete", progress: 100 } }));
-
-        setItems(prev => prev.map((it, idx) => idx === i ? { ...it, uploaded: true, uploadUrl: blob.url } : it));
-        results.push({ index: i, url: blob.url, success: true });
-      } catch (error) {
-        setUploadProgress(prev => ({ ...prev, [i]: { status: "error", progress: 0 } }));
-        results.push({ index: i, error: error.message, success: false });
-      }
-    }
-
-    setUploadedResults(results);
-    setUploading(false);
-    setShowCode(true);
-  };
-
-  // ─── Generate code ────────────────────────────────
+  // ─── Generate code using public/ folder paths ────────
   const generateCode = () => {
-    const uploaded = items.filter(it => it.uploaded && it.uploadUrl);
-    if (uploaded.length === 0) return "// No uploaded items yet.";
+    if (items.length === 0) return "// No items staged yet.";
 
+    const folder = categoryConfig.folder;
     const arrayName = category === "design" ? "DESIGN_PROJECTS" :
                       category === "photography" ? "PHOTO_GALLERY" :
                       category === "ai-human" ? "AI_WORKS" :
                       category === "motion" ? "MOTION_WORKS" : "CURATED_WORKS";
 
-    const lines = uploaded.map((it, i) => {
+    const lines = items.map((it, i) => {
       const id = `${category.charAt(0)}${Date.now().toString(36)}${i}`;
       const colorsStr = it.colors.length > 0 ? `[${it.colors.join(", ")}]` : "[]";
       const tagsStr = it.tags.length > 0 ? `[${it.tags.map(t => `"${t}"`).join(", ")}]` : "[]";
 
-      let obj = `  { id: "${id}", title: "${it.title}", img: "${it.uploadUrl}"`;
+      // Build the public/ path from the filename
+      const filePath = `/images/${folder}/${it.filename}`;
+
+      let obj = `  { id: "${id}", title: "${it.title}", img: "${filePath}"`;
       if (it.mediaType === "video") obj += `, mediaType: "video"`;
 
       if (it.subcategory) obj += `, category: "${it.subcategory}"`;
@@ -514,11 +464,16 @@ export const UploadAdmin = () => {
       return obj;
     });
 
-    return `// Add to ${arrayName} in src/data/portfolio.js:\n[\n${lines.join(",\n")}\n]`;
+    const fileList = items.map(it => `//   ${it.filename}  -->  public/images/${folder}/${it.filename}`).join("\n");
+
+    return `// ─── STEP 1: Copy these files into your public/ folder ───\n${fileList}\n\n// ─── STEP 2: Add to ${arrayName} in src/data/portfolio.js ───\n[\n${lines.join(",\n")}\n]`;
   };
 
-  const stagedCount = items.filter(it => !it.uploaded).length;
-  const uploadedCount = items.filter(it => it.uploaded).length;
+  const handleGenerateCode = () => {
+    setShowCode(true);
+  };
+
+  const itemCount = items.length;
 
   const filteredLive = liveItems.filter(item => {
     if (filterCat !== "all" && item.category !== filterCat) return false;
@@ -544,8 +499,8 @@ export const UploadAdmin = () => {
             autoFocus
           />
           {authError && <p style={{ color: P.magenta, fontSize: "0.85rem", marginBottom: "12px" }}>{authError}</p>}
-          <button onClick={handleLogin} disabled={authLoading} style={{ ...btnPrimary(authLoading), width: "100%" }}>
-            {authLoading ? "Verifying..." : "Enter"}
+          <button onClick={handleLogin} style={{ ...btnPrimary(false), width: "100%" }}>
+            Enter
           </button>
         </div>
       </div>
@@ -562,20 +517,31 @@ export const UploadAdmin = () => {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "30px" }}>
           <div>
             <h1 style={{ color: P.cyan, fontSize: "2rem", marginBottom: "6px" }}>Content Manager</h1>
-            <p style={{ color: P.steel, fontSize: "0.9rem" }}>Upload, tag, describe, and generate portfolio code.</p>
+            <p style={{ color: P.steel, fontSize: "0.9rem" }}>Stage files, tag & describe them, then generate code for your portfolio.</p>
           </div>
           <div style={{ display: "flex", gap: "12px", alignItems: "center", fontSize: "0.85rem" }}>
-            {stagedCount > 0 && <span style={{ color: P.amber }}>{stagedCount} staged</span>}
-            {uploadedCount > 0 && <span style={{ color: P.green }}>{uploadedCount} uploaded</span>}
+            {itemCount > 0 && <span style={{ color: P.amber }}>{itemCount} staged</span>}
             <button onClick={() => { sessionStorage.removeItem("admin_token"); setAuthed(false); }} style={{ background: "none", border: `1px solid ${P.magenta}40`, color: P.magenta, padding: "6px 14px", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem" }}>Logout</button>
           </div>
+        </div>
+
+        {/* How it works banner */}
+        <div style={{ ...cardStyle, border: `1px solid ${P.amber}30`, background: `${P.amber}08` }}>
+          <h3 style={{ color: P.amber, fontSize: "0.9rem", marginBottom: "10px", letterSpacing: "0.05em" }}>HOW IT WORKS (NO CLOUD UPLOAD NEEDED)</h3>
+          <ol style={{ color: P.ghost, fontSize: "0.85rem", lineHeight: 1.8, margin: 0, paddingLeft: "20px" }}>
+            <li>Pick files below to <strong>stage</strong> them (they stay on your computer)</li>
+            <li>Fill in titles, tags, descriptions, colors</li>
+            <li>Click <strong>"Generate Code"</strong> to get the data snippet</li>
+            <li>Copy the actual image/video files into <code style={{ color: P.cyan, background: `${P.cyan}12`, padding: "1px 6px", borderRadius: "3px" }}>public/images/{'{category}'}/</code></li>
+            <li>Paste the generated code into <code style={{ color: P.cyan, background: `${P.cyan}12`, padding: "1px 6px", borderRadius: "3px" }}>src/data/portfolio.js</code></li>
+            <li>Push to GitHub and Render auto-deploys</li>
+          </ol>
         </div>
 
         {/* Stats bar */}
         <div style={{ ...cardStyle, display: "flex", gap: "30px", flexWrap: "wrap", padding: "16px 24px", marginBottom: "20px" }}>
           <div><span style={{ color: P.steel, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Live Items</span><div style={{ color: P.cyan, fontSize: "1.3rem", fontWeight: "700" }}>{liveItems.length}</div></div>
-          <div><span style={{ color: P.steel, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>New Uploads</span><div style={{ color: P.green, fontSize: "1.3rem", fontWeight: "700" }}>{uploadedCount}</div></div>
-          <div><span style={{ color: P.steel, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Pending</span><div style={{ color: P.amber, fontSize: "1.3rem", fontWeight: "700" }}>{stagedCount}</div></div>
+          <div><span style={{ color: P.steel, fontSize: "0.7rem", textTransform: "uppercase", letterSpacing: "0.08em" }}>Staged</span><div style={{ color: P.amber, fontSize: "1.3rem", fontWeight: "700" }}>{itemCount}</div></div>
         </div>
 
         {/* View tabs + filter bar */}
@@ -743,68 +709,62 @@ export const UploadAdmin = () => {
               </div>
             </div>
 
-        {/* Staged items */}
-        {items.length > 0 && (
-          <div style={{ marginBottom: "30px" }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h2 style={{ color: P.ghost, fontSize: "1.4rem" }}>
-                Items ({items.length})
-              </h2>
-              <button onClick={uploadAll} disabled={uploading || stagedCount === 0} style={btnPrimary(uploading || stagedCount === 0)}>
-                {uploading ? "Uploading..." : `Upload ${stagedCount} item(s)`}
-              </button>
-            </div>
-
-            {items.map((item, i) => (
-              <div key={i} style={{ position: "relative" }}>
-                {/* Progress overlay */}
-                {uploadProgress[i] && uploadProgress[i].status === "uploading" && (
-                  <div style={{ position: "absolute", top: 0, left: 0, right: 0, zIndex: 2, padding: "0 24px" }}>
-                    <div style={{ height: "3px", background: P.deep, borderRadius: "2px", overflow: "hidden" }}>
-                      <div style={{ width: `${uploadProgress[i].progress}%`, height: "100%", background: P.cyan, transition: "width 0.3s ease" }} />
-                    </div>
-                    <span style={{ fontSize: "0.75rem", color: P.cyan }}>{uploadProgress[i].progress}%</span>
-                  </div>
-                )}
-                {uploadProgress[i] && uploadProgress[i].status === "complete" && (
-                  <div style={{ position: "absolute", top: "12px", left: "24px", zIndex: 2, fontSize: "0.75rem", color: P.green, background: `${P.green}15`, padding: "2px 10px", borderRadius: "10px" }}>
-                    Uploaded
-                  </div>
-                )}
-                {uploadProgress[i] && uploadProgress[i].status === "error" && (
-                  <div style={{ position: "absolute", top: "12px", left: "24px", zIndex: 2, fontSize: "0.75rem", color: P.magenta, background: `${P.magenta}15`, padding: "2px 10px", borderRadius: "10px" }}>
-                    Error
-                  </div>
-                )}
-
-                <ItemEditor item={item} index={i} onUpdate={updateItem} onRemove={removeItem} categoryConfig={categoryConfig} />
+            {/* File destination reminder */}
+            {items.length > 0 && (
+              <div style={{ ...cardStyle, padding: "14px 20px", border: `1px solid ${P.cyan}25`, background: `${P.cyan}06` }}>
+                <p style={{ color: P.cyan, fontSize: "0.8rem", margin: 0 }}>
+                  Files will go in: <code style={{ background: `${P.cyan}15`, padding: "2px 8px", borderRadius: "3px" }}>public/images/{categoryConfig.folder}/</code>
+                </p>
               </div>
-            ))}
-          </div>
-        )}
+            )}
 
-        {/* Empty state */}
-        {items.length === 0 && (
-          <div style={{ ...cardStyle, textAlign: "center", padding: "60px 24px" }}>
-            <p style={{ color: P.steel, fontSize: "1.1rem", marginBottom: "8px" }}>No items staged yet.</p>
-            <p style={{ color: P.steel, fontSize: "0.85rem" }}>Select a category above and add images to get started.</p>
-          </div>
-        )}
+            {/* Staged items */}
+            {items.length > 0 && (
+              <div style={{ marginBottom: "30px" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                  <h2 style={{ color: P.ghost, fontSize: "1.4rem" }}>
+                    Items ({items.length})
+                  </h2>
+                  <button onClick={handleGenerateCode} disabled={itemCount === 0} style={btnPrimary(itemCount === 0)}>
+                    Generate Code
+                  </button>
+                </div>
 
-        {/* Generated code */}
-        {showCode && uploadedCount > 0 && (
-          <div style={{ ...cardStyle, border: `1px solid ${P.green}40` }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
-              <h2 style={{ color: P.green, fontSize: "1.4rem" }}>Generated Code</h2>
-              <button onClick={() => navigator.clipboard.writeText(generateCode())} style={{ ...btnPrimary(false), background: P.green, padding: "8px 16px", fontSize: "0.85rem" }}>
-                Copy to Clipboard
-              </button>
-            </div>
-            <pre style={{ background: P.abyss, padding: "20px", borderRadius: "6px", overflow: "auto", fontSize: "0.8rem", lineHeight: 1.6, border: `1px solid ${P.steel}40`, maxHeight: "400px" }}>
-              <code>{generateCode()}</code>
-            </pre>
-          </div>
-        )}
+                {items.map((item, i) => (
+                  <ItemEditor key={i} item={item} index={i} onUpdate={updateItem} onRemove={removeItem} categoryConfig={categoryConfig} />
+                ))}
+              </div>
+            )}
+
+            {/* Empty state */}
+            {items.length === 0 && (
+              <div style={{ ...cardStyle, textAlign: "center", padding: "60px 24px" }}>
+                <p style={{ color: P.steel, fontSize: "1.1rem", marginBottom: "8px" }}>No items staged yet.</p>
+                <p style={{ color: P.steel, fontSize: "0.85rem" }}>Select a category above and add images to get started.</p>
+              </div>
+            )}
+
+            {/* Generated code */}
+            {showCode && itemCount > 0 && (
+              <div style={{ ...cardStyle, border: `1px solid ${P.green}40` }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "16px" }}>
+                  <h2 style={{ color: P.green, fontSize: "1.4rem" }}>Generated Code</h2>
+                  <button
+                    onClick={() => {
+                      navigator.clipboard.writeText(generateCode());
+                      setCopied(true);
+                      setTimeout(() => setCopied(false), 2000);
+                    }}
+                    style={{ ...btnPrimary(false), background: copied ? P.green : P.cyan, padding: "8px 16px", fontSize: "0.85rem" }}
+                  >
+                    {copied ? "Copied!" : "Copy to Clipboard"}
+                  </button>
+                </div>
+                <pre style={{ background: P.abyss, padding: "20px", borderRadius: "6px", overflow: "auto", fontSize: "0.8rem", lineHeight: 1.6, border: `1px solid ${P.steel}40`, maxHeight: "400px" }}>
+                  <code>{generateCode()}</code>
+                </pre>
+              </div>
+            )}
           </>
         )}
       </div>
