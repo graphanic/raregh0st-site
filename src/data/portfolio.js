@@ -3,6 +3,9 @@ import { P } from "./palette";
 
 export const PORTFOLIO_TABS = [
   { id: "curated", label: "Curated Works", icon: "\u2726", color: P.magenta, description: "Signature pieces \u2014 fully realized artworks with process, story, and meaning." },
+  { id: "cmlfgmp970", title: "Angel's Shadow", img: "https://0at986lkng8uss8h.public.blob.vercel-storage.com/Glitchcore%20Angel%203-HyNO3JxpPx9oezujTTJwEuf8DXIx9e.mp4", mediaType: "video", category: "series", colors: [P.steel, P.red], tags: ["photoshop", "grok", "photoshop-ai hybrid workflow", "after effects", "glitchcore"] },
+  { id: "cmlfgmp971", title: "Angel", img: "https://0at986lkng8uss8h.public.blob.vercel-storage.com/Glitchcore%20Angel-j3d6YqdPB0qoQIpFg4Nl3k2giH8U3U.mp4", mediaType: "video", category: "series", colors: [P.steel, P.red], tags: ["photoshop", "grok", "photoshop-ai hybrid workflow", "after effects", "glitchcore"] },
+  { id: "cmlfgmp972", title: "Glitchcore Unknown", img: "https://0at986lkng8uss8h.public.blob.vercel-storage.com/Glitchcore%20Unknown-KBh4JarGGPJnaN4OUyULBGQbFNcJKZ.mp4", mediaType: "video", category: "series", colors: [P.magenta, P.cyan], tags: ["photoshop", "grok", "photoshop-ai hybrid workflow", "after effects", "glitchcore"] }
   { id: "design", label: "Design", icon: "\u25C6", color: P.cyan, description: "Branding, esports graphics, sports design, merch, and creative direction." },
   { id: "photography", label: "Photography", icon: "\u25CE", color: P.ghost, description: "Moments caught through the lens." },
   { id: "ai-human", label: "AI \u00D7 Human", icon: "\u2727", color: P.purple, description: "The frontier \u2014 AI-generated, human-refined. Collaborative creation with Angel." },
