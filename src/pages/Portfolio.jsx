@@ -111,9 +111,11 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
   const [tagFilter, setTagFilter] = useState(null);
   const activeTab = PORTFOLIO_TABS.find(t => t.id === tab);
 
+  const PHOTO_SUBCATEGORIES = ["landscape", "portrait", "urban", "abstract", "studio", "street", "night", "nature", "event", "editorial"];
+
   const getTagsForTab = () => {
     if (tab === "design") return [...new Set(DESIGN_PROJECTS.map(p => p.category))];
-    if (tab === "photography") return [...new Set(PHOTO_GALLERY.flatMap(p => p.tags))];
+    if (tab === "photography") return PHOTO_SUBCATEGORIES;
     if (tab === "ai-human") return [...new Set(AI_WORKS.flatMap(p => p.tags))];
     if (tab === "motion") return [...new Set(MOTION_WORKS.map(p => p.type))];
     return [];
@@ -174,7 +176,7 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
 
         {tab === "photography" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
-            {PHOTO_GALLERY.filter(p => !tagFilter || p.tags.includes(tagFilter)).map(p => (
+            {PHOTO_GALLERY.filter(p => !tagFilter || p.category === tagFilter).map(p => (
               <GridItem key={p.id} item={p} onClick={setLightboxItem} />
             ))}
           </div>
