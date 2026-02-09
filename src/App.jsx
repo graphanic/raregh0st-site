@@ -11,6 +11,7 @@ import { Nav } from "./components/Nav";
 import { Footer } from "./components/Footer";
 import { Particles } from "./components/Particles";
 import { Preloader } from "./components/Preloader";
+import { StarBackground } from "./components/StarBackground";
 import { CookieConsent } from "./components/CookieConsent";
 import { SpotifyBar } from "./components/SpotifyBar";
 
@@ -153,6 +154,7 @@ export default function App() {
       >
         <ScrollToTop />
         {loading && <Preloader onComplete={() => setLoading(false)} />}
+        <StarBackground />
         {!isMobile && <Particles />}
 
         {/* Desktop nav on all pages */}

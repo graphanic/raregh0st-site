@@ -91,6 +91,12 @@ body[data-calm] *:not([data-morph]) { font-family: inherit !important; animation
   to { background-position: 0 -200px; }
 }
 
+@keyframes starFlicker {
+  0%   { opacity: 1; }
+  50%  { opacity: 0; }
+  100% { opacity: 1; }
+}
+
 /* ─── RESPONSIVE ─────────────────────────────────────── */
 @media (max-width: 768px) {
   .nav-desktop { display: none !important; }
