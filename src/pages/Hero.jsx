@@ -908,10 +908,26 @@ const Hero = () => {
     <div ref={containerRef} style={{ minHeight: "100vh", display: "flex", flexDirection: "column", justifyContent: "center", alignItems: "center", position: "relative", overflow: "hidden" }}>
       {/* L0: Cosmos background */}
       <div ref={bgRef} style={{ position: "absolute", inset: -60, pointerEvents: "none", willChange: "transform", zIndex: 0 }}>
+        {/* Galaxy photo layer */}
+        <img
+          src="/images/Galaxy-Background-1.png"
+          alt=""
+          style={{
+            position: "absolute",
+            inset: 0,
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            display: "block",
+            opacity: vis ? 0.45 : 0,
+            transition: "opacity 3s cubic-bezier(0.16,1,0.3,1)",
+          }}
+        />
+        {/* Colour tint overlay */}
         <div style={{
           position: "absolute", inset: 0,
           background: `radial-gradient(ellipse 80% 60% at 50% 45%, #090912 0%, ${P.abyss} 70%), radial-gradient(circle at 25% 30%, ${P.cyan}08 0%, transparent 50%), radial-gradient(circle at 75% 65%, ${P.magenta}06 0%, transparent 50%)`,
-          opacity: vis ? 1 : 0, transition: "opacity 3s cubic-bezier(0.16,1,0.3,1)",
+          opacity: vis ? 0.75 : 0, transition: "opacity 3s cubic-bezier(0.16,1,0.3,1)",
         }} />
       </div>
 
