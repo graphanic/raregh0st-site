@@ -1,5 +1,6 @@
 import { P } from "./palette";
 
+
 export const PORTFOLIO_TABS = [
   { id: "curated", label: "Curated Works", icon: "\u2726", color: P.magenta, description: "Signature pieces \u2014 fully realized artworks with process, story, and meaning." },
   { id: "design", label: "Design", icon: "\u25C6", color: P.cyan, description: "Branding, esports graphics, sports design, merch, and creative direction." },
