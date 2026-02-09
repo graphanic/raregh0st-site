@@ -48,12 +48,23 @@ const CaseStudyCard = ({ project, onClick }) => {
 
 const GridItem = ({ item, onClick, showProcess }) => {
   const [hov, setHov] = useState(false);
+  // Create thumbnail URL for faster grid loading (400px width)
+  const getThumbnailUrl = (url) => {
+    if (!url) return null;
+    return url.includes('vercel-storage.com') ? `${url}?width=400` : url;
+  };
+  
   return (
     <div onClick={() => onClick(item)} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ cursor: "pointer", position: "relative", overflow: "hidden" }}>
       <div style={{ overflow: "hidden", border: `1px solid ${hov ? item.colors[0] + "22" : "transparent"}`, transition: "all 0.3s" }}>
         <div style={{ transform: hov ? "scale(1.05)" : "scale(1)", transition: "transform 0.5s cubic-bezier(0.16,1,0.3,1)" }}>
           {item.img ? (
-            <img src={item.img} alt={item.title} style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }} />
+            <img 
+              src={getThumbnailUrl(item.img)} 
+              alt={item.title} 
+              loading="lazy"
+              style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }} 
+            />
           ) : (
             <PortfolioPlaceholder colors={item.colors} aspect="1" />
           )}
