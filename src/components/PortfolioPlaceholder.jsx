@@ -13,18 +13,20 @@ export const PortfolioPlaceholder = ({ colors, aspect = "4/5" }) => (
   </div>
 );
 
-const getOptimizedUrl = (url, { width, height, quality = 75 } = {}) => {
+const getOptimizedUrl = (url, { width, height, quality = 75, format = "webp" } = {}) => {
   if (!url || !url.includes('vercel-storage.com')) return url;
-  const params = [`quality=${quality}`];
+  const params = [];
+  if (format) params.push(`format=${format}`);
   if (width) params.push(`width=${width}`);
   if (height) params.push(`height=${height}`);
+  if (quality) params.push(`quality=${quality}`);
   return `${url}?${params.join('&')}`;
 };
 
 const LightboxImage = ({ item }) => {
   const [fullLoaded, setFullLoaded] = useState(false);
-  const thumbUrl = getOptimizedUrl(item.img, { width: 80, quality: 30 });
-  const fullUrl = getOptimizedUrl(item.img, { height: 1080, quality: 85 });
+  const thumbUrl = getOptimizedUrl(item.img, { width: 80, quality: 20, format: "webp" });
+  const fullUrl = getOptimizedUrl(item.img, { height: 1200, quality: 80, format: "webp" });
 
   return (
     <div style={{ position: "relative", width: "100%", maxHeight: "70vh", aspectRatio: "auto" }}>
@@ -37,6 +39,7 @@ const LightboxImage = ({ item }) => {
         src={fullUrl}
         alt=""
         loading="eager"
+        fetchPriority="high"
         decoding="async"
         onLoad={() => setFullLoaded(true)}
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", opacity: fullLoaded ? 1 : 0, transition: "opacity 0.4s ease" }}

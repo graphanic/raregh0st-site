@@ -46,20 +46,32 @@ const CaseStudyCard = ({ project, onClick }) => {
   );
 };
 
-const getOptimizedUrl = (url, { width, height, quality = 75 } = {}) => {
+const getOptimizedUrl = (url, { width, height, quality = 75, format = "webp" } = {}) => {
   if (!url || !url.includes('vercel-storage.com')) return url;
-  const params = [`quality=${quality}`];
+  const params = [];
+  if (format) params.push(`format=${format}`);
   if (width) params.push(`width=${width}`);
   if (height) params.push(`height=${height}`);
+  if (quality) params.push(`quality=${quality}`);
   return `${url}?${params.join('&')}`;
 };
 
-const getThumbnailUrl = (url) => getOptimizedUrl(url, { width: 400, quality: 70 });
-const getLightboxUrl = (url) => getOptimizedUrl(url, { height: 1080, quality: 85 });
+// Mobile-first responsive sizes
+const getThumbnailUrl = (url) => {
+  // Reduce quality further for thumbnails, use WebP
+  return getOptimizedUrl(url, { width: 400, quality: 60, format: "webp" });
+};
 
-const GridItem = ({ item, onClick, showProcess }) => {
+const getLightboxUrl = (url) => {
+  // Cap at 1200px for optimal loading + WebP
+  return getOptimizedUrl(url, { height: 1200, quality: 80, format: "webp" });
+};
+
+const GridItem = ({ item, onClick, showProcess, index = 0 }) => {
   const [hov, setHov] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  // Prioritize loading first 12 images
+  const isPriority = index < 12;
 
   return (
     <div onClick={() => onClick(item)} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ cursor: "pointer", position: "relative", overflow: "hidden" }}>
@@ -70,7 +82,8 @@ const GridItem = ({ item, onClick, showProcess }) => {
               <img
                 src={getThumbnailUrl(item.img)}
                 alt={item.title}
-                loading="lazy"
+                loading={isPriority ? "eager" : "lazy"}
+                fetchPriority={isPriority ? "high" : "auto"}
                 decoding="async"
                 onLoad={() => setLoaded(true)}
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block", opacity: loaded ? 1 : 0, transition: "opacity 0.4s ease" }}
@@ -217,8 +230,8 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
           return (
             <>
               <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
-                {visible.map(p => (
-                  <GridItem key={p.id} item={p} onClick={setLightboxItem} />
+                {visible.map((p, idx) => (
+                  <GridItem key={p.id} item={p} index={idx} onClick={setLightboxItem} />
                 ))}
               </div>
               {hasMore && (
@@ -232,8 +245,8 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
 
         {tab === "ai-human" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
-            {AI_WORKS.filter(p => !tagFilter || p.tags.includes(tagFilter)).map(p => (
-              <GridItem key={p.id} item={p} onClick={setLightboxItem} showProcess />
+            {AI_WORKS.filter(p => !tagFilter || p.tags.includes(tagFilter)).map((p, idx) => (
+              <GridItem key={p.id} item={p} index={idx} onClick={setLightboxItem} showProcess />
             ))}
           </div>
         )}
