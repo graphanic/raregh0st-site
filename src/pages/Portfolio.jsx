@@ -94,6 +94,8 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
   const setTab = setPortfolioTab;
   const [lightboxItem, setLightboxItem] = useState(null);
   const [tagFilter, setTagFilter] = useState(null);
+  const [tagSearch, setTagSearch] = useState("");
+  const [showAllTags, setShowAllTags] = useState(false);
   const activeTab = PORTFOLIO_TABS.find(t => t.id === tab);
 
   const getTagsForTab = () => {
@@ -103,7 +105,9 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
     if (tab === "motion") return [...new Set(MOTION_WORKS.map(p => p.type))];
     return [];
   };
-  const tags = getTagsForTab();
+  const allTags = getTagsForTab();
+  const filteredTags = tagSearch ? allTags.filter(t => t.toLowerCase().includes(tagSearch.toLowerCase())) : allTags;
+  const displayTags = showAllTags ? filteredTags : filteredTags.slice(0, 10);
 
   return (
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
