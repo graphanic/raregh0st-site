@@ -46,32 +46,37 @@ const CaseStudyCard = ({ project, onClick }) => {
   );
 };
 
+const getThumbnailUrl = (url) => {
+  if (!url) return null;
+  return url.includes('vercel-storage.com') ? `${url}?width=400&quality=75` : url;
+};
+
 const GridItem = ({ item, onClick, showProcess }) => {
   const [hov, setHov] = useState(false);
-  // Create thumbnail URL for faster grid loading (400px width)
-  const getThumbnailUrl = (url) => {
-    if (!url) return null;
-    return url.includes('vercel-storage.com') ? `${url}?width=400` : url;
-  };
-  
+  const [loaded, setLoaded] = useState(false);
+
   return (
     <div onClick={() => onClick(item)} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ cursor: "pointer", position: "relative", overflow: "hidden" }}>
       <div style={{ overflow: "hidden", border: `1px solid ${hov ? item.colors[0] + "22" : "transparent"}`, transition: "all 0.3s" }}>
         <div style={{ transform: hov ? "scale(1.05)" : "scale(1)", transition: "transform 0.5s cubic-bezier(0.16,1,0.3,1)" }}>
           {item.img ? (
-            <img 
-              src={getThumbnailUrl(item.img)} 
-              alt={item.title} 
-              loading="lazy"
-              style={{ width: "100%", aspectRatio: "1", objectFit: "cover", display: "block" }} 
-            />
+            <div style={{ position: "relative", width: "100%", aspectRatio: "1", background: `linear-gradient(135deg, ${P.abyss}, ${item.colors[0]}0c, ${item.colors[1] || item.colors[0]}0e, ${P.abyss})` }}>
+              <img
+                src={getThumbnailUrl(item.img)}
+                alt={item.title}
+                loading="lazy"
+                decoding="async"
+                onLoad={() => setLoaded(true)}
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block", opacity: loaded ? 1 : 0, transition: "opacity 0.4s ease" }}
+              />
+            </div>
           ) : (
             <PortfolioPlaceholder colors={item.colors} aspect="1" />
           )}
         </div>
       </div>
       <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, padding: "30px 12px 10px", background: `linear-gradient(to top, ${P.abyss}cc, transparent)`, opacity: hov ? 1 : 0, transition: "opacity 0.3s" }}>
-        <div style={{ fontFamily: "'Georgia', serif", fontSize: 12, color: P.ghost }}><HoverMorphText>{item.title}</HoverMorphText></div>
+        <div style={{ fontFamily: "'Georgia', serif", fontSize: 12, color: P.ghost }}>{item.title}</div>
         {showProcess && item.process && <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: item.colors[0], letterSpacing: 2, marginTop: 4 }}>{item.process}</div>}
       </div>
       <div style={{ position: "absolute", inset: 0, background: "transparent" }} onContextMenu={(e) => e.preventDefault()} />
