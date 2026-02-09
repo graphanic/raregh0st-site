@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { P } from "../data/palette";
 
 export const PortfolioPlaceholder = ({ colors, aspect = "4/5" }) => (
@@ -12,13 +13,37 @@ export const PortfolioPlaceholder = ({ colors, aspect = "4/5" }) => (
   </div>
 );
 
+const LightboxImage = ({ item }) => {
+  const [fullLoaded, setFullLoaded] = useState(false);
+  const thumbUrl = item.img.includes('vercel-storage.com') ? `${item.img}?width=400&quality=75` : item.img;
+
+  return (
+    <div style={{ position: "relative", width: "100%", maxHeight: "70vh", aspectRatio: "auto" }}>
+      <img
+        src={thumbUrl}
+        alt={item.title}
+        style={{ width: "100%", maxHeight: "70vh", objectFit: "contain", display: "block", filter: fullLoaded ? "none" : "blur(4px)", transition: "filter 0.3s ease" }}
+      />
+      <img
+        src={item.img}
+        alt=""
+        onLoad={() => setFullLoaded(true)}
+        style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", opacity: fullLoaded ? 1 : 0, transition: "opacity 0.4s ease" }}
+      />
+    </div>
+  );
+};
+
 export const Lightbox = ({ item, onClose }) => {
   if (!item) return null;
+  const visibleTags = item.tags ? item.tags.slice(0, 8) : [];
+  const extraCount = item.tags ? item.tags.length - 8 : 0;
+
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, background: `${P.abyss}f0`, backdropFilter: "blur(20px)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", animation: "fadeSlideIn 0.2s ease" }}>
       <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: 800, width: "90%", cursor: "default" }}>
         {item.img ? (
-          <img src={item.img} alt={item.title} style={{ width: "100%", maxHeight: "70vh", objectFit: "contain", display: "block" }} />
+          <LightboxImage item={item} />
         ) : (
           <PortfolioPlaceholder colors={item.colors} aspect="1" />
         )}
@@ -26,11 +51,12 @@ export const Lightbox = ({ item, onClose }) => {
           <div style={{ fontFamily: "'Georgia', serif", fontSize: 18, color: P.ghost }}>{item.title}</div>
           {item.process && <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: item.colors[0], letterSpacing: 3, marginTop: 8 }}>{item.process}</div>}
           {item.description && <div style={{ fontFamily: "'Georgia', serif", fontSize: 12, color: P.bone, opacity: 0.5, marginTop: 8, maxWidth: 500, margin: "8px auto 0" }}>{item.description}</div>}
-          {item.tags && (
+          {visibleTags.length > 0 && (
             <div style={{ display: "flex", gap: 6, justifyContent: "center", marginTop: 12, flexWrap: "wrap" }}>
-              {item.tags.map(t => (
+              {visibleTags.map(t => (
                 <span key={t} style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: P.bone, opacity: 0.3, letterSpacing: 2, textTransform: "uppercase", padding: "3px 8px", border: `1px solid ${P.steel}15` }}>{t}</span>
               ))}
+              {extraCount > 0 && <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: P.bone, opacity: 0.2, padding: "3px 8px" }}>+{extraCount}</span>}
             </div>
           )}
         </div>
