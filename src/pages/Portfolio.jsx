@@ -148,7 +148,7 @@ const MotionItem = ({ work, onClick }) => {
 
   return (
     <div onClick={() => onClick(work)} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ cursor: "pointer", transition: "all 0.3s" }}>
-      <div style={{ position: "relative", overflow: "hidden", border: `1px solid ${hov ? work.colors[0] + "22" : P.steel + "0a"}`, transition: "all 0.3s" }}>
+      <div style={{ position: "relative", overflow: "hidden", border: `1px solid ${hov ? ((work.colors && work.colors[0]) || P.bone) + "22" : P.steel + "0a"}`, transition: "all 0.3s" }}>
         {isVideo ? (
           <video
             ref={videoRef}
@@ -170,9 +170,9 @@ const MotionItem = ({ work, onClick }) => {
           </div>
         )}
         {work.duration && <div style={{ position: "absolute", bottom: 8, right: 10, fontFamily: "'Courier New', monospace", fontSize: 9, color: P.ghost, opacity: 0.5, letterSpacing: 1, background: `${P.abyss}aa`, padding: "2px 8px" }}>{work.duration}</div>}
-        <div style={{ position: "absolute", top: 8, left: 10 }}>
-          <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: work.colors[0], letterSpacing: 2, textTransform: "uppercase", background: `${P.abyss}cc`, padding: "3px 8px" }}>{work.type.replace(/-/g, " ")}</span>
-        </div>
+        {work.type && <div style={{ position: "absolute", top: 8, left: 10 }}>
+          <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: (work.colors && work.colors[0]) || P.bone, letterSpacing: 2, textTransform: "uppercase", background: `${P.abyss}cc`, padding: "3px 8px" }}>{work.type.replace(/-/g, " ")}</span>
+        </div>}
       </div>
       <div style={{ marginTop: 10 }}>
         <div style={{ fontFamily: "'Georgia', serif", fontSize: 14, color: P.ghost }}><HoverMorphText>{work.title}</HoverMorphText></div>
@@ -221,7 +221,7 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
     if (tab === "design") return [...new Set(DESIGN_PROJECTS.map(p => p.category))];
     if (tab === "photography") return PHOTO_SUBCATEGORIES;
     if (tab === "ai-human") return [...new Set(AI_WORKS.flatMap(p => p.tags))];
-    if (tab === "motion") return [...new Set(MOTION_WORKS.map(p => p.type))];
+    if (tab === "motion") return [...new Set(MOTION_WORKS.map(p => p.type).filter(Boolean))];
     return [];
   };
   const tags = getTagsForTab();
