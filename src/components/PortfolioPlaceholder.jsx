@@ -52,11 +52,22 @@ export const Lightbox = ({ item, onClose }) => {
   if (!item) return null;
   const visibleTags = item.tags ? item.tags.slice(0, 8) : [];
   const extraCount = item.tags ? item.tags.length - 8 : 0;
+  const isVideo = item.mediaType === "video" && item.img;
 
   return (
     <div onClick={onClose} style={{ position: "fixed", inset: 0, zIndex: 300, background: `${P.abyss}f0`, backdropFilter: "blur(20px)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer", animation: "fadeSlideIn 0.2s ease" }}>
       <div onClick={(e) => e.stopPropagation()} style={{ maxWidth: 800, width: "90%", cursor: "default" }}>
-        {item.img ? (
+        {isVideo ? (
+          <video
+            src={item.img}
+            autoPlay
+            loop
+            muted
+            playsInline
+            controls
+            style={{ width: "100%", maxHeight: "70vh", objectFit: "contain", display: "block", background: P.abyss }}
+          />
+        ) : item.img ? (
           <LightboxImage item={item} />
         ) : (
           <PortfolioPlaceholder colors={item.colors} aspect="1" />
