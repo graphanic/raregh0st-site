@@ -2,7 +2,7 @@ services:
   - type: web
     name: raregh0st-site
     runtime: static
-    buildCommand: npm install && npm run build && cp dist/index.html dist/200.html
+    buildCommand: pnpm install && pnpm run build && cp dist/index.html dist/200.html
     staticPublishPath: ./dist
     headers:
       - path: /*
