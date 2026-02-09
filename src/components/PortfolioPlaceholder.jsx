@@ -13,20 +13,31 @@ export const PortfolioPlaceholder = ({ colors, aspect = "4/5" }) => (
   </div>
 );
 
+const getOptimizedUrl = (url, { width, height, quality = 75 } = {}) => {
+  if (!url || !url.includes('vercel-storage.com')) return url;
+  const params = [`quality=${quality}`];
+  if (width) params.push(`width=${width}`);
+  if (height) params.push(`height=${height}`);
+  return `${url}?${params.join('&')}`;
+};
+
 const LightboxImage = ({ item }) => {
   const [fullLoaded, setFullLoaded] = useState(false);
-  const thumbUrl = item.img.includes('vercel-storage.com') ? `${item.img}?width=400&quality=75` : item.img;
+  const thumbUrl = getOptimizedUrl(item.img, { width: 80, quality: 30 });
+  const fullUrl = getOptimizedUrl(item.img, { height: 1080, quality: 85 });
 
   return (
     <div style={{ position: "relative", width: "100%", maxHeight: "70vh", aspectRatio: "auto" }}>
       <img
         src={thumbUrl}
         alt={item.title}
-        style={{ width: "100%", maxHeight: "70vh", objectFit: "contain", display: "block", filter: fullLoaded ? "none" : "blur(4px)", transition: "filter 0.3s ease" }}
+        style={{ width: "100%", maxHeight: "70vh", objectFit: "contain", display: "block", filter: fullLoaded ? "none" : "blur(8px)", transition: "filter 0.3s ease" }}
       />
       <img
-        src={item.img}
+        src={fullUrl}
         alt=""
+        loading="eager"
+        decoding="async"
         onLoad={() => setFullLoaded(true)}
         style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "contain", opacity: fullLoaded ? 1 : 0, transition: "opacity 0.4s ease" }}
       />
