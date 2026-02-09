@@ -16,14 +16,6 @@ export const DESIGN_PROJECTS = [
 ];
 
 export const PHOTO_GALLERY = [
-  { id: "p1", title: "Golden Hour, Calgary", tags: ["landscape", "golden hour"], colors: [P.amber, P.gold] },
-  { id: "p2", title: "Downtown Fog", tags: ["urban", "moody"], colors: [P.steel, P.ghost] },
-  { id: "p3", title: "Untitled Portrait I", tags: ["portrait", "studio"], colors: [P.magenta, P.ghost] },
-  { id: "p4", title: "Storm Over Prairies", tags: ["landscape", "dramatic"], colors: [P.cyan, P.steel] },
-  { id: "p5", title: "Neon Alley", tags: ["urban", "night"], colors: [P.magenta, P.cyan] },
-  { id: "p6", title: "Reflection Study", tags: ["abstract", "water"], colors: [P.cyan, P.ghost] },
-  { id: "p7", title: "Concrete & Sky", tags: ["urban", "minimal"], colors: [P.steel, P.ghost] },
-  { id: "p8", title: "Untitled Portrait II", tags: ["portrait", "natural light"], colors: [P.amber, P.ghost] },
   { id: "pmlex9tu00", title: "Ridge of Lights", img: "https://0at986lkng8uss8h.public.blob.vercel-storage.com/PXL_20260101_043502261.NIGHT-lm75s4SjJ6VCIYegpGrFoEmVsimNQj.jpg", category: "night", description: "A wide, breathy view — two figures framed against the glow of downtown, with the dog on watch and the whole city humming below.", colors: [P.amber, P.green], tags: ["yyc", "yyc-photography", "calgary", "alberta", "canada", "skyline", "downtown calgary", "winter", "snow", "night photography", "viewpoint", "wide angle", "silhouettes", "dog", "cinematic", "city lights", "moody", "atmospheric", "wander"] },
   { id: "pmlex9tu01", title: "Hilltop Witness (Calgary at Night)", img: "https://0at986lkng8uss8h.public.blob.vercel-storage.com/PXL_20260101_043649410-pmXwRASxbWxT8U5KDc14efGjH9SbZ8.jpg", category: "night", description: "Two silhouettes and a loyal dog hold the ridge while downtown Calgary burns bright below — a quiet, cinematic pause between cold air and city light.", colors: [P.red, P.purple], tags: ["calgary", "alberta", "canada", "downtown", "skyline", "city lights", "winter", "snow", "night photography", "viewpoint", "ridge", "cinematic", "urban", "silhouettes", "dog", "saddledome", "moody", "atmospheric"] },
   { id: "pmlex9tu02", title: "Winter Workday Portrait", img: "https://0at986lkng8uss8h.public.blob.vercel-storage.com/PXL_20260101_224326905-JedM2iBAMBICAL1tQVP5BF99GdH7jY.jpg", category: "portrait", description: "A calm mirror moment in heavy winter layers — warmth in the eyes, grit in the gear, and a soft glow that says “still here.”", colors: [P.red, P.amber], tags: ["portrait", "selfie", "winter", "workwear", "calgary", "alberta", "canada", "candid", "documentary", "lifestyle", "blue hour tones", "grit", "resilience", "street style", "parka", "beanie", "everyday"] },
