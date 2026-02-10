@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { P } from "../data/palette";
 import { PIECES, ART_IMGS } from "../data/pieces";
-import { PORTFOLIO_TABS, DESIGN_PROJECTS, PHOTO_GALLERY, AI_WORKS, MOTION_WORKS } from "../data/portfolio";
+import { PORTFOLIO_TABS, DESIGN_PROJECTS, PHOTO_GALLERY, AI_WORKS, AI_TYPES, MOTION_WORKS } from "../data/portfolio";
 import { HoverMorphText, ScrollMorphText } from "../components/MorphText";
 import { HScrollRow } from "../components/HScrollRow";
 import { PortfolioPlaceholder, Lightbox } from "../components/PortfolioPlaceholder";
@@ -220,11 +220,12 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
   const getTagsForTab = () => {
     if (tab === "design") return [...new Set(DESIGN_PROJECTS.map(p => p.category))];
     if (tab === "photography") return PHOTO_SUBCATEGORIES;
-    if (tab === "ai-human") return [...new Set(AI_WORKS.flatMap(p => p.tags))];
+    if (tab === "ai-human") return AI_TYPES;
     if (tab === "motion") return [...new Set(MOTION_WORKS.map(p => p.type).filter(Boolean))];
     return [];
   };
   const tags = getTagsForTab();
+  const isAiTab = tab === "ai-human";
 
   return (
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
@@ -258,9 +259,14 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
         {tags.length > 0 && (
           <div style={{ display: "flex", gap: 6, marginBottom: 28, flexWrap: "wrap" }}>
             <button onClick={() => setTagFilter(null)} style={{ background: !tagFilter ? `${activeTab.color}11` : "none", border: `1px solid ${!tagFilter ? activeTab.color + "22" : P.steel + "11"}`, color: !tagFilter ? activeTab.color : P.bone, fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2, padding: "6px 12px", cursor: "pointer", textTransform: "uppercase", opacity: !tagFilter ? 1 : 0.4, transition: "all 0.3s" }}>All</button>
-            {tags.map(t => (
-              <button key={t} onClick={() => setTagFilter(tagFilter === t ? null : t)} style={{ background: tagFilter === t ? `${activeTab.color}11` : "none", border: `1px solid ${tagFilter === t ? activeTab.color + "22" : P.steel + "11"}`, color: tagFilter === t ? activeTab.color : P.bone, fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2, padding: "6px 12px", cursor: "pointer", textTransform: "uppercase", opacity: tagFilter === t ? 1 : 0.4, transition: "all 0.3s" }}>{t.replace(/-/g, " ")}</button>
-            ))}
+            {isAiTab
+              ? tags.map(t => (
+                <button key={t.id} onClick={() => setTagFilter(tagFilter === t.id ? null : t.id)} style={{ background: tagFilter === t.id ? `${t.color}11` : "none", border: `1px solid ${tagFilter === t.id ? t.color + "22" : P.steel + "11"}`, color: tagFilter === t.id ? t.color : P.bone, fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2, padding: "6px 12px", cursor: "pointer", textTransform: "uppercase", opacity: tagFilter === t.id ? 1 : 0.4, transition: "all 0.3s" }}>{t.label}</button>
+              ))
+              : tags.map(t => (
+                <button key={t} onClick={() => setTagFilter(tagFilter === t ? null : t)} style={{ background: tagFilter === t ? `${activeTab.color}11` : "none", border: `1px solid ${tagFilter === t ? activeTab.color + "22" : P.steel + "11"}`, color: tagFilter === t ? activeTab.color : P.bone, fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2, padding: "6px 12px", cursor: "pointer", textTransform: "uppercase", opacity: tagFilter === t ? 1 : 0.4, transition: "all 0.3s" }}>{t.replace(/-/g, " ")}</button>
+              ))
+            }
           </div>
         )}
 
@@ -298,13 +304,38 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
           );
         })()}
 
-        {tab === "ai-human" && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
-            {AI_WORKS.filter(p => !tagFilter || p.tags.includes(tagFilter)).map((p, idx) => (
-              <GridItem key={p.id} item={p} index={idx} onClick={setLightboxItem} showProcess />
-            ))}
-          </div>
-        )}
+        {tab === "ai-human" && (() => {
+          const filtered = AI_WORKS.filter(p => !tagFilter || p.type === tagFilter);
+          const activeType = tagFilter ? AI_TYPES.find(t => t.id === tagFilter) : null;
+          return (
+            <div>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+                {filtered.map((p, idx) => {
+                  const typeInfo = AI_TYPES.find(t => t.id === p.type);
+                  return (
+                    <div key={p.id}>
+                      <GridItem item={p} index={idx} onClick={setLightboxItem} showProcess />
+                      <div style={{ padding: "8px 0 0 0" }}>
+                        {typeInfo && (
+                          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: typeInfo.color, textTransform: "uppercase", marginBottom: 6, opacity: 0.7 }}>
+                            {typeInfo.label}
+                          </div>
+                        )}
+                        {p.tags && p.tags.length > 0 && (
+                          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+                            {p.tags.map(tag => (
+                              <span key={tag} style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 1, color: P.bone, opacity: 0.3, padding: "2px 7px", background: `${P.steel}0d`, border: `1px solid ${P.steel}0a` }}>{tag}</span>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          );
+        })()}
 
         {tab === "motion" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>

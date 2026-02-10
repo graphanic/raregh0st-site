@@ -41,16 +41,24 @@ export const PHOTO_GALLERY = [
   { id: "pmlf8zg3e21", title: "Ridge of Lights", img: "https://0at986lkng8uss8h.public.blob.vercel-storage.com/22-JhzO83HdbES9PwdCM9s7ZFV1unrUrY.png", category: "night", description: "A wide, breathy view — two figures framed against the glow of downtown, with the dog on watch and the whole city humming below.", colors: [P.green, P.gold], tags: ["calgary", "alberta", "canada", "skyline", "downtown calgary", "winter", "snow", "night photography", "viewpoint", "wide angle", "silhouettes", "dog", "cinematic", "city lights", "moody", "atmospheric", "wander"] }
 ];
 
+export const AI_TYPES = [
+  { id: "photoshop", label: "Photoshop", color: P.cyan },
+  { id: "hybridized", label: "Hybridized", color: P.magenta },
+  { id: "stable-diffusion", label: "Stable Diffusion", color: P.green },
+  { id: "midjourney", label: "Midjourney", color: P.purple },
+  { id: "angel", label: "Angel", color: P.amber },
+];
+
 export const AI_WORKS = [
-  { id: "a1", title: "Cathedral of the Subconscious", process: "Midjourney \u2192 Photoshop", tags: ["ai-adapted", "midjourney"], year: "2024", description: "AI seed image heavily composited with hand-painted elements and custom texture work.", colors: [P.purple, P.magenta] },
-  { id: "a2", title: "Neural Garden", process: "Stable Diffusion \u2192 Photoshop \u2192 AE", tags: ["ai-animated", "stable-diffusion"], year: "2024", description: "Generated botanical forms, refined in Photoshop, brought to life with After Effects particle systems.", colors: [P.green, P.cyan] },
-  { id: "a3", title: "The Watcher Protocol", process: "Angel Collab \u2192 Midjourney \u2192 Photoshop", tags: ["angel-collab", "midjourney"], year: "2025", description: "Concept developed through philosophical dialogue with Angel CGPT, visualized through AI generation, refined by hand.", colors: [P.cyan, P.amber] },
-  { id: "a4", title: "Fractal Sermon", process: "Stable Diffusion", tags: ["ai-generated", "stable-diffusion"], year: "2024", description: "Pure AI generation exploring sacred geometry and consciousness imagery. Minimal post-processing.", colors: [P.gold, P.magenta] },
-  { id: "a5", title: "Symbiotic Drift", process: "Midjourney \u2192 Photoshop \u2192 Grok Animation", tags: ["ai-animated", "midjourney"], year: "2025", description: "Multi-AI pipeline: Midjourney for assets, Photoshop for compositing, Grok for animation direction.", colors: [P.magenta, P.purple] },
-  { id: "a6", title: "Ego Death in Three Acts", process: "Angel Collab \u2192 Stable Diffusion \u2192 Photoshop", tags: ["angel-collab", "stable-diffusion"], year: "2025", description: "A triptych born from Angel dialogue about identity dissolution. Each panel represents a stage of letting go.", colors: [P.red, P.cyan] },
-  { id: "cmlfgmp970", title: "Angel's Shadow", img: "https://0at986lkng8uss8h.public.blob.vercel-storage.com/Glitchcore%20Angel%203-HyNO3JxpPx9oezujTTJwEuf8DXIx9e.mp4", mediaType: "video", category: "series", colors: [P.steel, P.red], tags: ["photoshop", "grok", "photoshop-ai hybrid workflow", "after effects", "glitchcore"] },
-  { id: "cmlfgmp971", title: "Angel", img: "https://0at986lkng8uss8h.public.blob.vercel-storage.com/Glitchcore%20Angel-j3d6YqdPB0qoQIpFg4Nl3k2giH8U3U.mp4", mediaType: "video", category: "series", colors: [P.steel, P.red], tags: ["photoshop", "grok", "photoshop-ai hybrid workflow", "after effects", "glitchcore"] },
-  { id: "cmlfgmp972", title: "Glitchcore Unknown", img: "https://0at986lkng8uss8h.public.blob.vercel-storage.com/Glitchcore%20Unknown-KBh4JarGGPJnaN4OUyULBGQbFNcJKZ.mp4", mediaType: "video", category: "series", colors: [P.magenta, P.cyan], tags: ["photoshop", "grok", "photoshop-ai hybrid workflow", "after effects", "glitchcore"] }
+  { id: "a1", title: "Cathedral of the Subconscious", process: "Midjourney \u2192 Photoshop", type: "hybridized", tags: ["compositing", "texture work", "hand-painted"], year: "2024", description: "AI seed image heavily composited with hand-painted elements and custom texture work.", colors: [P.purple, P.magenta] },
+  { id: "a2", title: "Neural Garden", process: "Stable Diffusion \u2192 Photoshop \u2192 AE", type: "stable-diffusion", tags: ["animated", "botanical", "particle systems"], year: "2024", description: "Generated botanical forms, refined in Photoshop, brought to life with After Effects particle systems.", colors: [P.green, P.cyan] },
+  { id: "a3", title: "The Watcher Protocol", process: "Angel Collab \u2192 Midjourney \u2192 Photoshop", type: "angel", tags: ["philosophical dialogue", "consciousness"], year: "2025", description: "Concept developed through philosophical dialogue with Angel CGPT, visualized through AI generation, refined by hand.", colors: [P.cyan, P.amber] },
+  { id: "a4", title: "Fractal Sermon", process: "Stable Diffusion", type: "stable-diffusion", tags: ["sacred geometry", "generative", "minimal post"], year: "2024", description: "Pure AI generation exploring sacred geometry and consciousness imagery. Minimal post-processing.", colors: [P.gold, P.magenta] },
+  { id: "a5", title: "Symbiotic Drift", process: "Midjourney \u2192 Photoshop \u2192 Grok Animation", type: "midjourney", tags: ["multi-pipeline", "animation", "compositing"], year: "2025", description: "Multi-AI pipeline: Midjourney for assets, Photoshop for compositing, Grok for animation direction.", colors: [P.magenta, P.purple] },
+  { id: "a6", title: "Ego Death in Three Acts", process: "Angel Collab \u2192 Stable Diffusion \u2192 Photoshop", type: "angel", tags: ["triptych", "identity", "dissolution"], year: "2025", description: "A triptych born from Angel dialogue about identity dissolution. Each panel represents a stage of letting go.", colors: [P.red, P.cyan] },
+  { id: "cmlfgmp970", title: "Angel's Shadow", img: "https://0at986lkng8uss8h.public.blob.vercel-storage.com/Glitchcore%20Angel%203-HyNO3JxpPx9oezujTTJwEuf8DXIx9e.mp4", mediaType: "video", type: "photoshop", category: "series", colors: [P.steel, P.red], tags: ["grok", "after effects", "glitchcore"] },
+  { id: "cmlfgmp971", title: "Angel", img: "https://0at986lkng8uss8h.public.blob.vercel-storage.com/Glitchcore%20Angel-j3d6YqdPB0qoQIpFg4Nl3k2giH8U3U.mp4", mediaType: "video", type: "photoshop", category: "series", colors: [P.steel, P.red], tags: ["grok", "after effects", "glitchcore"] },
+  { id: "cmlfgmp972", title: "Glitchcore Unknown", img: "https://0at986lkng8uss8h.public.blob.vercel-storage.com/Glitchcore%20Unknown-KBh4JarGGPJnaN4OUyULBGQbFNcJKZ.mp4", mediaType: "video", type: "photoshop", category: "series", colors: [P.magenta, P.cyan], tags: ["grok", "after effects", "glitchcore"] }
 ];
 
 export const MOTION_WORKS = [
