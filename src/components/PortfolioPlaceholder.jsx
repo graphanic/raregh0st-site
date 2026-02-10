@@ -250,10 +250,57 @@ const ZoomControls = ({ zoom, setZoom, setPanOffset }) => {
   );
 };
 
-export const Lightbox = ({ item, onClose }) => {
+const NavButton = ({ direction, onClick }) => {
+  const isNext = direction === "next";
+  return (
+    <button
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      aria-label={isNext ? "Next artwork" : "Previous artwork"}
+      style={{
+        position: "absolute",
+        top: "50%",
+        transform: "translateY(-50%)",
+        [isNext ? "right" : "left"]: 12,
+        background: `${P.abyss}cc`,
+        backdropFilter: "blur(12px)",
+        border: `1px solid ${P.steel}33`,
+        color: P.bone,
+        fontFamily: "'Courier New', monospace",
+        fontSize: 20,
+        width: 44,
+        height: 44,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        cursor: "pointer",
+        opacity: 0.5,
+        zIndex: 10,
+        transition: "opacity 0.2s, border-color 0.2s",
+      }}
+      onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.borderColor = `${P.cyan}44`; }}
+      onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.5"; e.currentTarget.style.borderColor = `${P.steel}33`; }}
+    >
+      {isNext ? "\u203A" : "\u2039"}
+    </button>
+  );
+};
+
+export const Lightbox = ({ item, items, onClose, onNavigate }) => {
   const [zoom, setZoom] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [showInfo, setShowInfo] = useState(true);
+
+  const currentIndex = items && item ? items.findIndex(i => i.id === item.id) : -1;
+  const hasPrev = currentIndex > 0;
+  const hasNext = items && currentIndex < items.length - 1;
+
+  const goNext = useCallback(() => {
+    if (hasNext && onNavigate) onNavigate(items[currentIndex + 1]);
+  }, [hasNext, onNavigate, items, currentIndex]);
+
+  const goPrev = useCallback(() => {
+    if (hasPrev && onNavigate) onNavigate(items[currentIndex - 1]);
+  }, [hasPrev, onNavigate, items, currentIndex]);
 
   // Reset zoom state when item changes
   useEffect(() => {
@@ -268,11 +315,13 @@ export const Lightbox = ({ item, onClose }) => {
     else setShowInfo(true);
   }, [zoom]);
 
-  // Keyboard: Escape to close, +/- for zoom, 0 for reset
+  // Keyboard: Escape to close, +/- for zoom, 0 for reset, arrows for nav
   useEffect(() => {
     if (!item) return;
     const handleKey = (e) => {
       if (e.key === "Escape") onClose();
+      if (e.key === "ArrowRight") goNext();
+      if (e.key === "ArrowLeft") goPrev();
       if (e.key === "=" || e.key === "+") setZoom(prev => Math.min(ZOOM_MAX, prev + 0.25));
       if (e.key === "-") {
         setZoom(prev => {
@@ -285,7 +334,7 @@ export const Lightbox = ({ item, onClose }) => {
     };
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [item, onClose]);
+  }, [item, onClose, goNext, goPrev]);
 
   // Lock body scroll when lightbox is open
   useEffect(() => {
@@ -300,6 +349,7 @@ export const Lightbox = ({ item, onClose }) => {
   const visibleTags = item.tags ? item.tags.slice(0, 8) : [];
   const extraCount = item.tags ? item.tags.length - 8 : 0;
   const isVideo = item.mediaType === "video" && item.img;
+  const showCounter = items && items.length > 1;
 
   return (
     <div
@@ -316,34 +366,41 @@ export const Lightbox = ({ item, onClose }) => {
         animation: "fadeSlideIn 0.2s ease",
       }}
     >
-      {/* Close button */}
-      <button
-        onClick={(e) => { e.stopPropagation(); onClose(); }}
-        aria-label="Close lightbox"
-        style={{
-          position: "absolute",
-          top: 16,
-          right: 20,
-          background: `${P.steel}22`,
-          border: `1px solid ${P.steel}33`,
-          color: P.bone,
-          fontFamily: "'Courier New', monospace",
-          fontSize: 16,
-          width: 36,
-          height: 36,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          cursor: "pointer",
-          opacity: 0.6,
-          zIndex: 10,
-          transition: "opacity 0.2s",
-        }}
-        onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
-        onMouseLeave={(e) => e.currentTarget.style.opacity = "0.6"}
-      >
-        {"\u2715"}
-      </button>
+      {/* Top bar: close + counter */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "16px 20px", zIndex: 10 }}>
+        {showCounter ? (
+          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 3, color: P.bone, opacity: 0.35 }}>
+            {currentIndex + 1} / {items.length}
+          </div>
+        ) : <div />}
+        <button
+          onClick={(e) => { e.stopPropagation(); onClose(); }}
+          aria-label="Close lightbox"
+          style={{
+            background: `${P.steel}22`,
+            border: `1px solid ${P.steel}33`,
+            color: P.bone,
+            fontFamily: "'Courier New', monospace",
+            fontSize: 16,
+            width: 36,
+            height: 36,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            cursor: "pointer",
+            opacity: 0.6,
+            transition: "opacity 0.2s",
+          }}
+          onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
+          onMouseLeave={(e) => e.currentTarget.style.opacity = "0.6"}
+        >
+          {"\u2715"}
+        </button>
+      </div>
+
+      {/* Previous / Next buttons */}
+      {hasPrev && <NavButton direction="prev" onClick={goPrev} />}
+      {hasNext && <NavButton direction="next" onClick={goNext} />}
 
       {/* Main image area — fills viewport */}
       <div
@@ -353,7 +410,7 @@ export const Lightbox = ({ item, onClose }) => {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "56px 16px 16px",
+          padding: "56px 60px 16px",
           minHeight: 0,
           position: "relative",
           cursor: "default",

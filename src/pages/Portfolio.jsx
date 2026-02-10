@@ -316,6 +316,7 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
                     <div key={p.id}>
                       <GridItem item={p} index={idx} onClick={setLightboxItem} showProcess />
                       <div style={{ padding: "8px 0 0 0" }}>
+                        <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.ghost, lineHeight: 1.3, marginBottom: 4 }}>{p.title}</div>
                         {typeInfo && (
                           <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: typeInfo.color, textTransform: "uppercase", marginBottom: 6, opacity: 0.7 }}>
                             {typeInfo.label}
@@ -345,7 +346,17 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
           </div>
         )}
       </div>
-      <Lightbox item={lightboxItem} onClose={() => setLightboxItem(null)} />
+      <Lightbox
+        item={lightboxItem}
+        items={
+          tab === "photography" ? PHOTO_GALLERY.filter(p => !tagFilter || p.category === tagFilter) :
+          tab === "ai-human" ? AI_WORKS.filter(p => !tagFilter || p.type === tagFilter) :
+          tab === "motion" ? MOTION_WORKS.filter(p => !tagFilter || p.type === tagFilter) :
+          undefined
+        }
+        onNavigate={setLightboxItem}
+        onClose={() => setLightboxItem(null)}
+      />
     </div>
   );
 };
