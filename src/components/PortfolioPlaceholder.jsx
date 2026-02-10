@@ -50,6 +50,7 @@ const LightboxImage = ({ item, zoom, setZoom, panOffset, setPanOffset }) => {
   }, [setZoom, setPanOffset]);
 
   const handlePointerDown = useCallback((e) => {
+    e.preventDefault();
     if (zoom <= 1) return;
     isDragging.current = true;
     dragStart.current = { x: e.clientX, y: e.clientY };
@@ -124,9 +125,11 @@ const LightboxImage = ({ item, zoom, setZoom, panOffset, setPanOffset }) => {
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onDoubleClick={handleDoubleClick}
+      onDragStart={(e) => e.preventDefault()}
       style={{
         position: "relative",
         width: "100%",
@@ -381,20 +384,23 @@ export const Lightbox = ({ item, items, onClose, onNavigate }) => {
             border: `1px solid ${P.steel}33`,
             color: P.bone,
             fontFamily: "'Courier New', monospace",
-            fontSize: 16,
-            width: 36,
+            fontSize: 11,
             height: 36,
+            padding: "0 14px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
+            gap: 8,
             cursor: "pointer",
             opacity: 0.6,
             transition: "opacity 0.2s",
+            letterSpacing: 2,
           }}
           onMouseEnter={(e) => e.currentTarget.style.opacity = "1"}
           onMouseLeave={(e) => e.currentTarget.style.opacity = "0.6"}
         >
-          {"\u2715"}
+          <span style={{ fontSize: 10, textTransform: "uppercase" }}>Close</span>
+          <span style={{ fontSize: 15, lineHeight: 1 }}>{"\u2715"}</span>
         </button>
       </div>
 
