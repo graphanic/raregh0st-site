@@ -20,8 +20,8 @@ const CATEGORIES = {
   },
   "ai-human": {
     label: "AI x Human",
-    subcategories: ["ai-generated", "ai-adapted", "ai-animated", "angel-collab", "midjourney", "stable-diffusion"],
-    fields: ["title", "process", "year", "description", "tags", "colors"],
+    subcategories: ["photoshop", "hybridized", "stable-diffusion", "midjourney", "angel"],
+    fields: ["title", "process", "type", "year", "description", "tags", "colors"],
     folder: "ai",
   },
   motion: {
