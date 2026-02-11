@@ -285,7 +285,7 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
         {tab === "design" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24 }}>
             {DESIGN_PROJECTS.filter(p => !tagFilter || p.category === tagFilter).map(p => (
-              <CaseStudyCard key={p.id} project={p} onClick={() => navigate(`/portfolio/design/${p.id}`)} />
+              <CaseStudyCard key={p.id} project={p} onClick={() => navigate(`/portfolio/design/${p.slug || p.id}`)} />
             ))}
           </div>
         )}
