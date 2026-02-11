@@ -294,7 +294,7 @@ export default function App() {
               element={<ShowcaseDetail addToCart={addToCart} />}
             />
             <Route
-              path="/portfolio/design/:id"
+              path="/portfolio/design/:slug"
               element={<CaseStudyDetail />}
             />
             <Route path="/media" element={<MediaHub />} />

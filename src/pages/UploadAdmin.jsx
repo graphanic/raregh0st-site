@@ -162,6 +162,117 @@ const ColorPicker = ({ selected, onChange }) => (
   </div>
 );
 
+// ─── Gallery Editor (for design projects) ──────────────
+const GalleryEditor = ({ gallery, onChange, folder }) => {
+  const fileRefs = useRef({});
+
+  const updateSlot = (idx, updates) => {
+    const next = gallery.map((g, i) => i === idx ? { ...g, ...updates } : g);
+    onChange(next);
+  };
+
+  const removeSlot = (idx) => {
+    const removed = gallery[idx];
+    if (removed.thumbnailUrl) URL.revokeObjectURL(removed.thumbnailUrl);
+    onChange(gallery.filter((_, i) => i !== idx));
+  };
+
+  const addSlot = () => {
+    onChange([...gallery, { file: null, filename: "", thumbnailUrl: "", title: "", caption: "" }]);
+  };
+
+  const handleFile = (idx, e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ");
+    updateSlot(idx, {
+      file,
+      filename: file.name,
+      thumbnailUrl: URL.createObjectURL(file),
+      title: cleanName,
+    });
+  };
+
+  return (
+    <div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        {gallery.map((g, idx) => (
+          <div key={idx} style={{ display: "flex", gap: "12px", alignItems: "flex-start", padding: "12px", background: `${P.abyss}80`, borderRadius: "6px", border: `1px solid ${P.steel}30` }}>
+            {/* Thumbnail / Upload area */}
+            <div style={{ flexShrink: 0 }}>
+              {g.thumbnailUrl ? (
+                <img src={g.thumbnailUrl} alt={g.title || `Gallery ${idx + 1}`} style={{ width: "80px", height: "80px", objectFit: "cover", borderRadius: "4px", border: `1px solid ${P.steel}40`, display: "block" }} />
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => fileRefs.current[idx]?.click()}
+                  style={{ width: "80px", height: "80px", background: `${P.steel}15`, border: `1px dashed ${P.steel}50`, borderRadius: "4px", cursor: "pointer", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "4px", color: P.steel, fontSize: "0.7rem" }}
+                >
+                  <span style={{ fontSize: "1.2rem" }}>+</span>
+                  Upload
+                </button>
+              )}
+              <input
+                ref={el => fileRefs.current[idx] = el}
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                onChange={e => handleFile(idx, e)}
+              />
+            </div>
+
+            {/* Fields */}
+            <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div style={{ display: "flex", gap: "8px" }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ ...labelStyle, fontSize: "0.7rem", marginBottom: "3px" }}>Title</label>
+                  <input value={g.title || ""} onChange={e => updateSlot(idx, { title: e.target.value })} style={{ ...inputStyle, padding: "7px 10px", fontSize: "0.85rem" }} placeholder={`Gallery image ${idx + 1}`} />
+                </div>
+                {g.thumbnailUrl && (
+                  <button
+                    type="button"
+                    onClick={() => fileRefs.current[idx]?.click()}
+                    style={{ alignSelf: "flex-end", background: `${P.cyan}15`, border: `1px solid ${P.cyan}30`, color: P.cyan, padding: "7px 12px", borderRadius: "4px", cursor: "pointer", fontSize: "0.75rem", whiteSpace: "nowrap" }}
+                  >
+                    Replace
+                  </button>
+                )}
+              </div>
+              <div>
+                <label style={{ ...labelStyle, fontSize: "0.7rem", marginBottom: "3px" }}>Caption</label>
+                <input value={g.caption || ""} onChange={e => updateSlot(idx, { caption: e.target.value })} style={{ ...inputStyle, padding: "7px 10px", fontSize: "0.85rem" }} placeholder="Optional caption..." />
+              </div>
+              {g.filename && (
+                <div style={{ fontFamily: "'Courier New', monospace", fontSize: "0.7rem", color: P.steel, opacity: 0.6 }}>
+                  {`public/images/${folder}/${g.filename}`}
+                </div>
+              )}
+            </div>
+
+            {/* Remove */}
+            <button
+              type="button"
+              onClick={() => removeSlot(idx)}
+              style={{ background: `${P.magenta}15`, border: `1px solid ${P.magenta}30`, color: P.magenta, padding: "4px 8px", borderRadius: "4px", cursor: "pointer", fontSize: "0.75rem", flexShrink: 0, alignSelf: "flex-start" }}
+              aria-label={`Remove gallery image ${idx + 1}`}
+            >
+              x
+            </button>
+          </div>
+        ))}
+      </div>
+
+      <button
+        type="button"
+        onClick={addSlot}
+        style={{ marginTop: "10px", background: `${P.cyan}10`, border: `1px dashed ${P.cyan}40`, color: P.cyan, padding: "8px 16px", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem", letterSpacing: "0.05em", width: "100%" }}
+      >
+        + Add Gallery Image
+      </button>
+    </div>
+  );
+};
+
 // ─── Single Item Editor ─────────────────────────────────
 const ItemEditor = ({ item, index, onUpdate, onRemove, categoryConfig }) => {
   const fields = categoryConfig.fields;
@@ -283,6 +394,21 @@ const ItemEditor = ({ item, index, onUpdate, onRemove, categoryConfig }) => {
           <div>
             <label style={labelStyle}>Colors (pick up to 2)</label>
             <ColorPicker selected={item.colors || []} onChange={v => update("colors", v)} />
+          </div>
+        )}
+
+        {/* Gallery images — only for design category */}
+        {categoryConfig.folder === "design" && (
+          <div style={{ marginTop: "6px", paddingTop: "16px", borderTop: `1px solid ${P.steel}20` }}>
+            <label style={labelStyle}>Gallery Images</label>
+            <p style={{ color: P.steel, fontSize: "0.75rem", marginBottom: "10px", lineHeight: 1.4 }}>
+              Add project screenshots, process images, or deliverable mockups. These appear below the main image on the project page.
+            </p>
+            <GalleryEditor
+              gallery={item.gallery || []}
+              onChange={v => update("gallery", v)}
+              folder={categoryConfig.folder}
+            />
           </div>
         )}
       </div>
@@ -410,6 +536,10 @@ export const UploadAdmin = () => {
         deliverables: [],
         tags: [],
         colors: [],
+        gallery: category === "design" ? [
+          { file: null, filename: "", thumbnailUrl: "", title: "", caption: "" },
+          { file: null, filename: "", thumbnailUrl: "", title: "", caption: "" },
+        ] : [],
       };
     });
     setItems(prev => [...prev, ...newItems]);
@@ -446,7 +576,8 @@ export const UploadAdmin = () => {
       // Build the public/ path from the filename
       const filePath = `/images/${folder}/${it.filename}`;
 
-      let obj = `  { id: "${id}", title: "${it.title}", img: "${filePath}"`;
+      const slug = slugify(it.title);
+      let obj = `  { id: "${id}", slug: "${slug}", title: "${it.title}", img: "${filePath}"`;
       if (it.mediaType === "video") obj += `, mediaType: "video"`;
 
       if (it.subcategory) obj += `, category: "${it.subcategory}"`;
@@ -460,11 +591,28 @@ export const UploadAdmin = () => {
       if (it.type) obj += `, type: "${it.type}"`;
       if (it.deliverables && it.deliverables.length > 0) obj += `, deliverables: [${it.deliverables.map(d => `"${d}"`).join(", ")}]`;
       obj += `, colors: ${colorsStr}, tags: ${tagsStr}`;
+
+      // Gallery images (design only)
+      const galleryWithFiles = (it.gallery || []).filter(g => g.filename);
+      if (galleryWithFiles.length > 0) {
+        const galleryStr = galleryWithFiles.map(g => {
+          let gObj = `{ img: "/images/${folder}/${g.filename}"`;
+          if (g.title) gObj += `, title: "${g.title.replace(/"/g, '\\"')}"`;
+          if (g.caption) gObj += `, caption: "${g.caption.replace(/"/g, '\\"')}"`;
+          gObj += ` }`;
+          return gObj;
+        }).join(", ");
+        obj += `, gallery: [${galleryStr}]`;
+      }
+
       obj += ` }`;
       return obj;
     });
 
-    const fileList = items.map(it => `//   ${it.filename}  -->  public/images/${folder}/${it.filename}`).join("\n");
+    // Include gallery filenames in the file list
+    const galleryFiles = items.flatMap(it => (it.gallery || []).filter(g => g.filename).map(g => `//   ${g.filename}  -->  public/images/${folder}/${g.filename}`));
+    const mainFiles = items.map(it => `//   ${it.filename}  -->  public/images/${folder}/${it.filename}`);
+    const fileList = [...mainFiles, ...galleryFiles].join("\n");
 
     return `// ─── STEP 1: Copy these files into your public/ folder ───\n${fileList}\n\n// ─── STEP 2: Add to ${arrayName} in src/data/portfolio.js ───\n[\n${lines.join(",\n")}\n]`;
   };

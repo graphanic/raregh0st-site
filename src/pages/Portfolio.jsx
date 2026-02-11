@@ -29,7 +29,13 @@ const CaseStudyCard = ({ project, onClick }) => {
   const [hov, setHov] = useState(false);
   return (
     <div onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ cursor: "pointer", border: `1px solid ${hov ? project.colors[0] + "22" : P.steel + "0a"}`, transition: "all 0.4s", overflow: "hidden" }}>
-      <PortfolioPlaceholder colors={project.colors} aspect="16/9" />
+      {project.img ? (
+        <div style={{ overflow: "hidden" }}>
+          <img src={project.img} alt={project.title} style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block", transform: hov ? "scale(1.03)" : "scale(1)", transition: "transform 0.6s cubic-bezier(0.16,1,0.3,1)" }} />
+        </div>
+      ) : (
+        <PortfolioPlaceholder colors={project.colors} aspect="16/9" />
+      )}
       <div style={{ padding: 20 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 }}>
           <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 3, color: project.colors[0], textTransform: "uppercase" }}>{project.category} &mdash; {project.year}</div>
@@ -279,7 +285,7 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
         {tab === "design" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24 }}>
             {DESIGN_PROJECTS.filter(p => !tagFilter || p.category === tagFilter).map(p => (
-              <CaseStudyCard key={p.id} project={p} onClick={() => navigate(`/portfolio/design/${p.id}`)} />
+              <CaseStudyCard key={p.id} project={p} onClick={() => navigate(`/portfolio/design/${p.slug || p.id}`)} />
             ))}
           </div>
         )}
