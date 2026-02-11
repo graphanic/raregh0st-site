@@ -23,7 +23,6 @@ const getOptimizedUrl = (url, { width, height, quality = 75, format = "webp" } =
   return `${url}?${params.join('&')}`;
 };
 
-const ZOOM_LEVELS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 3;
 
@@ -294,16 +293,21 @@ export const Lightbox = ({ item, items, onClose, onNavigate }) => {
   const [showInfo, setShowInfo] = useState(true);
 
   const currentIndex = items && item ? items.findIndex(i => i.id === item.id) : -1;
-  const hasPrev = currentIndex > 0;
-  const hasNext = items && currentIndex < items.length - 1;
+  const canNavigate = items && items.length > 1;
 
   const goNext = useCallback(() => {
-    if (hasNext && onNavigate) onNavigate(items[currentIndex + 1]);
-  }, [hasNext, onNavigate, items, currentIndex]);
+    if (canNavigate && onNavigate) {
+      const nextIndex = (currentIndex + 1) % items.length;
+      onNavigate(items[nextIndex]);
+    }
+  }, [canNavigate, onNavigate, items, currentIndex]);
 
   const goPrev = useCallback(() => {
-    if (hasPrev && onNavigate) onNavigate(items[currentIndex - 1]);
-  }, [hasPrev, onNavigate, items, currentIndex]);
+    if (canNavigate && onNavigate) {
+      const prevIndex = (currentIndex - 1 + items.length) % items.length;
+      onNavigate(items[prevIndex]);
+    }
+  }, [canNavigate, onNavigate, items, currentIndex]);
 
   // Reset zoom state when item changes
   useEffect(() => {
@@ -370,7 +374,7 @@ export const Lightbox = ({ item, items, onClose, onNavigate }) => {
       }}
     >
       {/* Top bar: close + counter */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "env(safe-area-inset-top, 0px) 20px 0", paddingTop: "calc(env(safe-area-inset-top, 0px) + 48px)", zIndex: 10 }}>
+      <div style={{ position: "absolute", top: 48, left: 0, right: 0, display: "flex", justifyContent: "space-between", alignItems: "center", padding: "12px 20px 0", zIndex: 10 }}>
         {showCounter ? (
           <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 3, color: P.bone, opacity: 0.35 }}>
             {currentIndex + 1} / {items.length}
@@ -405,8 +409,8 @@ export const Lightbox = ({ item, items, onClose, onNavigate }) => {
       </div>
 
       {/* Previous / Next buttons */}
-      {hasPrev && <NavButton direction="prev" onClick={goPrev} />}
-      {hasNext && <NavButton direction="next" onClick={goNext} />}
+      {canNavigate && <NavButton direction="prev" onClick={goPrev} />}
+      {canNavigate && <NavButton direction="next" onClick={goNext} />}
 
       {/* Main image area — fills viewport */}
       <div
