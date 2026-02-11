@@ -20,7 +20,11 @@ const CaseStudyDetail = () => {
       <div style={{ maxWidth: 900, margin: "0 auto", padding: "0 40px" }}>
         <button onClick={() => navigate("/portfolio")} style={{ background: "none", border: "none", color: P.bone, fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 4, cursor: "pointer", opacity: 0.4, marginBottom: 32, textTransform: "uppercase" }}>&larr; Portfolio</button>
         <div style={{ opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(12px)", transition: "all 0.6s cubic-bezier(0.16,1,0.3,1)" }}>
-          <PortfolioPlaceholder colors={project.colors} aspect="21/9" />
+          {project.img ? (
+            <img src={project.img} alt={project.title} style={{ width: "100%", aspectRatio: "21/9", objectFit: "cover", display: "block" }} />
+          ) : (
+            <PortfolioPlaceholder colors={project.colors} aspect="21/9" />
+          )}
           <div style={{ marginTop: 40 }}>
             <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 5, color: project.colors[0], textTransform: "uppercase", marginBottom: 8 }}>{project.category} &mdash; {project.year}</div>
             <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(24px, 3vw, 34px)", fontWeight: 400, color: P.ghost, margin: "0 0 6px", lineHeight: 1.15 }}>{project.title}</h2>
