@@ -293,16 +293,21 @@ export const Lightbox = ({ item, items, onClose, onNavigate }) => {
   const [showInfo, setShowInfo] = useState(true);
 
   const currentIndex = items && item ? items.findIndex(i => i.id === item.id) : -1;
-  const hasPrev = currentIndex > 0;
-  const hasNext = items && currentIndex < items.length - 1;
+  const canNavigate = items && items.length > 1;
 
   const goNext = useCallback(() => {
-    if (hasNext && onNavigate) onNavigate(items[currentIndex + 1]);
-  }, [hasNext, onNavigate, items, currentIndex]);
+    if (canNavigate && onNavigate) {
+      const nextIndex = (currentIndex + 1) % items.length;
+      onNavigate(items[nextIndex]);
+    }
+  }, [canNavigate, onNavigate, items, currentIndex]);
 
   const goPrev = useCallback(() => {
-    if (hasPrev && onNavigate) onNavigate(items[currentIndex - 1]);
-  }, [hasPrev, onNavigate, items, currentIndex]);
+    if (canNavigate && onNavigate) {
+      const prevIndex = (currentIndex - 1 + items.length) % items.length;
+      onNavigate(items[prevIndex]);
+    }
+  }, [canNavigate, onNavigate, items, currentIndex]);
 
   // Reset zoom state when item changes
   useEffect(() => {
@@ -404,8 +409,8 @@ export const Lightbox = ({ item, items, onClose, onNavigate }) => {
       </div>
 
       {/* Previous / Next buttons */}
-      {hasPrev && <NavButton direction="prev" onClick={goPrev} />}
-      {hasNext && <NavButton direction="next" onClick={goNext} />}
+      {canNavigate && <NavButton direction="prev" onClick={goPrev} />}
+      {canNavigate && <NavButton direction="next" onClick={goNext} />}
 
       {/* Main image area — fills viewport */}
       <div
