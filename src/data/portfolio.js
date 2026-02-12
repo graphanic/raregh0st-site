@@ -48,6 +48,11 @@ export const AI_TYPES = [
 ];
 
 export const AI_WORKS = [
+  // ─── STEP 1: Copy these files into your public/ folder ───
+//   Shrouded-Instinct-AI-Adapted-1.png  -->  public/images/ai/Shrouded-Instinct-AI-Adapted-1.png
+
+// ─── STEP 2: Add to AI_WORKS in src/data/portfolio.js ───
+  { id: "amlj38me10", slug: "shrouded-instinct-ai-adapted-1", title: "Shrouded Instinct AI Adapted 1", img: "/images/ai/Shrouded-Instinct-AI-Adapted-1.png", category: "hybridized", year: "2026", description: "The eternal battle of the individual versus the world.", process: "Midjourney {Asset Creation} -> Photoshop {Composition} -> Krea {Enhancement & Upscaling}", type: "hybridized", colors: [P.red, P.amber], tags: ["midjourney", "photoshop", "krea"] },
   { id: "amlj2rw2p0", slug: "eternal-ai-adapted-1", title: "Eternal AI Adapted 1", img: "/images/ai/Eternal-AI-Adapted-1.png", category: "hybridized", year: "2026", description: "Eternal ... I'm still waiting to meet her ... ", process: "Midjourney {Asset Creation} -> Photoshop {Composition} -> Krea {Enhancement & Upscaling}", type: "hybridized", colors: [P.purple, P.red], tags: ["midjourney", "photoshop", "krea"] },
   { id: "amlj1iqht0", slug: "warrior-in-a-garden-ai-adapted-1", title: "Warrior In A Garden AI Adapted 1", img: "/images/ai/Warrior-In-A-Garden-AI-Adapted-1.png", category: "hybridized", year: "2026", description: "Warrior In A Garden. This was a piece completed for my cousin, it's a quote we both love ... and, it hold merit.", process: "Midjourney {Asset Creation} -> Photoshop {Composition} -> Krea {Enhancement & Upscaling} ", type: "hybridized", colors: [P.magenta, P.cyan], tags: ["midjourney", "photoshop", "krea"] },
   { id: "cmlfgmp970", title: "Angel's Shadow", img: "https://0at986lkng8uss8h.public.blob.vercel-storage.com/Glitchcore%20Angel%203-HyNO3JxpPx9oezujTTJwEuf8DXIx9e.mp4", mediaType: "video", type: "photoshop", category: "series", colors: [P.steel, P.red], tags: ["grok", "after effects", "glitchcore"] },
