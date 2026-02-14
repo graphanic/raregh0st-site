@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+import { Link, Routes, Route, useLocation } from "react-router-dom";
 import { CalmContext } from "./components/CalmContext";
 import { P } from "./data/palette";
 import { saveLocal, loadLocal } from "./utils/storage";
@@ -177,8 +177,8 @@ export default function App() {
               borderBottom: `1px solid ${P.steel}15`,
             }}
           >
-            <a
-              href="/"
+            <Link
+              to="/"
               style={{
                 background: "none",
                 border: "none",
@@ -206,7 +206,7 @@ export default function App() {
                 <polyline points="15 18 9 12 15 6" />
               </svg>
               HUB
-            </a>
+            </Link>
             <div
               style={{
                 fontFamily: "'Courier New', monospace",
@@ -219,8 +219,8 @@ export default function App() {
             >
               {location.pathname.replace("/", "").replace(/-/g, " ") || "Home"}
             </div>
-            <a
-              href="/cart"
+            <Link
+              to="/cart"
               style={{
                 cursor: "pointer",
                 position: "relative",
@@ -253,7 +253,7 @@ export default function App() {
                   {cart.length}
                 </span>
               )}
-            </a>
+            </Link>
           </nav>
         )}
 
