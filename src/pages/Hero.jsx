@@ -568,13 +568,14 @@ const Hero = () => {
         ctx.restore();
       }
 
-      // Rectangular grid (spins RIGHT) - with gravity distortion
+      // Rectangular grid (fixed 45deg) - with gravity distortion
       ctx.save();
-      ctx.rotate(faR);
+      const gridAngle = Math.PI / 4; // locked 45 degrees
+      ctx.rotate(gridAngle);
       ctx.strokeStyle = P.cyan;
       ctx.lineWidth = 0.5;
       ctx.globalAlpha = a * 0.14;
-      const gridSpacing = 86;
+      const gridSpacing = 86 / 3; // 3x density
       const halfExtent = Math.sqrt((cw / zoom) * (cw / zoom) + (ch / zoom) * (ch / zoom)) / 2 + 1200;
       const gridLeft = Math.floor((-halfExtent) / gridSpacing) * gridSpacing;
       const gridRight = Math.ceil((halfExtent) / gridSpacing) * gridSpacing;
@@ -582,7 +583,7 @@ const Hero = () => {
       const gridBottom = Math.ceil((halfExtent) / gridSpacing) * gridSpacing;
 
       // Transform planet positions into rotated grid space for distortion
-      const cosR = Math.cos(faR), sinR = Math.sin(faR);
+      const cosR = Math.cos(gridAngle), sinR = Math.sin(gridAngle);
       // Pre-compute all gravity sources in grid-rotated space
       const gridGravSources = [
         { x: 0, y: 0, strength: 45, radius: 500 }, // Central moon -- strongest
@@ -614,7 +615,7 @@ const Hero = () => {
       };
 
       // Draw distorted horizontal lines
-      const segStep = gridSpacing / 2;
+      const segStep = gridSpacing;
       ctx.beginPath();
       for (let y = gridTop; y <= gridBottom; y += gridSpacing) {
         const p0 = gravDistort(gridLeft, y);
