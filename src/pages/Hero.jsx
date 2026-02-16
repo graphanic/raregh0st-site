@@ -128,6 +128,11 @@ const Hero = () => {
     };
   }));
 
+  // ── Gravity wave system ──
+  const gravityWaves = useRef([]);       // array of { x, y, radius, maxRadius, born, source }
+  const lastCursorWave = useRef(0);      // timestamp of last cursor wave spawn
+  const lastMoonWave = useRef(0);        // timestamp of last moon wave spawn
+
   const lensDustImg = useRef(null);
   const lensDustCanvas = useRef(null);
   const lensDustHue = useRef(210);
@@ -481,6 +486,34 @@ const Hero = () => {
       const cx = cw / 2 + fpx;
       const cy = ch / 2 + fpy;
 
+      // ── Gravity wave spawning ──
+      const cursorWorldX = (mouse.current.px - cx) / zoom;
+      const cursorWorldY = (mouse.current.py - cy) / zoom;
+      // Cursor waves: spawn every 220ms when mouse is on canvas
+      if (timestamp - lastCursorWave.current > 220 && mouse.current.px > 0) {
+        lastCursorWave.current = timestamp;
+        gravityWaves.current.push({
+          x: cursorWorldX, y: cursorWorldY,
+          radius: 0, maxRadius: 320, born: timestamp,
+          life: 2200, source: "cursor",
+        });
+      }
+      // Moon waves: spawn every 900ms from center (the moon lives at 0,0)
+      if (timestamp - lastMoonWave.current > 900) {
+        lastMoonWave.current = timestamp;
+        gravityWaves.current.push({
+          x: 0, y: 0,
+          radius: 0, maxRadius: 600, born: timestamp,
+          life: 4000, source: "moon",
+        });
+      }
+      // Age and cull expired waves
+      gravityWaves.current = gravityWaves.current.filter(w => {
+        const age = timestamp - w.born;
+        w.radius = (age / w.life) * w.maxRadius;
+        return age < w.life;
+      });
+
       ctx.save();
       ctx.translate(cx, cy);
       ctx.scale(zoom, zoom);
@@ -507,7 +540,7 @@ const Hero = () => {
         ctx.restore();
       }
 
-      // Rectangular grid (spins RIGHT)
+      // Rectangular grid (spins RIGHT) - with gravity distortion
       ctx.save();
       ctx.rotate(faR);
       ctx.strokeStyle = P.cyan;
@@ -519,12 +552,50 @@ const Hero = () => {
       const gridRight = Math.ceil((halfExtent) / gridSpacing) * gridSpacing;
       const gridTop = Math.floor((-halfExtent) / gridSpacing) * gridSpacing;
       const gridBottom = Math.ceil((halfExtent) / gridSpacing) * gridSpacing;
+
+      // Transform cursor world pos into rotated grid space for distortion
+      const cosR = Math.cos(faR), sinR = Math.sin(faR);
+      const curGridX = cursorWorldX * cosR + cursorWorldY * sinR;
+      const curGridY = -cursorWorldX * sinR + cursorWorldY * cosR;
+      // Moon is at 0,0 in field space, so in rotated grid space:
+      // moonGridX = 0, moonGridY = 0 (since rotating around origin)
+
+      const gravDistort = (px, py) => {
+        let dx = 0, dy = 0;
+        const gravPull = (sx, sy, strength, radius) => {
+          const ddx = px - sx, ddy = py - sy;
+          const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+          if (dist < 1 || dist > radius) return;
+          const force = strength * (1 - dist / radius) * (1 - dist / radius);
+          dx += (ddx / dist) * force;
+          dy += (ddy / dist) * force;
+        };
+        // Cursor gravity
+        if (mouse.current.px > 0) gravPull(curGridX, curGridY, 22, 260);
+        // Moon gravity (stronger, wider)
+        gravPull(0, 0, 35, 400);
+        return { x: px + dx, y: py + dy };
+      };
+
+      // Draw distorted horizontal lines
+      const segStep = gridSpacing / 2;
       ctx.beginPath();
       for (let y = gridTop; y <= gridBottom; y += gridSpacing) {
-        ctx.moveTo(gridLeft, y); ctx.lineTo(gridRight, y);
+        const p0 = gravDistort(gridLeft, y);
+        ctx.moveTo(p0.x, p0.y);
+        for (let x = gridLeft + segStep; x <= gridRight; x += segStep) {
+          const p = gravDistort(x, y);
+          ctx.lineTo(p.x, p.y);
+        }
       }
+      // Draw distorted vertical lines
       for (let x = gridLeft; x <= gridRight; x += gridSpacing) {
-        ctx.moveTo(x, gridTop); ctx.lineTo(x, gridBottom);
+        const p0 = gravDistort(x, gridTop);
+        ctx.moveTo(p0.x, p0.y);
+        for (let y = gridTop + segStep; y <= gridBottom; y += segStep) {
+          const p = gravDistort(x, y);
+          ctx.lineTo(p.x, p.y);
+        }
       }
       ctx.stroke();
       ctx.restore();
@@ -544,6 +615,38 @@ const Hero = () => {
       }
       ctx.setLineDash([]);
       ctx.restore();
+
+      // ── Gravity waves (ripples from cursor + moon) ──
+      for (const w of gravityWaves.current) {
+        const age = timestamp - w.born;
+        const progress = age / w.life;           // 0 -> 1
+        const fadeIn2 = Math.min(progress * 8, 1);  // quick fade in
+        const fadeOut = 1 - Math.pow(progress, 1.5); // gentle fade out
+        const alpha = fadeIn2 * fadeOut;
+        if (alpha < 0.005) continue;
+
+        const isCursor = w.source === "cursor";
+        const baseColor = isCursor ? P.cyan : P.magenta;
+        const ringCount = isCursor ? 3 : 4;
+
+        for (let ri = 0; ri < ringCount; ri++) {
+          const rOffset = ri * (isCursor ? 18 : 28);
+          const r = w.radius - rOffset;
+          if (r < 2) continue;
+
+          const ringFade = 1 - ri * 0.25;
+          const lineW = isCursor
+            ? Math.max(0.3, (1 - progress) * 1.8 - ri * 0.3)
+            : Math.max(0.4, (1 - progress) * 2.2 - ri * 0.35);
+
+          ctx.strokeStyle = baseColor;
+          ctx.lineWidth = lineW;
+          ctx.globalAlpha = a * alpha * ringFade * (isCursor ? 0.25 : 0.18);
+          ctx.beginPath();
+          ctx.arc(w.x, w.y, r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
 
       // Radial lines (spins LEFT)
       ctx.save();
