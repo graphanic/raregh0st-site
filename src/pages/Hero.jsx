@@ -129,9 +129,9 @@ const Hero = () => {
   }));
 
   // ── Gravity wave system ──
-  const gravityWaves = useRef([]);       // array of { x, y, radius, maxRadius, born, source }
-  const lastCursorWave = useRef(0);      // timestamp of last cursor wave spawn
-  const lastMoonWave = useRef(0);        // timestamp of last moon wave spawn
+  const gravityWaves = useRef([]);       // array of { x, y, radius, maxRadius, born, source, color }
+  const waveTimers = useRef({});         // keyed timestamps for staggered spawns
+  const lastMoonWave = useRef(0);        // timestamp of last central moon wave
 
   const lensDustImg = useRef(null);
   const lensDustCanvas = useRef(null);
@@ -486,26 +486,54 @@ const Hero = () => {
       const cx = cw / 2 + fpx;
       const cy = ch / 2 + fpy;
 
-      // ── Gravity wave spawning ──
-      const cursorWorldX = (mouse.current.px - cx) / zoom;
-      const cursorWorldY = (mouse.current.py - cy) / zoom;
-      // Cursor waves: spawn every 220ms when mouse is on canvas
-      if (timestamp - lastCursorWave.current > 220 && mouse.current.px > 0) {
-        lastCursorWave.current = timestamp;
-        gravityWaves.current.push({
-          x: cursorWorldX, y: cursorWorldY,
-          radius: 0, maxRadius: 320, born: timestamp,
-          life: 2200, source: "cursor",
-        });
-      }
-      // Moon waves: spawn every 900ms from center (the moon lives at 0,0)
-      if (timestamp - lastMoonWave.current > 900) {
+      // ── Gravity wave spawning (moon, planets, sub-moons) ──
+      if (timestamp - lastMoonWave.current > 1200) {
         lastMoonWave.current = timestamp;
         gravityWaves.current.push({
           x: 0, y: 0,
-          radius: 0, maxRadius: 600, born: timestamp,
-          life: 4000, source: "moon",
+          radius: 0, maxRadius: 1200, born: timestamp,
+          life: 6000, source: "moon", color: P.bone,
         });
+      }
+      // Planets: compute their current world positions from orbitAngles
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i];
+        const rad = orbitAngles.current[i] * Math.PI / 180;
+        const nx = Math.cos(rad) * node.orbitRadius;
+        const ny = Math.sin(rad) * node.orbitRadius;
+        // Stagger planet wave spawns so they don't all fire at once
+        const planetKey = `planet_${i}`;
+        if (!waveTimers.current[planetKey]) waveTimers.current[planetKey] = timestamp + i * 400;
+        if (timestamp - waveTimers.current[planetKey] > 1800 + i * 200) {
+          waveTimers.current[planetKey] = timestamp;
+          gravityWaves.current.push({
+            x: nx, y: ny,
+            radius: 0, maxRadius: 400 + node.orbitRadius * 0.25,
+            born: timestamp, life: 3500,
+            source: "planet", color: node.color,
+          });
+        }
+        // Sub-moons of this node
+        if (node.moons) {
+          for (let mi = 0; mi < node.moons.length; mi++) {
+            const moon = node.moons[mi];
+            const flatIdx = allMoons.findIndex(m => m.nodeIndex === i && m.moonIndex === mi);
+            const mrad = moonAnglesRef.current[flatIdx] * Math.PI / 180;
+            const mx2 = nx + Math.cos(mrad) * moon.orbitRadius;
+            const my2 = ny + Math.sin(mrad) * moon.orbitRadius;
+            const moonKey = `moon_${flatIdx}`;
+            if (!waveTimers.current[moonKey]) waveTimers.current[moonKey] = timestamp + flatIdx * 300;
+            if (timestamp - waveTimers.current[moonKey] > 3000 + flatIdx * 150) {
+              waveTimers.current[moonKey] = timestamp;
+              gravityWaves.current.push({
+                x: mx2, y: my2,
+                radius: 0, maxRadius: 120,
+                born: timestamp, life: 2200,
+                source: "submoon", color: node.color,
+              });
+            }
+          }
+        }
       }
       // Age and cull expired waves
       gravityWaves.current = gravityWaves.current.filter(w => {
@@ -553,27 +581,35 @@ const Hero = () => {
       const gridTop = Math.floor((-halfExtent) / gridSpacing) * gridSpacing;
       const gridBottom = Math.ceil((halfExtent) / gridSpacing) * gridSpacing;
 
-      // Transform cursor world pos into rotated grid space for distortion
+      // Transform planet positions into rotated grid space for distortion
       const cosR = Math.cos(faR), sinR = Math.sin(faR);
-      const curGridX = cursorWorldX * cosR + cursorWorldY * sinR;
-      const curGridY = -cursorWorldX * sinR + cursorWorldY * cosR;
-      // Moon is at 0,0 in field space, so in rotated grid space:
-      // moonGridX = 0, moonGridY = 0 (since rotating around origin)
+      // Pre-compute all gravity sources in grid-rotated space
+      const gridGravSources = [
+        { x: 0, y: 0, strength: 45, radius: 500 }, // Central moon -- strongest
+      ];
+      for (let i = 0; i < nodes.length; i++) {
+        const rad = orbitAngles.current[i] * Math.PI / 180;
+        const wx = Math.cos(rad) * nodes[i].orbitRadius;
+        const wy = Math.sin(rad) * nodes[i].orbitRadius;
+        gridGravSources.push({
+          x: wx * cosR + wy * sinR,
+          y: -wx * sinR + wy * cosR,
+          strength: 18 + nodes[i].radius * 0.15,
+          radius: 200 + nodes[i].radius * 2,
+        });
+      }
 
       const gravDistort = (px, py) => {
         let dx = 0, dy = 0;
-        const gravPull = (sx, sy, strength, radius) => {
-          const ddx = px - sx, ddy = py - sy;
+        for (let g = 0; g < gridGravSources.length; g++) {
+          const src = gridGravSources[g];
+          const ddx = px - src.x, ddy = py - src.y;
           const dist = Math.sqrt(ddx * ddx + ddy * ddy);
-          if (dist < 1 || dist > radius) return;
-          const force = strength * (1 - dist / radius) * (1 - dist / radius);
+          if (dist < 1 || dist > src.radius) continue;
+          const force = src.strength * (1 - dist / src.radius) * (1 - dist / src.radius);
           dx += (ddx / dist) * force;
           dy += (ddy / dist) * force;
-        };
-        // Cursor gravity
-        if (mouse.current.px > 0) gravPull(curGridX, curGridY, 22, 260);
-        // Moon gravity (stronger, wider)
-        gravPull(0, 0, 35, 400);
+        }
         return { x: px + dx, y: py + dy };
       };
 
@@ -616,32 +652,35 @@ const Hero = () => {
       ctx.setLineDash([]);
       ctx.restore();
 
-      // ── Gravity waves (ripples from cursor + moon) ──
+      // ── Gravity waves (ripples from moon, planets, sub-moons) ──
       for (const w of gravityWaves.current) {
         const age = timestamp - w.born;
-        const progress = age / w.life;           // 0 -> 1
-        const fadeIn2 = Math.min(progress * 8, 1);  // quick fade in
-        const fadeOut = 1 - Math.pow(progress, 1.5); // gentle fade out
+        const progress = age / w.life;
+        const fadeIn2 = Math.min(progress * 6, 1);
+        const fadeOut = 1 - Math.pow(progress, 1.4);
         const alpha = fadeIn2 * fadeOut;
         if (alpha < 0.005) continue;
 
-        const isCursor = w.source === "cursor";
-        const baseColor = isCursor ? P.cyan : P.magenta;
-        const ringCount = isCursor ? 3 : 4;
+        const isMoon = w.source === "moon";
+        const isPlanet = w.source === "planet";
+        const isSubmoon = w.source === "submoon";
+
+        const ringCount = isMoon ? 5 : isPlanet ? 3 : 2;
+        const ringGap = isMoon ? 40 : isPlanet ? 22 : 12;
+        const baseAlpha = isMoon ? 0.16 : isPlanet ? 0.2 : 0.15;
+        const baseLineW = isMoon ? 2.5 : isPlanet ? 1.8 : 1.0;
 
         for (let ri = 0; ri < ringCount; ri++) {
-          const rOffset = ri * (isCursor ? 18 : 28);
+          const rOffset = ri * ringGap;
           const r = w.radius - rOffset;
           if (r < 2) continue;
 
-          const ringFade = 1 - ri * 0.25;
-          const lineW = isCursor
-            ? Math.max(0.3, (1 - progress) * 1.8 - ri * 0.3)
-            : Math.max(0.4, (1 - progress) * 2.2 - ri * 0.35);
+          const ringFade = 1 - ri * (1 / (ringCount + 1));
+          const lineW = Math.max(0.2, (1 - progress) * baseLineW - ri * 0.3);
 
-          ctx.strokeStyle = baseColor;
+          ctx.strokeStyle = w.color;
           ctx.lineWidth = lineW;
-          ctx.globalAlpha = a * alpha * ringFade * (isCursor ? 0.25 : 0.18);
+          ctx.globalAlpha = a * alpha * ringFade * baseAlpha;
           ctx.beginPath();
           ctx.arc(w.x, w.y, r, 0, Math.PI * 2);
           ctx.stroke();
