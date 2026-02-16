@@ -600,8 +600,25 @@ const Hero = () => {
         });
       }
 
+      // Pre-compute wave positions in grid-rotated space
+      const gridWaves = gravityWaves.current.map(w => {
+        const age = timestamp - w.born;
+        const progress = age / w.life;
+        return {
+          gx: w.x * cosR + w.y * sinR,
+          gy: -w.x * sinR + w.y * cosR,
+          radius: w.radius,
+          // Wave displacement strength: peaks early, fades out
+          strength: (w.source === "moon" ? 14 : w.source === "planet" ? 8 : 4)
+            * (1 - progress * progress),
+          // How thick the wavefront band is
+          band: w.source === "moon" ? 80 : w.source === "planet" ? 50 : 30,
+        };
+      });
+
       const gravDistort = (px, py) => {
         let dx = 0, dy = 0;
+        // Static body gravity (moon + planets)
         for (let g = 0; g < gridGravSources.length; g++) {
           const src = gridGravSources[g];
           const ddx = px - src.x, ddy = py - src.y;
@@ -610,6 +627,23 @@ const Hero = () => {
           const force = src.strength * (1 - dist / src.radius) * (1 - dist / src.radius);
           dx += (ddx / dist) * force;
           dy += (ddy / dist) * force;
+        }
+        // Ripple wave displacement -- push grid outward at the wavefront
+        for (let w = 0; w < gridWaves.length; w++) {
+          const wave = gridWaves[w];
+          if (wave.radius < 2 || wave.strength < 0.1) continue;
+          const wdx = px - wave.gx, wdy = py - wave.gy;
+          const dist = Math.sqrt(wdx * wdx + wdy * wdy);
+          if (dist < 1) continue;
+          // How close is this point to the ring edge?
+          const ringDist = Math.abs(dist - wave.radius);
+          if (ringDist > wave.band) continue;
+          // Smooth bell curve centered on the wavefront
+          const t = ringDist / wave.band;
+          const envelope = Math.cos(t * Math.PI * 0.5); // 1 at wavefront, 0 at band edge
+          const force = wave.strength * envelope * envelope;
+          dx += (wdx / dist) * force;
+          dy += (wdy / dist) * force;
         }
         return { x: px + dx, y: py + dy };
       };
