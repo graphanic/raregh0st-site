@@ -586,7 +586,7 @@ const Hero = () => {
       const cosR = Math.cos(gridAngle), sinR = Math.sin(gridAngle);
       // Pre-compute all gravity sources in grid-rotated space
       const gridGravSources = [
-        { x: 0, y: 0, strength: 45, radius: 500 }, // Central moon -- strongest
+        { x: 0, y: 0, strength: 80, radius: 1400 }, // Central moon -- strongest
       ];
       for (let i = 0; i < nodes.length; i++) {
         const rad = orbitAngles.current[i] * Math.PI / 180;
