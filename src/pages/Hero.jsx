@@ -128,6 +128,11 @@ const Hero = () => {
     };
   }));
 
+  // ── Gravity wave system ──
+  const gravityWaves = useRef([]);       // array of { x, y, radius, maxRadius, born, source, color }
+  const waveTimers = useRef({});         // keyed timestamps for staggered spawns
+  const lastMoonWave = useRef(0);        // timestamp of last central moon wave
+
   const lensDustImg = useRef(null);
   const lensDustCanvas = useRef(null);
   const lensDustHue = useRef(210);
@@ -481,6 +486,62 @@ const Hero = () => {
       const cx = cw / 2 + fpx;
       const cy = ch / 2 + fpy;
 
+      // ── Gravity wave spawning (moon, planets, sub-moons) ──
+      if (timestamp - lastMoonWave.current > 1200) {
+        lastMoonWave.current = timestamp;
+        gravityWaves.current.push({
+          x: 0, y: 0,
+          radius: 0, maxRadius: 1200, born: timestamp,
+          life: 6000, source: "moon", color: P.bone,
+        });
+      }
+      // Planets: compute their current world positions from orbitAngles
+      for (let i = 0; i < nodes.length; i++) {
+        const node = nodes[i];
+        const rad = orbitAngles.current[i] * Math.PI / 180;
+        const nx = Math.cos(rad) * node.orbitRadius;
+        const ny = Math.sin(rad) * node.orbitRadius;
+        // Stagger planet wave spawns so they don't all fire at once
+        const planetKey = `planet_${i}`;
+        if (!waveTimers.current[planetKey]) waveTimers.current[planetKey] = timestamp + i * 400;
+        if (timestamp - waveTimers.current[planetKey] > 1800 + i * 200) {
+          waveTimers.current[planetKey] = timestamp;
+          gravityWaves.current.push({
+            x: nx, y: ny,
+            radius: 0, maxRadius: 400 + node.orbitRadius * 0.25,
+            born: timestamp, life: 3500,
+            source: "planet", color: node.color,
+          });
+        }
+        // Sub-moons of this node
+        if (node.moons) {
+          for (let mi = 0; mi < node.moons.length; mi++) {
+            const moon = node.moons[mi];
+            const flatIdx = allMoons.findIndex(m => m.nodeIndex === i && m.moonIndex === mi);
+            const mrad = moonAnglesRef.current[flatIdx] * Math.PI / 180;
+            const mx2 = nx + Math.cos(mrad) * moon.orbitRadius;
+            const my2 = ny + Math.sin(mrad) * moon.orbitRadius;
+            const moonKey = `moon_${flatIdx}`;
+            if (!waveTimers.current[moonKey]) waveTimers.current[moonKey] = timestamp + flatIdx * 300;
+            if (timestamp - waveTimers.current[moonKey] > 3000 + flatIdx * 150) {
+              waveTimers.current[moonKey] = timestamp;
+              gravityWaves.current.push({
+                x: mx2, y: my2,
+                radius: 0, maxRadius: 120,
+                born: timestamp, life: 2200,
+                source: "submoon", color: node.color,
+              });
+            }
+          }
+        }
+      }
+      // Age and cull expired waves
+      gravityWaves.current = gravityWaves.current.filter(w => {
+        const age = timestamp - w.born;
+        w.radius = (age / w.life) * w.maxRadius;
+        return age < w.life;
+      });
+
       ctx.save();
       ctx.translate(cx, cy);
       ctx.scale(zoom, zoom);
@@ -507,24 +568,105 @@ const Hero = () => {
         ctx.restore();
       }
 
-      // Rectangular grid (spins RIGHT)
+      // Rectangular grid (fixed 45deg) - with gravity distortion
       ctx.save();
-      ctx.rotate(faR);
+      const gridAngle = Math.PI / 4; // locked 45 degrees
+      ctx.rotate(gridAngle);
       ctx.strokeStyle = P.cyan;
       ctx.lineWidth = 0.5;
       ctx.globalAlpha = a * 0.14;
-      const gridSpacing = 86;
+      const gridSpacing = 86 / 3; // 3x density
       const halfExtent = Math.sqrt((cw / zoom) * (cw / zoom) + (ch / zoom) * (ch / zoom)) / 2 + 1200;
       const gridLeft = Math.floor((-halfExtent) / gridSpacing) * gridSpacing;
       const gridRight = Math.ceil((halfExtent) / gridSpacing) * gridSpacing;
       const gridTop = Math.floor((-halfExtent) / gridSpacing) * gridSpacing;
       const gridBottom = Math.ceil((halfExtent) / gridSpacing) * gridSpacing;
+
+      // Transform planet positions into rotated grid space for distortion
+      const cosR = Math.cos(gridAngle), sinR = Math.sin(gridAngle);
+      // Pre-compute all gravity sources in grid-rotated space
+      const gridGravSources = [
+        { x: 0, y: 0, strength: 80, radius: 1400 }, // Central moon -- strongest
+      ];
+      for (let i = 0; i < nodes.length; i++) {
+        const rad = orbitAngles.current[i] * Math.PI / 180;
+        const wx = Math.cos(rad) * nodes[i].orbitRadius;
+        const wy = Math.sin(rad) * nodes[i].orbitRadius;
+        gridGravSources.push({
+          x: wx * cosR + wy * sinR,
+          y: -wx * sinR + wy * cosR,
+          strength: 18 + nodes[i].radius * 0.15,
+          radius: 200 + nodes[i].radius * 2,
+        });
+      }
+
+      // Pre-compute wave positions in grid-rotated space
+      const gridWaves = gravityWaves.current.map(w => {
+        const age = timestamp - w.born;
+        const progress = age / w.life;
+        return {
+          gx: w.x * cosR + w.y * sinR,
+          gy: -w.x * sinR + w.y * cosR,
+          radius: w.radius,
+          // Wave displacement strength: peaks early, fades out
+          strength: (w.source === "moon" ? 14 : w.source === "planet" ? 8 : 4)
+            * (1 - progress * progress),
+          // How thick the wavefront band is
+          band: w.source === "moon" ? 80 : w.source === "planet" ? 50 : 30,
+        };
+      });
+
+      const gravDistort = (px, py) => {
+        let dx = 0, dy = 0;
+        // Static body gravity (moon + planets)
+        for (let g = 0; g < gridGravSources.length; g++) {
+          const src = gridGravSources[g];
+          const ddx = px - src.x, ddy = py - src.y;
+          const dist = Math.sqrt(ddx * ddx + ddy * ddy);
+          if (dist < 1 || dist > src.radius) continue;
+          const force = src.strength * (1 - dist / src.radius) * (1 - dist / src.radius);
+          dx += (ddx / dist) * force;
+          dy += (ddy / dist) * force;
+        }
+        // Ripple wave displacement -- push grid outward at the wavefront
+        for (let w = 0; w < gridWaves.length; w++) {
+          const wave = gridWaves[w];
+          if (wave.radius < 2 || wave.strength < 0.1) continue;
+          const wdx = px - wave.gx, wdy = py - wave.gy;
+          const dist = Math.sqrt(wdx * wdx + wdy * wdy);
+          if (dist < 1) continue;
+          // How close is this point to the ring edge?
+          const ringDist = Math.abs(dist - wave.radius);
+          if (ringDist > wave.band) continue;
+          // Smooth bell curve centered on the wavefront
+          const t = ringDist / wave.band;
+          const envelope = Math.cos(t * Math.PI * 0.5); // 1 at wavefront, 0 at band edge
+          const force = wave.strength * envelope * envelope;
+          dx += (wdx / dist) * force;
+          dy += (wdy / dist) * force;
+        }
+        return { x: px + dx, y: py + dy };
+      };
+
+      // Draw distorted horizontal lines
+      const segStep = gridSpacing;
       ctx.beginPath();
       for (let y = gridTop; y <= gridBottom; y += gridSpacing) {
-        ctx.moveTo(gridLeft, y); ctx.lineTo(gridRight, y);
+        const p0 = gravDistort(gridLeft, y);
+        ctx.moveTo(p0.x, p0.y);
+        for (let x = gridLeft + segStep; x <= gridRight; x += segStep) {
+          const p = gravDistort(x, y);
+          ctx.lineTo(p.x, p.y);
+        }
       }
+      // Draw distorted vertical lines
       for (let x = gridLeft; x <= gridRight; x += gridSpacing) {
-        ctx.moveTo(x, gridTop); ctx.lineTo(x, gridBottom);
+        const p0 = gravDistort(x, gridTop);
+        ctx.moveTo(p0.x, p0.y);
+        for (let y = gridTop + segStep; y <= gridBottom; y += segStep) {
+          const p = gravDistort(x, y);
+          ctx.lineTo(p.x, p.y);
+        }
       }
       ctx.stroke();
       ctx.restore();
@@ -544,6 +686,41 @@ const Hero = () => {
       }
       ctx.setLineDash([]);
       ctx.restore();
+
+      // ── Gravity waves (ripples from moon, planets, sub-moons) ──
+      for (const w of gravityWaves.current) {
+        const age = timestamp - w.born;
+        const progress = age / w.life;
+        const fadeIn2 = Math.min(progress * 6, 1);
+        const fadeOut = 1 - Math.pow(progress, 1.4);
+        const alpha = fadeIn2 * fadeOut;
+        if (alpha < 0.005) continue;
+
+        const isMoon = w.source === "moon";
+        const isPlanet = w.source === "planet";
+        const isSubmoon = w.source === "submoon";
+
+        const ringCount = isMoon ? 5 : isPlanet ? 3 : 2;
+        const ringGap = isMoon ? 40 : isPlanet ? 22 : 12;
+        const baseAlpha = isMoon ? 0.16 : isPlanet ? 0.2 : 0.15;
+        const baseLineW = isMoon ? 2.5 : isPlanet ? 1.8 : 1.0;
+
+        for (let ri = 0; ri < ringCount; ri++) {
+          const rOffset = ri * ringGap;
+          const r = w.radius - rOffset;
+          if (r < 2) continue;
+
+          const ringFade = 1 - ri * (1 / (ringCount + 1));
+          const lineW = Math.max(0.2, (1 - progress) * baseLineW - ri * 0.3);
+
+          ctx.strokeStyle = w.color;
+          ctx.lineWidth = lineW;
+          ctx.globalAlpha = a * alpha * ringFade * baseAlpha;
+          ctx.beginPath();
+          ctx.arc(w.x, w.y, r, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
 
       // Radial lines (spins LEFT)
       ctx.save();
