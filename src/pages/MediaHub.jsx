@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { P } from "../data/palette";
 import { VIDEO_GENRES, VIDEOS } from "../data/videos";
 import { SOCIALS } from "../data/socials";
@@ -211,179 +211,7 @@ const InstagramSection = ({ social }) => {
   );
 };
 
-/* ═══════════════════════════════════════════════════════
-   X (TWITTER) TIMELINE SECTION
-   Uses the syndication iframe with a load timeout that
-   falls back to a clean "view on X" link when rate-limited.
-   ═══════════════════════════════════════════════════════ */
-const XTimelineSection = ({ social }) => {
-  const { embed } = social;
-  if (!embed || embed.type !== "x-timeline") return null;
-
-  const handle = social.handle.replace("@", "");
-  const timelineUrl = `https://syndication.twitter.com/srv/timeline-profile/screen-name/${handle}?dnt=true&embedId=twitter-widget-0&frame=false&hideBorder=true&hideFooter=true&hideHeader=true&hideScrollBar=false&lang=en&theme=dark&transparent=true`;
-  const [status, setStatus] = useState("loading"); // loading | ready | error
-  const timerRef = useRef(null);
-
-  /* Start a 8-second timeout -- if the iframe hasn't reported
-     a load by then we assume it's rate-limited or blocked. */
-  useEffect(() => {
-    timerRef.current = setTimeout(() => {
-      setStatus((s) => (s === "loading" ? "error" : s));
-    }, 8000);
-    return () => clearTimeout(timerRef.current);
-  }, []);
-
-  const onLoad = () => {
-    clearTimeout(timerRef.current);
-    setStatus("ready");
-  };
-
-  return (
-    <div>
-      <SectionHeader social={social} />
-
-      {/* Error / rate-limited fallback */}
-      {status === "error" && (
-        <div
-          style={{
-            maxWidth: 500,
-            width: "100%",
-            borderRadius: 3,
-            overflow: "hidden",
-            background: `linear-gradient(135deg, ${P.abyss}, ${social.color}06, ${P.abyss})`,
-            border: `1px solid ${P.steel}15`,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            padding: "48px 24px",
-            gap: 16,
-            textAlign: "center",
-          }}
-        >
-          <div
-            style={{
-              fontFamily: "'Courier New', monospace",
-              fontSize: 10,
-              letterSpacing: 3,
-              color: P.bone,
-              opacity: 0.35,
-              textTransform: "uppercase",
-              marginBottom: 4,
-            }}
-          >
-            Timeline temporarily unavailable
-          </div>
-          <a
-            href={social.profileUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "inline-flex",
-              alignItems: "center",
-              gap: 8,
-              padding: "10px 20px",
-              background: `${social.color}10`,
-              border: `1px solid ${social.color}25`,
-              borderRadius: 2,
-              color: social.color,
-              fontFamily: "'Courier New', monospace",
-              fontSize: 10,
-              letterSpacing: 2,
-              textDecoration: "none",
-              textTransform: "uppercase",
-              transition: "all 0.3s",
-            }}
-          >
-            View @{handle} on X {"\u2192"}
-          </a>
-        </div>
-      )}
-
-      {/* Iframe (hidden once error, visible once loaded) */}
-      {status !== "error" && (
-        <EmbedFrame
-          src={timelineUrl}
-          title="X (Twitter) timeline"
-          width={500}
-          height={600}
-          color={social.color}
-          fallbackUrl={social.profileUrl}
-          fallbackLabel="View on X"
-          style={{ maxWidth: 500, width: "100%", minWidth: "auto" }}
-          onFrameLoad={onLoad}
-        />
-      )}
-    </div>
-  );
-};
-
-/* ═══════════════════════════════════════════════════════
-   FACEBOOK SECTION  --  full-width 16:9 scaled embed
-   Facebook Page Plugin has a hard 500px max width, so we
-   render it at 500px and use CSS transform: scale() to
-   stretch it visually to fill the available container.
-   ═══════════════════════════════════════════════════════ */
-const FB_MAX = 500;          // Facebook's hard limit
-const FB_HEIGHT = 700;       // tall enough for several posts
-
-const FacebookSection = ({ social }) => {
-  const { embed } = social;
-  if (!embed || embed.type !== "facebook") return null;
-
-  const wrapRef = useRef(null);
-  const [containerW, setContainerW] = useState(FB_MAX);
-
-  useEffect(() => {
-    const measure = () => {
-      if (wrapRef.current) setContainerW(wrapRef.current.offsetWidth);
-    };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
-  }, []);
-
-  const scale = containerW / FB_MAX;                    // e.g. 1120 / 500 = 2.24
-  const scaledHeight = FB_HEIGHT * scale;               // visible height after scale
-
-  const encodedUrl = encodeURIComponent(embed.pageUrl);
-  const src = `https://www.facebook.com/plugins/page.php?href=${encodedUrl}&tabs=timeline&width=${FB_MAX}&height=${FB_HEIGHT}&small_header=true&adapt_container_width=true&hide_cover=false&show_facepile=false&appId`;
-
-  return (
-    <div ref={wrapRef}>
-      <SectionHeader social={social} />
-      {/* Outer container sized to the scaled result */}
-      <div
-        style={{
-          width: "100%",
-          height: scaledHeight,
-          borderRadius: 3,
-          overflow: "hidden",
-          position: "relative",
-          background: `linear-gradient(135deg, ${P.abyss}, ${social.color}06, ${P.abyss})`,
-          border: `1px solid ${P.steel}15`,
-        }}
-      >
-        {/* Inner iframe rendered at 500px then scaled up */}
-        <iframe
-          src={src}
-          title="Facebook page"
-          width={FB_MAX}
-          height={FB_HEIGHT}
-          style={{
-            border: "none",
-            transform: `scale(${scale})`,
-            transformOrigin: "0 0",
-          }}
-          loading="lazy"
-          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-          scrolling="yes"
-        />
-      </div>
-    </div>
-  );
-};
+/* (X and Facebook now use link-only -- see socials.js) */
 
 /* ═══════════════════════════════════════════════════════
    LINK-ONLY SECTION (for platforms without free embeds)
@@ -444,8 +272,7 @@ const SocialEmbedSection = ({ social }) => {
     case "twitch": return <TwitchSection social={social} />;
     case "tiktok": return <TikTokSection social={social} />;
     case "instagram": return <InstagramSection social={social} />;
-    case "x-timeline": return <XTimelineSection social={social} />;
-    case "facebook": return <FacebookSection social={social} />;
+
     case "link-only":
     default: return <LinkOnlySection social={social} />;
   }
