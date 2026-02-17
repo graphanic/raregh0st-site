@@ -86,6 +86,11 @@ body[data-calm] *:not([data-morph]) { font-family: inherit !important; animation
   100% { filter: brightness(1.1) hue-rotate(0deg) drop-shadow(0 0 24px #00e5ff40) drop-shadow(0 0 48px #ff006620); }
 }
 
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
 @keyframes crtScan {
   from { background-position: 0 0; }
   to { background-position: 0 -200px; }
