@@ -31,7 +31,7 @@ export const SOCIALS = [
     embed: {
       type: "tiktok",
       // Placeholder video IDs -- swap in real ones
-      videos: ["7195156122037242667", "7329143872844154881",]
+      videos: ["7195156122037242667", "7586503646846651655",]
     },
   },
   {
