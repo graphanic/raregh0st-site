@@ -3,8 +3,8 @@ import { P } from "./palette";
 export const SOCIALS = [
   {
     id: "youtube", label: "YouTube", icon: "\u25B6", color: "#ff0000",
-    handle: "@RareGh0st",
-    profileUrl: "https://youtube.com/@RareGh0st",
+    handle: "@RareGh0stArchitect",
+    profileUrl: "https://youtube.com/@RareGh0stArchitect",
     embed: {
       type: "youtube",
       // Featured video (large embed) -- placeholder for now, swap in a real ID when ready
@@ -17,11 +17,11 @@ export const SOCIALS = [
   },
   {
     id: "twitch", label: "Twitch", icon: "\u25C6", color: "#9146ff",
-    handle: "RareGh0st",
-    profileUrl: "https://twitch.tv/RareGh0st",
+    handle: "raregh0stgames",
+    profileUrl: "https://twitch.tv/raregh0stgames",
     embed: {
       type: "twitch",
-      channel: "RareGh0st",
+      channel: "raregh0stgames",
     },
   },
   {
@@ -63,11 +63,11 @@ export const SOCIALS = [
   },
   {
     id: "facebook", label: "Facebook", icon: "f", color: "#1877f2",
-    handle: "RareGh0st",
-    profileUrl: "https://facebook.com/RareGh0st",
+    handle: "RageGh0st",
+    profileUrl: "https://facebook.com/RageGh0st",
     embed: {
       type: "facebook",
-      pageUrl: "https://www.facebook.com/RareGh0st",
+      pageUrl: "https://www.facebook.com/RageGh0st",
     },
   },
 ];

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { P } from "../data/palette";
 import { VIDEO_GENRES, VIDEOS } from "../data/videos";
 import { SOCIALS } from "../data/socials";
@@ -217,66 +217,22 @@ const InstagramSection = ({ social }) => {
 const XTimelineSection = ({ social }) => {
   const { embed } = social;
   if (!embed || embed.type !== "x-timeline") return null;
-  const ref = useRef(null);
-  const [loaded, setLoaded] = useState(false);
-
-  useEffect(() => {
-    // Load Twitter widget script dynamically
-    if (typeof window !== "undefined" && !window.twttr) {
-      const s = document.createElement("script");
-      s.src = "https://platform.twitter.com/widgets.js";
-      s.async = true;
-      s.onload = () => {
-        if (window.twttr && ref.current) {
-          window.twttr.widgets.createTimeline(
-            { sourceType: "profile", screenName: social.handle.replace("@", "") },
-            ref.current,
-            { theme: "dark", chrome: "noheader nofooter noborders transparent", width: 400, height: 600, tweetLimit: 5 }
-          ).then(() => setLoaded(true));
-        }
-      };
-      document.head.appendChild(s);
-    } else if (window.twttr && ref.current) {
-      window.twttr.widgets.createTimeline(
-        { sourceType: "profile", screenName: social.handle.replace("@", "") },
-        ref.current,
-        { theme: "dark", chrome: "noheader nofooter noborders transparent", width: 400, height: 600, tweetLimit: 5 }
-      ).then(() => setLoaded(true));
-    }
-  }, [social.handle]);
+  const handle = social.handle.replace("@", "");
+  const timelineUrl = `https://syndication.twitter.com/srv/timeline-profile/screen-name/${handle}?dnt=true&embedId=twitter-widget-0&frame=false&hideBorder=true&hideFooter=true&hideHeader=true&hideScrollBar=false&lang=en&theme=dark&transparent=true`;
 
   return (
     <div>
       <SectionHeader social={social} />
-      <div
-        ref={ref}
-        style={{
-          maxWidth: 400,
-          minHeight: 200,
-          borderRadius: 3,
-          overflow: "hidden",
-          background: `linear-gradient(135deg, ${P.abyss}, ${social.color}06, ${P.abyss})`,
-          border: `1px solid ${P.steel}15`,
-          position: "relative",
-        }}
-      >
-        {!loaded && (
-          <div style={{
-            display: "flex", flexDirection: "column", alignItems: "center",
-            justifyContent: "center", height: 200, gap: 12,
-          }}>
-            <div style={{
-              width: 32, height: 32, borderRadius: "50%",
-              border: `2px solid ${social.color}30`, borderTopColor: social.color,
-              animation: "spin 1s linear infinite",
-            }} />
-            <span style={{
-              fontFamily: "'Courier New', monospace", fontSize: 9,
-              letterSpacing: 3, color: P.bone, opacity: 0.3, textTransform: "uppercase",
-            }}>Loading timeline</span>
-          </div>
-        )}
-      </div>
+      <EmbedFrame
+        src={timelineUrl}
+        title="X (Twitter) timeline"
+        width={400}
+        height={600}
+        color={social.color}
+        fallbackUrl={social.profileUrl}
+        fallbackLabel="View on X"
+        style={{ maxWidth: 400, width: "100%", minWidth: "auto" }}
+      />
     </div>
   );
 };
@@ -359,7 +315,7 @@ const LinkOnlySection = ({ social }) => (
 
 /* ═══════════════════════════════════════════════════════
    EMBED ROUTER -- picks the right section per platform
-   ═══════════════════════════════════════════════════════ */
+   ═══════════════════════════════════��═══════════════════ */
 const SocialEmbedSection = ({ social }) => {
   const type = social.embed?.type;
   switch (type) {
