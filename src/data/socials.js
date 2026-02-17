@@ -8,7 +8,7 @@ export const SOCIALS = [
     embed: {
       type: "youtube",
       // Featured video (large embed) -- placeholder for now, swap in a real ID when ready
-      featured: "dQw4w9WgXcQ",
+      featured: "EMNWUWex7H8",
       // Horizontal scroll row of videos -- mix real + placeholder
       videos: ["dQw4w9WgXcQ", "jNQXAC9IVRw", "9bZkp7q19f0", "kJQP7kiw5Fk"],
       // Optional: channel playlist (uncomment when ready)
