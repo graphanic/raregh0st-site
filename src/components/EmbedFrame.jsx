@@ -16,6 +16,7 @@ export const EmbedFrame = ({
   style = {},
   allow = "",
   sandbox,
+  onFrameLoad,
 }) => {
   const [visible, setVisible] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -153,7 +154,7 @@ export const EmbedFrame = ({
           loading="lazy"
           allow={allow}
           sandbox={sandbox}
-          onLoad={() => setLoaded(true)}
+          onLoad={() => { setLoaded(true); if (onFrameLoad) onFrameLoad(); }}
           onError={() => setError(true)}
         />
       )}

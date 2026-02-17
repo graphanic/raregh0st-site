@@ -49,8 +49,7 @@ export const SOCIALS = [
     handle: "@RareGh0st",
     profileUrl: "https://x.com/RareGh0st",
     embed: {
-      type: "x-timeline",
-      profileUrl: "https://twitter.com/RareGh0st",
+      type: "link-only",
     },
   },
   {
@@ -66,8 +65,7 @@ export const SOCIALS = [
     handle: "RageGh0st",
     profileUrl: "https://facebook.com/RageGh0st",
     embed: {
-      type: "facebook",
-      pageUrl: "https://www.facebook.com/RageGh0st",
+      type: "link-only",
     },
   },
 ];

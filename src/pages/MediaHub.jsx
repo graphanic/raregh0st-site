@@ -211,58 +211,7 @@ const InstagramSection = ({ social }) => {
   );
 };
 
-/* ═══════════════════════════════════════════════════════
-   X (TWITTER) TIMELINE SECTION
-   ═══════════════════════════════════════════════════════ */
-const XTimelineSection = ({ social }) => {
-  const { embed } = social;
-  if (!embed || embed.type !== "x-timeline") return null;
-  const handle = social.handle.replace("@", "");
-  const timelineUrl = `https://syndication.twitter.com/srv/timeline-profile/screen-name/${handle}?dnt=true&embedId=twitter-widget-0&frame=false&hideBorder=true&hideFooter=true&hideHeader=true&hideScrollBar=false&lang=en&theme=dark&transparent=true`;
-
-  return (
-    <div>
-      <SectionHeader social={social} />
-      <EmbedFrame
-        src={timelineUrl}
-        title="X (Twitter) timeline"
-        width={400}
-        height={600}
-        color={social.color}
-        fallbackUrl={social.profileUrl}
-        fallbackLabel="View on X"
-        style={{ maxWidth: 400, width: "100%", minWidth: "auto" }}
-      />
-    </div>
-  );
-};
-
-/* ═══════════════════════════════════════════════════════
-   FACEBOOK SECTION
-   ═══════════════════════════════════════════════════════ */
-const FacebookSection = ({ social }) => {
-  const { embed } = social;
-  if (!embed || embed.type !== "facebook") return null;
-
-  const encodedUrl = encodeURIComponent(embed.pageUrl);
-  const src = `https://www.facebook.com/plugins/page.php?href=${encodedUrl}&tabs=timeline&width=400&height=500&small_header=true&adapt_container_width=true&hide_cover=false&show_facepile=false&appId`;
-
-  return (
-    <div>
-      <SectionHeader social={social} />
-      <EmbedFrame
-        src={src}
-        title="Facebook page"
-        width={400}
-        height={500}
-        color={social.color}
-        fallbackUrl={social.profileUrl}
-        fallbackLabel="Visit on Facebook"
-        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-      />
-    </div>
-  );
-};
+/* (X and Facebook now use link-only -- see socials.js) */
 
 /* ═══════════════════════════════════════════════════════
    LINK-ONLY SECTION (for platforms without free embeds)
@@ -323,8 +272,7 @@ const SocialEmbedSection = ({ social }) => {
     case "twitch": return <TwitchSection social={social} />;
     case "tiktok": return <TikTokSection social={social} />;
     case "instagram": return <InstagramSection social={social} />;
-    case "x-timeline": return <XTimelineSection social={social} />;
-    case "facebook": return <FacebookSection social={social} />;
+
     case "link-only":
     default: return <LinkOnlySection social={social} />;
   }
