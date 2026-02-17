@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { P } from "../data/palette";
 import { VIDEO_GENRES, VIDEOS } from "../data/videos";
 import { SOCIALS } from "../data/socials";
@@ -213,53 +213,254 @@ const InstagramSection = ({ social }) => {
 
 /* ═══════════════════════════════════════════════════════
    X (TWITTER) TIMELINE SECTION
+   Uses the official X for Websites JS widget (more resilient
+   to rate-limiting than the syndication iframe approach).
    ═══════════════════════════════════════════════════════ */
 const XTimelineSection = ({ social }) => {
   const { embed } = social;
   if (!embed || embed.type !== "x-timeline") return null;
+
   const handle = social.handle.replace("@", "");
-  const timelineUrl = `https://syndication.twitter.com/srv/timeline-profile/screen-name/${handle}?dnt=true&embedId=twitter-widget-0&frame=false&hideBorder=true&hideFooter=true&hideHeader=true&hideScrollBar=false&lang=en&theme=dark&transparent=true`;
+  const containerRef = useRef(null);
+  const [status, setStatus] = useState("loading"); // loading | ready | error
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const render = () => {
+      if (cancelled || !containerRef.current) return;
+      // Clear previous renders
+      containerRef.current.innerHTML = "";
+
+      if (window.twttr && window.twttr.widgets) {
+        window.twttr.widgets
+          .createTimeline(
+            { sourceType: "profile", screenName: handle },
+            containerRef.current,
+            {
+              theme: "dark",
+              chrome: "noheader nofooter noborders transparent",
+              width: 500,
+              height: 600,
+              dnt: true,
+              tweetLimit: 8,
+            }
+          )
+          .then((el) => {
+            if (cancelled) return;
+            if (el) {
+              setStatus("ready");
+            } else {
+              setStatus("error");
+            }
+          })
+          .catch(() => {
+            if (!cancelled) setStatus("error");
+          });
+      } else {
+        setStatus("error");
+      }
+    };
+
+    // Load the X widgets.js script if not already present
+    if (!window.twttr) {
+      const script = document.createElement("script");
+      script.src = "https://platform.twitter.com/widgets.js";
+      script.async = true;
+      script.onload = () => {
+        // twttr.widgets.load will be available after script loads
+        if (window.twttr && window.twttr.ready) {
+          window.twttr.ready(render);
+        } else {
+          render();
+        }
+      };
+      script.onerror = () => { if (!cancelled) setStatus("error"); };
+      document.head.appendChild(script);
+    } else if (window.twttr.ready) {
+      window.twttr.ready(render);
+    } else {
+      render();
+    }
+
+    return () => { cancelled = true; };
+  }, [handle]);
 
   return (
     <div>
       <SectionHeader social={social} />
-      <EmbedFrame
-        src={timelineUrl}
-        title="X (Twitter) timeline"
-        width={400}
-        height={600}
-        color={social.color}
-        fallbackUrl={social.profileUrl}
-        fallbackLabel="View on X"
-        style={{ maxWidth: 400, width: "100%", minWidth: "auto" }}
-      />
+      <div
+        style={{
+          maxWidth: 500,
+          width: "100%",
+          minHeight: 300,
+          borderRadius: 3,
+          overflow: "hidden",
+          position: "relative",
+          background: `linear-gradient(135deg, ${P.abyss}, ${social.color}06, ${P.abyss})`,
+          border: `1px solid ${P.steel}15`,
+        }}
+      >
+        {/* Loading state */}
+        {status === "loading" && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              height: 300,
+              gap: 12,
+            }}
+          >
+            <div
+              style={{
+                width: 32,
+                height: 32,
+                borderRadius: "50%",
+                border: `2px solid ${social.color}30`,
+                borderTopColor: social.color,
+                animation: "spin 1s linear infinite",
+              }}
+            />
+            <span
+              style={{
+                fontFamily: "'Courier New', monospace",
+                fontSize: 9,
+                letterSpacing: 3,
+                color: P.bone,
+                opacity: 0.3,
+                textTransform: "uppercase",
+              }}
+            >
+              Loading timeline
+            </span>
+          </div>
+        )}
+
+        {/* Error / rate-limited fallback */}
+        {status === "error" && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              justifyContent: "center",
+              padding: "40px 24px",
+              gap: 16,
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                fontFamily: "'Courier New', monospace",
+                fontSize: 10,
+                letterSpacing: 3,
+                color: P.bone,
+                opacity: 0.35,
+                textTransform: "uppercase",
+                marginBottom: 4,
+              }}
+            >
+              Timeline temporarily unavailable
+            </div>
+            <a
+              href={social.profileUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 8,
+                padding: "10px 20px",
+                background: `${social.color}10`,
+                border: `1px solid ${social.color}25`,
+                borderRadius: 2,
+                color: social.color,
+                fontFamily: "'Courier New', monospace",
+                fontSize: 10,
+                letterSpacing: 2,
+                textDecoration: "none",
+                textTransform: "uppercase",
+                transition: "all 0.3s",
+              }}
+            >
+              View @{handle} on X {"\u2192"}
+            </a>
+          </div>
+        )}
+
+        {/* Widget renders here */}
+        <div
+          ref={containerRef}
+          style={{
+            display: status === "ready" ? "block" : "none",
+            maxHeight: 600,
+            overflow: "auto",
+          }}
+        />
+      </div>
     </div>
   );
 };
 
 /* ═══════════════════════════════════════════════════════
-   FACEBOOK SECTION
+   FACEBOOK SECTION  --  full-width 16:9 timeline embed
    ═══════════════════════════════════════════════════════ */
 const FacebookSection = ({ social }) => {
   const { embed } = social;
   if (!embed || embed.type !== "facebook") return null;
 
+  const wrapRef = useRef(null);
+  const [embedWidth, setEmbedWidth] = useState(500);
+
+  useEffect(() => {
+    const measure = () => {
+      if (wrapRef.current) {
+        // Facebook Page Plugin max width is 500 px
+        setEmbedWidth(Math.min(wrapRef.current.offsetWidth, 500));
+      }
+    };
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, []);
+
+  const embedHeight = Math.round(embedWidth * (9 / 16));
   const encodedUrl = encodeURIComponent(embed.pageUrl);
-  const src = `https://www.facebook.com/plugins/page.php?href=${encodedUrl}&tabs=timeline&width=400&height=500&small_header=true&adapt_container_width=true&hide_cover=false&show_facepile=false&appId`;
+  const src = `https://www.facebook.com/plugins/page.php?href=${encodedUrl}&tabs=timeline&width=${embedWidth}&height=${embedHeight}&small_header=true&adapt_container_width=true&hide_cover=false&show_facepile=false&appId`;
 
   return (
-    <div>
+    <div ref={wrapRef}>
       <SectionHeader social={social} />
-      <EmbedFrame
-        src={src}
-        title="Facebook page"
-        width={400}
-        height={500}
-        color={social.color}
-        fallbackUrl={social.profileUrl}
-        fallbackLabel="Visit on Facebook"
-        allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
-      />
+      {/* Full-width 16:9 container */}
+      <div
+        style={{
+          position: "relative",
+          width: "100%",
+          paddingBottom: "56.25%", /* 16:9 */
+          borderRadius: 3,
+          overflow: "hidden",
+          background: `linear-gradient(135deg, ${P.abyss}, ${social.color}06, ${P.abyss})`,
+          border: `1px solid ${P.steel}15`,
+        }}
+      >
+        <iframe
+          src={src}
+          title="Facebook page"
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            border: "none",
+          }}
+          loading="lazy"
+          allow="autoplay; clipboard-write; encrypted-media; picture-in-picture; web-share"
+          scrolling="yes"
+        />
+      </div>
     </div>
   );
 };
