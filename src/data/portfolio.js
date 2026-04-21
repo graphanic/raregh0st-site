@@ -130,3 +130,7 @@ export const MOTION_WORKS = [
   { id: "mmlfnujgu10", title: "Angel", img: "https://0at986lkng8uss8h.public.blob.vercel-storage.com/Glitchcore%20Angel-j3d6YqdPB0qoQIpFg4Nl3k2giH8U3U.mp4", mediaType: "video", type: "glitchcore", category: "series", colors: [P.steel, P.red], tags: ["photoshop", "grok", "photoshop-ai hybrid workflow", "after effects", "glitchcore"] },
   { id: "mmlfnujgu11", title: "Angel's Shadow", img: "https://0at986lkng8uss8h.public.blob.vercel-storage.com/Glitchcore%20Angel%203-HyNO3JxpPx9oezujTTJwEuf8DXIx9e.mp4", mediaType: "video", type: "glitchcore", category: "series", colors: [P.steel, P.red], tags: ["photoshop", "grok", "photoshop-ai hybrid workflow", "after effects", "glitchcore"] },
 ];
+
+export const CURATED_WORKS = [
+  { id: "cmo907xwf0", slug: "neon-cloche-of-the-void", title: "Neon Cloche of the Void", img: "/images/curated/FINAL.mp4", mediaType: "video", category: "signature", description: "The light does not go out. The monster does not win. The pigs can muddy the water, the dragon can roar through the sine wave, but the Bible-anchored choice turns every trough into the next crest of the spiral. What was raised (not restrained) becomes the fractal forest. The Shared Wound becomes the door home for every other skull that thought the light was finished.", colors: [P.magenta, P.cyan], tags: ["photoshop", "krea", "seedance 2", "after effects", "illustrator", "premiere pro", "glitchbeast by studioaaa"] }
+];
