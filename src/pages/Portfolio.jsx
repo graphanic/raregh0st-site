@@ -10,11 +10,45 @@ import { SEO } from "../components/SEO";
 
 const CuratedCard = ({ piece, onClick }) => {
   const [hov, setHov] = useState(false);
+  const videoRef = useRef(null);
+  const isVideo = piece.mediaType === "video" && piece.img;
+
+  useEffect(() => {
+    if (!isVideo || !videoRef.current) return;
+    if (hov) {
+      videoRef.current.play().catch(() => {});
+    } else {
+      videoRef.current.pause();
+    }
+  }, [hov, isVideo]);
+
   return (
     <div onClick={onClick} onMouseEnter={() => setHov(true)} onMouseLeave={() => setHov(false)} style={{ cursor: "pointer", transition: "all 0.4s" }}>
-      <div style={{ overflow: "hidden", border: `1px solid ${hov ? piece.colors[0] + "33" : P.steel + "0a"}`, transition: "all 0.4s" }}>
-        {piece.img ? <img src={piece.img} alt={piece.title} style={{ width: "100%", aspectRatio: "4/5", objectFit: "cover", transform: hov ? "scale(1.03)" : "scale(1)", transition: "transform 0.6s cubic-bezier(0.16,1,0.3,1)" }} />
-        : <div style={{ transform: hov ? "scale(1.03)" : "scale(1)", transition: "transform 0.6s cubic-bezier(0.16,1,0.3,1)" }}><PortfolioPlaceholder colors={piece.colors} /></div>}
+      <div style={{ overflow: "hidden", border: `1px solid ${hov ? piece.colors[0] + "33" : P.steel + "0a"}`, transition: "all 0.4s", position: "relative" }}>
+        {isVideo ? (
+          <div style={{ position: "relative", width: "100%", aspectRatio: "4/5", background: `linear-gradient(135deg, ${P.abyss}, ${piece.colors[0]}0c, ${piece.colors[1] || piece.colors[0]}0e, ${P.abyss})`, overflow: "hidden" }}>
+            <video
+              ref={videoRef}
+              src={piece.img}
+              muted
+              loop
+              playsInline
+              preload="metadata"
+              style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block", transform: hov ? "scale(1.03)" : "scale(1)", transition: "transform 0.6s cubic-bezier(0.16,1,0.3,1)" }}
+            />
+            {!hov && (
+              <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                <div style={{ width: 48, height: 48, borderRadius: "50%", border: `2px solid ${P.ghost}44`, display: "flex", alignItems: "center", justifyContent: "center", background: `${P.abyss}88`, backdropFilter: "blur(4px)" }}>
+                  <span style={{ color: P.ghost, fontSize: 18, marginLeft: 3 }}>{"\u25B6"}</span>
+                </div>
+              </div>
+            )}
+          </div>
+        ) : piece.img ? (
+          <img src={piece.img} alt={piece.title} style={{ width: "100%", aspectRatio: "4/5", objectFit: "cover", transform: hov ? "scale(1.03)" : "scale(1)", transition: "transform 0.6s cubic-bezier(0.16,1,0.3,1)" }} />
+        ) : (
+          <div style={{ transform: hov ? "scale(1.03)" : "scale(1)", transition: "transform 0.6s cubic-bezier(0.16,1,0.3,1)" }}><PortfolioPlaceholder colors={piece.colors} /></div>
+        )}
       </div>
       <div style={{ marginTop: 14 }}>
         <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: piece.colors[0], textTransform: "uppercase", opacity: 0.7 }}>{piece.series} &mdash; {piece.year}</div>

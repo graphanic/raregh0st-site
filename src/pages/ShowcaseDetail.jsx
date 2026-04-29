@@ -18,8 +18,11 @@ const ShowcaseDetail = ({ addToCart }) => {
 
   if (!piece) return null;
 
+  const isVideo = piece.mediaType === "video" && piece.img;
+  const hasPrice = typeof piece.price === "number" && piece.price > 0;
   const galleryImages = [
-    { src: piece.img, label: piece.title },
+    // Skip the hero src in the image lightbox if it's a video — video gets its own native player.
+    ...(!isVideo && piece.img ? [{ src: piece.img, label: piece.title }] : []),
     ...(piece.details || []).map((d, i) => ({ src: d.img, label: d.label || `Detail ${i + 1}` })),
   ].filter(g => g.src);
 
@@ -44,43 +47,60 @@ const ShowcaseDetail = ({ addToCart }) => {
                   </div>
                 ))}
               </div>
-              <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                <span style={{ fontFamily: "'Courier New', monospace", fontSize: 22, fontWeight: 700, color: P.ghost }}>${piece.price}<span style={{ fontSize: 10, opacity: 0.3, marginLeft: 3 }}>CAD</span></span>
-                <button onClick={() => addToCart(piece)} style={{ background: `${piece.colors[0]}12`, border: `1px solid ${piece.colors[0]}30`, color: P.ghost, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 4, padding: "11px 24px", cursor: "pointer", textTransform: "uppercase", transition: "all 0.3s" }}
-                  onMouseEnter={(e) => { e.target.style.background = `${piece.colors[0]}22`; }}
-                  onMouseLeave={(e) => { e.target.style.background = `${piece.colors[0]}12`; }}
-                >Add to Cart</button>
-              </div>
+              {hasPrice && (
+                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <span style={{ fontFamily: "'Courier New', monospace", fontSize: 22, fontWeight: 700, color: P.ghost }}>${piece.price}<span style={{ fontSize: 10, opacity: 0.3, marginLeft: 3 }}>CAD</span></span>
+                  <button onClick={() => addToCart(piece)} style={{ background: `${piece.colors[0]}12`, border: `1px solid ${piece.colors[0]}30`, color: P.ghost, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 4, padding: "11px 24px", cursor: "pointer", textTransform: "uppercase", transition: "all 0.3s" }}
+                    onMouseEnter={(e) => { e.target.style.background = `${piece.colors[0]}22`; }}
+                    onMouseLeave={(e) => { e.target.style.background = `${piece.colors[0]}12`; }}
+                  >Add to Cart</button>
+                </div>
+              )}
             </div>
           </div>
 
-          <div
-            style={{ position: "relative", overflow: "hidden", cursor: "pointer", marginBottom: 48, border: `1px solid ${piece.colors[0]}15` }}
-            onMouseEnter={() => setImgHover(true)}
-            onMouseLeave={() => setImgHover(false)}
-            onClick={() => { if (piece.img) { setGalleryIdx(0); setGalleryOpen(true); } }}
-            onContextMenu={(e) => e.preventDefault()}
-          >
-            {piece.img ? (
-              <img src={piece.img} alt={piece.title} style={{
-                width: "100%", height: "auto", display: "block",
-                filter: imgHover ? "blur(6px) brightness(0.7)" : "blur(0) brightness(1)",
-                transform: imgHover ? "scale(1.03)" : "scale(1)",
-                transition: "all 0.5s cubic-bezier(0.16,1,0.3,1)",
-                pointerEvents: "none",
-              }} />
-            ) : <PortfolioPlaceholder colors={piece.colors} aspect="21/9" />}
-            <div style={{
-              position: "absolute", inset: 0,
-              display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
-              opacity: imgHover ? 1 : 0, transition: "opacity 0.4s ease", pointerEvents: "none",
-            }}>
-              <div style={{ width: 56, height: 56, borderRadius: "50%", border: `2px solid ${P.ghost}88`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, background: `${P.abyss}44`, backdropFilter: "blur(4px)" }}>
-                <span style={{ fontSize: 22, color: P.ghost }}>{"\u26F6"}</span>
-              </div>
-              <span style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 5, color: P.ghost, textTransform: "uppercase", textShadow: `0 2px 12px ${P.abyss}` }}>View Full Size</span>
+          {isVideo ? (
+            <div style={{ position: "relative", overflow: "hidden", marginBottom: 48, border: `1px solid ${piece.colors[0]}15` }}>
+              <video
+                src={piece.img}
+                controls
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                style={{ width: "100%", height: "auto", display: "block", background: P.abyss }}
+              />
             </div>
-          </div>
+          ) : (
+            <div
+              style={{ position: "relative", overflow: "hidden", cursor: "pointer", marginBottom: 48, border: `1px solid ${piece.colors[0]}15` }}
+              onMouseEnter={() => setImgHover(true)}
+              onMouseLeave={() => setImgHover(false)}
+              onClick={() => { if (piece.img) { setGalleryIdx(0); setGalleryOpen(true); } }}
+              onContextMenu={(e) => e.preventDefault()}
+            >
+              {piece.img ? (
+                <img src={piece.img} alt={piece.title} style={{
+                  width: "100%", height: "auto", display: "block",
+                  filter: imgHover ? "blur(6px) brightness(0.7)" : "blur(0) brightness(1)",
+                  transform: imgHover ? "scale(1.03)" : "scale(1)",
+                  transition: "all 0.5s cubic-bezier(0.16,1,0.3,1)",
+                  pointerEvents: "none",
+                }} />
+              ) : <PortfolioPlaceholder colors={piece.colors} aspect="21/9" />}
+              <div style={{
+                position: "absolute", inset: 0,
+                display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
+                opacity: imgHover ? 1 : 0, transition: "opacity 0.4s ease", pointerEvents: "none",
+              }}>
+                <div style={{ width: 56, height: 56, borderRadius: "50%", border: `2px solid ${P.ghost}88`, display: "flex", alignItems: "center", justifyContent: "center", marginBottom: 12, background: `${P.abyss}44`, backdropFilter: "blur(4px)" }}>
+                  <span style={{ fontSize: 22, color: P.ghost }}>{"\u26F6"}</span>
+                </div>
+                <span style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 5, color: P.ghost, textTransform: "uppercase", textShadow: `0 2px 12px ${P.abyss}` }}>View Full Size</span>
+              </div>
+            </div>
+          )}
 
           <div style={{ marginBottom: 48 }}>
             <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 6, color: P.bone, opacity: 0.25, textTransform: "uppercase", marginBottom: 20 }}>Details & Close-ups</div>
