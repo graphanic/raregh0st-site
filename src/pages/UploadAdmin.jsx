@@ -32,8 +32,8 @@ const CATEGORIES = {
   },
   curated: {
     label: "Curated Works",
-    subcategories: ["signature", "series", "collection"],
-    fields: ["title", "description", "tags", "colors"],
+    subcategories: ["Kaleidoscope", "Revelations"],
+    fields: ["title", "year", "medium", "price", "edition", "description", "tags", "colors"],
     folder: "curated",
   },
 };
@@ -378,6 +378,28 @@ const ItemEditor = ({ item, index, onUpdate, onRemove, categoryConfig }) => {
             <textarea value={item.description || ""} onChange={e => update("description", e.target.value)} rows={3} style={{ ...inputStyle, resize: "vertical" }} placeholder="Describe the piece..." />
           </div>
         )}
+        {fields.includes("medium") && (
+          <div>
+            <label style={labelStyle}>Medium</label>
+            <input value={item.medium || ""} onChange={e => update("medium", e.target.value)} style={inputStyle} placeholder="Digital Collage / Photoshop + AI Composite" />
+          </div>
+        )}
+        {(fields.includes("price") || fields.includes("edition")) && (
+          <div style={{ display: "flex", gap: "12px" }}>
+            {fields.includes("price") && (
+              <div style={{ flex: 1 }}>
+                <label style={labelStyle}>Price (CAD)</label>
+                <input type="number" value={item.price || ""} onChange={e => update("price", e.target.value)} style={inputStyle} placeholder="250 (leave empty for non-sale)" />
+              </div>
+            )}
+            {fields.includes("edition") && (
+              <div style={{ flex: 2 }}>
+                <label style={labelStyle}>Edition</label>
+                <input value={item.edition || ""} onChange={e => update("edition", e.target.value)} style={inputStyle} placeholder="1/1 Original + 10 Prints" />
+              </div>
+            )}
+          </div>
+        )}
         {fields.includes("deliverables") && (
           <div>
             <label style={labelStyle}>Deliverables</label>
@@ -433,6 +455,9 @@ function mapExisting(items, cat) {
     process: item.process || "",
     duration: item.duration || "",
     type: item.type || "",
+    medium: item.medium || "",
+    price: item.price != null ? String(item.price) : "",
+    edition: item.edition || "",
     colors: (item.colors || []).map(c => {
       const found = AVAILABLE_COLORS.find(ac => COLOR_MAP[ac.value] === c);
       return found ? found.value : null;
@@ -533,6 +558,9 @@ export const UploadAdmin = () => {
         process: "",
         duration: "",
         type: "",
+        medium: "",
+        price: "",
+        edition: "",
         deliverables: [],
         tags: [],
         colors: [],
@@ -563,6 +591,31 @@ export const UploadAdmin = () => {
     if (items.length === 0) return "// No items staged yet.";
 
     const folder = categoryConfig.folder;
+
+    // ── Curated is a SPECIAL CASE — it lives in src/data/pieces.js with its own schema (PIECES array). ──
+    if (category === "curated") {
+      const maxId = Math.max(0, ...PIECES.map(p => (typeof p.id === "number" ? p.id : 0)));
+      const lines = items.map((it, i) => {
+        const newId = maxId + i + 1;
+        const colorsStr = it.colors.length > 0 ? `[${it.colors.join(", ")}]` : "[]";
+        const tagsStr = it.tags.length > 0 ? `[${it.tags.map(t => `"${t}"`).join(", ")}]` : "[]";
+        const filePath = `/images/curated/${it.filename}`;
+        let obj = `  { id: ${newId}, title: "${it.title.replace(/"/g, '\\"')}"`;
+        if (it.year) obj += `, year: "${it.year}"`;
+        if (it.subcategory) obj += `, series: "${it.subcategory}"`;
+        if (it.medium) obj += `, medium: "${it.medium.replace(/"/g, '\\"')}"`;
+        if (it.description) obj += `, description: "${it.description.replace(/"/g, '\\"')}"`;
+        if (it.price) obj += `, price: ${Number(it.price)}`;
+        if (it.edition) obj += `, edition: "${it.edition.replace(/"/g, '\\"')}"`;
+        obj += `, colors: ${colorsStr}, tags: ${tagsStr}, img: "${filePath}"`;
+        if (it.mediaType === "video") obj += `, mediaType: "video"`;
+        obj += ` }`;
+        return obj;
+      });
+      const fileList = items.map(it => `//   ${it.filename}  -->  public/images/curated/${it.filename}`).join("\n");
+      return `// ─── STEP 1: Copy these files into your public/ folder ───\n${fileList}\n\n// ─── STEP 2: Add these entries to the PIECES array in src/data/pieces.js ───\n${lines.join(",\n")}`;
+    }
+
     const arrayName = category === "design" ? "DESIGN_PROJECTS" :
                       category === "photography" ? "PHOTO_GALLERY" :
                       category === "ai-human" ? "AI_WORKS" :
