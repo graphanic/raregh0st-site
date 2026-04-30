@@ -71,9 +71,9 @@ export const adminGetDashboard = (token) =>
   fetch("/api/admin/dashboard", { headers: adminHeaders(token) }).then(j);
 
 export const adminGetAishReport = (token, month) =>
-  fetch(`/api/admin/aish-report?month=${month}`, { headers: adminHeaders(token) }).then(j);
+  fetch(`/api/admin/dashboard?report=aish&month=${month}`, { headers: adminHeaders(token) }).then(j);
 
-export const adminAishCsvUrl = (month) => `/api/admin/aish-report?month=${month}&format=csv`;
+export const adminAishCsvUrl = (month) => `/api/admin/dashboard?report=aish&month=${month}&format=csv`;
 
 export const adminSyncPrintful = (token) =>
   fetch("/api/admin/printful", {

@@ -28,9 +28,12 @@ import { About } from "./pages/About";
 import Shop from "./pages/Shop";
 import { Contact } from "./pages/Contact";
 import { Cart } from "./pages/Cart";
+import { CheckoutSuccess } from "./pages/CheckoutSuccess";
+import { CheckoutCancel } from "./pages/CheckoutCancel";
 import { LegalPage } from "./pages/LegalPage";
 import { NotFound } from "./pages/NotFound";
 import { UploadAdmin } from "./pages/UploadAdmin";
+import AdminStore from "./pages/AdminStore";
 
 // Styles
 import "./styles/global.css";
@@ -133,6 +136,11 @@ export default function App() {
       saveLocal("cart", next);
       return next;
     });
+  }, []);
+
+  const clearCart = useCallback(() => {
+    setCart([]);
+    saveLocal("cart", []);
   }, []);
 
   // Persist tab state
@@ -307,10 +315,16 @@ export default function App() {
               path="/cart"
               element={<Cart cart={cart} removeFromCart={removeFromCart} />}
             />
+            <Route
+              path="/checkout/success"
+              element={<CheckoutSuccess onClearCart={clearCart} />}
+            />
+            <Route path="/checkout/cancel" element={<CheckoutCancel />} />
           <Route path="/privacy" element={<LegalPage page="privacy" />} />
           <Route path="/terms" element={<LegalPage page="terms" />} />
           <Route path="/shipping" element={<LegalPage page="shipping" />} />
           <Route path="/admin/upload" element={<UploadAdmin />} />
+          <Route path="/admin/store" element={<AdminStore />} />
           <Route path="*" element={<NotFound />} />
           </Routes>
           <Footer />
