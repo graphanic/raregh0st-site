@@ -163,7 +163,7 @@ const ColorPicker = ({ selected, onChange }) => (
 );
 
 // ─── Gallery Editor (for design projects) ──────────────
-const GalleryEditor = ({ gallery, onChange, folder }) => {
+const GalleryEditor = ({ gallery, onChange, folder, onUpload }) => {
   const fileRefs = useRef({});
 
   const updateSlot = (idx, updates) => {
@@ -178,7 +178,7 @@ const GalleryEditor = ({ gallery, onChange, folder }) => {
   };
 
   const addSlot = () => {
-    onChange([...gallery, { file: null, filename: "", thumbnailUrl: "", title: "", caption: "" }]);
+    onChange([...gallery, { file: null, filename: "", thumbnailUrl: "", title: "", caption: "", blobUrl: "", uploadStatus: "" }]);
   };
 
   const handleFile = (idx, e) => {
@@ -190,7 +190,16 @@ const GalleryEditor = ({ gallery, onChange, folder }) => {
       filename: file.name,
       thumbnailUrl: URL.createObjectURL(file),
       title: cleanName,
+      blobUrl: "",
+      uploadStatus: "uploading",
+      uploadError: "",
     });
+    // Kick off upload
+    if (onUpload) {
+      onUpload(file, folder)
+        .then(({ url }) => updateSlot(idx, { blobUrl: url, uploadStatus: "uploaded" }))
+        .catch((err) => updateSlot(idx, { uploadStatus: "failed", uploadError: err.message }));
+    }
   };
 
   return (
@@ -219,6 +228,7 @@ const GalleryEditor = ({ gallery, onChange, folder }) => {
                 style={{ display: "none" }}
                 onChange={e => handleFile(idx, e)}
               />
+              <UploadStatusBadge status={g.uploadStatus} error={g.uploadError} />
             </div>
 
             {/* Fields */}
@@ -273,8 +283,31 @@ const GalleryEditor = ({ gallery, onChange, folder }) => {
   );
 };
 
+// ─── Upload status badge ────────────────────────────────
+const UploadStatusBadge = ({ status, error }) => {
+  if (!status) return null;
+  const config = {
+    uploading: { bg: `${P.amber}20`, fg: P.amber, label: "UPLOADING\u2026" },
+    uploaded: { bg: `${P.green}20`, fg: P.green, label: "UPLOADED" },
+    failed: { bg: `${P.magenta}20`, fg: P.magenta, label: "FAILED" },
+  }[status];
+  if (!config) return null;
+  return (
+    <div style={{ marginTop: "6px", display: "flex", flexDirection: "column", gap: "4px", alignItems: "stretch" }}>
+      <span style={{ background: config.bg, color: config.fg, padding: "3px 8px", borderRadius: "3px", fontSize: "0.65rem", fontWeight: 700, letterSpacing: "0.06em", textAlign: "center" }}>
+        {config.label}
+      </span>
+      {status === "failed" && error && (
+        <span style={{ color: P.magenta, fontSize: "0.65rem", lineHeight: 1.3 }} title={error}>
+          {error.length > 40 ? error.slice(0, 40) + "\u2026" : error}
+        </span>
+      )}
+    </div>
+  );
+};
+
 // ─── Single Item Editor ─────────────────────────────────
-const ItemEditor = ({ item, index, onUpdate, onRemove, categoryConfig }) => {
+const ItemEditor = ({ item, index, onUpdate, onRemove, categoryConfig, onUpload }) => {
   const fields = categoryConfig.fields;
   const update = (key, val) => onUpdate(index, { ...item, [key]: val });
 
@@ -300,6 +333,7 @@ const ItemEditor = ({ item, index, onUpdate, onRemove, categoryConfig }) => {
               {item.filename || "No media"}
             </div>
           )}
+          <UploadStatusBadge status={item.uploadStatus} error={item.uploadError} />
         </div>
 
         {/* Core fields: Title + Subcategory */}
@@ -430,6 +464,7 @@ const ItemEditor = ({ item, index, onUpdate, onRemove, categoryConfig }) => {
               gallery={item.gallery || []}
               onChange={v => update("gallery", v)}
               folder={categoryConfig.folder}
+              onUpload={onUpload}
             />
           </div>
         )}
@@ -498,10 +533,20 @@ export const UploadAdmin = () => {
 
   const categoryConfig = CATEGORIES[category];
 
-  /* check stored session */
+  /* check stored session — token is base64(password:YYYY-MM-DD), expires daily */
   useEffect(() => {
     const token = sessionStorage.getItem("admin_token");
-    if (token) setAuthed(true);
+    if (!token) return;
+    try {
+      const decoded = atob(token);
+      const idx = decoded.lastIndexOf(":");
+      const date = idx === -1 ? "" : decoded.slice(idx + 1);
+      const today = new Date().toISOString().split("T")[0];
+      if (date === today) setAuthed(true);
+      else sessionStorage.removeItem("admin_token");
+    } catch {
+      sessionStorage.removeItem("admin_token");
+    }
   }, []);
 
   /* load existing data once authed */
@@ -517,17 +562,24 @@ export const UploadAdmin = () => {
     setLiveItems(all);
   }, [authed]);
 
-  /* login — client-side only, no API needed */
-  const handleLogin = () => {
-    // Simple hash check — not military-grade, but keeps random visitors out.
-    // Change this passphrase to whatever you want.
-    const ADMIN_PASS = "gh0st2024";
-    if (password === ADMIN_PASS) {
-      sessionStorage.setItem("admin_token", "local-admin");
+  /* login — calls /api/auth so we get a real backend token for uploads */
+  const handleLogin = async () => {
+    setAuthError("");
+    try {
+      const res = await fetch("/api/auth", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.token) {
+        setAuthError(data.error || "Invalid password");
+        return;
+      }
+      sessionStorage.setItem("admin_token", data.token);
       setAuthed(true);
-      setAuthError("");
-    } else {
-      setAuthError("Invalid password");
+    } catch (err) {
+      setAuthError("Login failed: " + (err.message || "network error"));
     }
   };
 
@@ -537,9 +589,28 @@ export const UploadAdmin = () => {
     setConfirmDeleteId(null);
   };
 
-  // ─── Add files as staged items with thumbnails ─────
+  // ─── Upload a file to Vercel Blob, return { url, pathname } or throw ─────
+  const uploadToBlob = async (file, folder) => {
+    const token = sessionStorage.getItem("admin_token") || "";
+    const res = await fetch("/api/admin/portfolio-upload", {
+      method: "POST",
+      headers: {
+        "x-admin-token": token,
+        "x-filename": file.name,
+        "x-folder": folder,
+        "content-type": file.type || "application/octet-stream",
+      },
+      body: file,
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || `Upload failed (${res.status})`);
+    return data; // { url, pathname }
+  };
+
+  // ─── Add files as staged items with thumbnails — auto-uploads to Blob ─────
   const handleFileSelect = (e) => {
     const selectedFiles = Array.from(e.target.files);
+    const startIndex = items.length;
     const newItems = selectedFiles.map(file => {
       const cleanName = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " ").replace(/PXL \d{8} \d+/i, "Untitled");
       const isVideo = file.type.startsWith("video/") || isVideoFile(file.name);
@@ -548,6 +619,9 @@ export const UploadAdmin = () => {
         filename: file.name,
         thumbnailUrl: URL.createObjectURL(file),
         mediaType: isVideo ? "video" : "image",
+        uploadStatus: "uploading", // "uploading" | "uploaded" | "failed"
+        uploadError: "",
+        blobUrl: "",
         title: cleanName,
         subcategory: "",
         year: new Date().getFullYear().toString(),
@@ -565,13 +639,26 @@ export const UploadAdmin = () => {
         tags: [],
         colors: [],
         gallery: category === "design" ? [
-          { file: null, filename: "", thumbnailUrl: "", title: "", caption: "" },
-          { file: null, filename: "", thumbnailUrl: "", title: "", caption: "" },
+          { file: null, filename: "", thumbnailUrl: "", title: "", caption: "", blobUrl: "", uploadStatus: "" },
+          { file: null, filename: "", thumbnailUrl: "", title: "", caption: "", blobUrl: "", uploadStatus: "" },
         ] : [],
       };
     });
     setItems(prev => [...prev, ...newItems]);
     if (fileInputRef.current) fileInputRef.current.value = "";
+
+    // Kick off uploads in parallel, update each item as it completes
+    const folder = CATEGORIES[category].folder;
+    selectedFiles.forEach((file, i) => {
+      const targetIdx = startIndex + i;
+      uploadToBlob(file, folder)
+        .then(({ url }) => {
+          setItems(prev => prev.map((it, idx) => idx === targetIdx ? { ...it, blobUrl: url, uploadStatus: "uploaded" } : it));
+        })
+        .catch((err) => {
+          setItems(prev => prev.map((it, idx) => idx === targetIdx ? { ...it, uploadStatus: "failed", uploadError: err.message } : it));
+        });
+    });
   };
 
   const updateItem = (index, updated) => {
@@ -599,7 +686,8 @@ export const UploadAdmin = () => {
         const newId = maxId + i + 1;
         const colorsStr = it.colors.length > 0 ? `[${it.colors.join(", ")}]` : "[]";
         const tagsStr = it.tags.length > 0 ? `[${it.tags.map(t => `"${t}"`).join(", ")}]` : "[]";
-        const filePath = `/images/curated/${it.filename}`;
+        // Prefer Blob URL when uploaded; fall back to local path with a warning
+        const filePath = it.blobUrl || `/images/curated/${it.filename}`;
         let obj = `  { id: ${newId}, title: "${it.title.replace(/"/g, '\\"')}"`;
         if (it.year) obj += `, year: "${it.year}"`;
         if (it.subcategory) obj += `, series: "${it.subcategory}"`;
@@ -612,8 +700,11 @@ export const UploadAdmin = () => {
         obj += ` }`;
         return obj;
       });
-      const fileList = items.map(it => `//   ${it.filename}  -->  public/images/curated/${it.filename}`).join("\n");
-      return `// ─── STEP 1: Copy these files into your public/ folder ───\n${fileList}\n\n// ─── STEP 2: Add these entries to the PIECES array in src/data/pieces.js ───\n${lines.join(",\n")}`;
+      const allUploaded = items.every(it => it.blobUrl);
+      const stepHeader = allUploaded
+        ? `// All files uploaded to Vercel Blob — paste the entries below into the PIECES array in src/data/pieces.js`
+        : `// WARNING: Some files did not upload to Blob. Items missing a Blob URL fall back to a local path —\n// you will need to copy those into public/images/curated/ manually for them to show on the live site.`;
+      return `${stepHeader}\n\n// ─── Add these entries to the PIECES array in src/data/pieces.js ───\n${lines.join(",\n")}`;
     }
 
     const arrayName = category === "design" ? "DESIGN_PROJECTS" :
@@ -626,8 +717,8 @@ export const UploadAdmin = () => {
       const colorsStr = it.colors.length > 0 ? `[${it.colors.join(", ")}]` : "[]";
       const tagsStr = it.tags.length > 0 ? `[${it.tags.map(t => `"${t}"`).join(", ")}]` : "[]";
 
-      // Build the public/ path from the filename
-      const filePath = `/images/${folder}/${it.filename}`;
+      // Prefer Blob URL when uploaded; fall back to local path with a warning
+      const filePath = it.blobUrl || `/images/${folder}/${it.filename}`;
 
       const slug = slugify(it.title);
       let obj = `  { id: "${id}", slug: "${slug}", title: "${it.title}", img: "${filePath}"`;
@@ -645,11 +736,12 @@ export const UploadAdmin = () => {
       if (it.deliverables && it.deliverables.length > 0) obj += `, deliverables: [${it.deliverables.map(d => `"${d}"`).join(", ")}]`;
       obj += `, colors: ${colorsStr}, tags: ${tagsStr}`;
 
-      // Gallery images (design only)
+      // Gallery images (design only) — prefer Blob URL when uploaded
       const galleryWithFiles = (it.gallery || []).filter(g => g.filename);
       if (galleryWithFiles.length > 0) {
         const galleryStr = galleryWithFiles.map(g => {
-          let gObj = `{ img: "/images/${folder}/${g.filename}"`;
+          const gPath = g.blobUrl || `/images/${folder}/${g.filename}`;
+          let gObj = `{ img: "${gPath}"`;
           if (g.title) gObj += `, title: "${g.title.replace(/"/g, '\\"')}"`;
           if (g.caption) gObj += `, caption: "${g.caption.replace(/"/g, '\\"')}"`;
           gObj += ` }`;
@@ -662,12 +754,16 @@ export const UploadAdmin = () => {
       return obj;
     });
 
-    // Include gallery filenames in the file list
-    const galleryFiles = items.flatMap(it => (it.gallery || []).filter(g => g.filename).map(g => `//   ${g.filename}  -->  public/images/${folder}/${g.filename}`));
-    const mainFiles = items.map(it => `//   ${it.filename}  -->  public/images/${folder}/${it.filename}`);
-    const fileList = [...mainFiles, ...galleryFiles].join("\n");
+    // Build a status header — list any items that didn't upload to Blob successfully
+    const missingMain = items.filter(it => !it.blobUrl).map(it => `//   ${it.filename}`);
+    const missingGallery = items.flatMap(it => (it.gallery || []).filter(g => g.filename && !g.blobUrl).map(g => `//   ${g.filename}`));
+    const missing = [...missingMain, ...missingGallery];
 
-    return `// ─── STEP 1: Copy these files into your public/ folder ───\n${fileList}\n\n// ─── STEP 2: Add to ${arrayName} in src/data/portfolio.js ───\n[\n${lines.join(",\n")}\n]`;
+    const stepHeader = missing.length === 0
+      ? `// All files uploaded to Vercel Blob — just paste the array below into ${arrayName} in src/data/portfolio.js`
+      : `// WARNING: ${missing.length} file(s) did not upload to Blob.\n// Those items fall back to local paths — copy them into public/images/${folder}/ manually for them to show:\n${missing.join("\n")}`;
+
+    return `${stepHeader}\n\n// ─── Add to ${arrayName} in src/data/portfolio.js ───\n[\n${lines.join(",\n")}\n]`;
   };
 
   const handleGenerateCode = () => {
@@ -728,14 +824,14 @@ export const UploadAdmin = () => {
 
         {/* How it works banner */}
         <div style={{ ...cardStyle, border: `1px solid ${P.amber}30`, background: `${P.amber}08` }}>
-          <h3 style={{ color: P.amber, fontSize: "0.9rem", marginBottom: "10px", letterSpacing: "0.05em" }}>HOW IT WORKS (NO CLOUD UPLOAD NEEDED)</h3>
+          <h3 style={{ color: P.amber, fontSize: "0.9rem", marginBottom: "10px", letterSpacing: "0.05em" }}>HOW IT WORKS (FILES AUTO-UPLOAD TO CLOUD)</h3>
           <ol style={{ color: P.ghost, fontSize: "0.85rem", lineHeight: 1.8, margin: 0, paddingLeft: "20px" }}>
-            <li>Pick files below to <strong>stage</strong> them (they stay on your computer)</li>
-            <li>Fill in titles, tags, descriptions, colors</li>
-            <li>Click <strong>"Generate Code"</strong> to get the data snippet</li>
-            <li>Copy the actual image/video files into <code style={{ color: P.cyan, background: `${P.cyan}12`, padding: "1px 6px", borderRadius: "3px" }}>public/images/{'{category}'}/</code></li>
-            <li>Paste the generated code into <code style={{ color: P.cyan, background: `${P.cyan}12`, padding: "1px 6px", borderRadius: "3px" }}>src/data/portfolio.js</code></li>
-            <li>Push to GitHub and Render auto-deploys</li>
+            <li>Pick files below — they upload to <strong>Vercel Blob</strong> automatically in the background</li>
+            <li>Fill in titles, tags, descriptions, colors while upload runs</li>
+            <li>Wait for each item to show <span style={{ color: P.green, fontWeight: 600 }}>UPLOADED</span> (green badge)</li>
+            <li>Click <strong>"Generate Code"</strong> to get the data snippet (uses real cloud URLs — no manual file copying)</li>
+            <li>Paste the generated code into <code style={{ color: P.cyan, background: `${P.cyan}12`, padding: "1px 6px", borderRadius: "3px" }}>src/data/portfolio.js</code> (you can do this directly on GitHub.com)</li>
+            <li>Commit on GitHub and Render auto-deploys — your photos will be live</li>
           </ol>
         </div>
 
@@ -910,14 +1006,24 @@ export const UploadAdmin = () => {
               </div>
             </div>
 
-            {/* File destination reminder */}
-            {items.length > 0 && (
-              <div style={{ ...cardStyle, padding: "14px 20px", border: `1px solid ${P.cyan}25`, background: `${P.cyan}06` }}>
-                <p style={{ color: P.cyan, fontSize: "0.8rem", margin: 0 }}>
-                  Files will go in: <code style={{ background: `${P.cyan}15`, padding: "2px 8px", borderRadius: "3px" }}>public/images/{categoryConfig.folder}/</code>
-                </p>
-              </div>
-            )}
+            {/* Upload status reminder */}
+            {items.length > 0 && (() => {
+              const uploading = items.filter(it => it.uploadStatus === "uploading").length;
+              const failed = items.filter(it => it.uploadStatus === "failed").length;
+              const uploaded = items.filter(it => it.uploadStatus === "uploaded").length;
+              const tone = failed > 0 ? P.magenta : uploading > 0 ? P.amber : P.green;
+              return (
+                <div style={{ ...cardStyle, padding: "14px 20px", border: `1px solid ${tone}30`, background: `${tone}08` }}>
+                  <p style={{ color: tone, fontSize: "0.8rem", margin: 0 }}>
+                    Uploads to <code style={{ background: `${P.cyan}15`, padding: "2px 8px", borderRadius: "3px", color: P.cyan }}>blob/portfolio/{categoryConfig.folder}/</code>
+                    {" \u2014 "}
+                    <strong>{uploaded}</strong> uploaded
+                    {uploading > 0 && <> &middot; <strong>{uploading}</strong> in progress</>}
+                    {failed > 0 && <> &middot; <strong style={{ color: P.magenta }}>{failed} failed</strong></>}
+                  </p>
+                </div>
+              );
+            })()}
 
             {/* Staged items */}
             {items.length > 0 && (
@@ -926,13 +1032,20 @@ export const UploadAdmin = () => {
                   <h2 style={{ color: P.ghost, fontSize: "1.4rem" }}>
                     Items ({items.length})
                   </h2>
-                  <button onClick={handleGenerateCode} disabled={itemCount === 0} style={btnPrimary(itemCount === 0)}>
-                    Generate Code
-                  </button>
+                  {(() => {
+                    const stillUploading = items.some(it => it.uploadStatus === "uploading") ||
+                      items.some(it => (it.gallery || []).some(g => g.uploadStatus === "uploading"));
+                    const disabled = itemCount === 0 || stillUploading;
+                    return (
+                      <button onClick={handleGenerateCode} disabled={disabled} style={btnPrimary(disabled)} title={stillUploading ? "Wait for uploads to finish" : ""}>
+                        {stillUploading ? "Uploading\u2026" : "Generate Code"}
+                      </button>
+                    );
+                  })()}
                 </div>
 
                 {items.map((item, i) => (
-                  <ItemEditor key={i} item={item} index={i} onUpdate={updateItem} onRemove={removeItem} categoryConfig={categoryConfig} />
+                  <ItemEditor key={i} item={item} index={i} onUpdate={updateItem} onRemove={removeItem} categoryConfig={categoryConfig} onUpload={uploadToBlob} />
                 ))}
               </div>
             )}
