@@ -1,3 +1,4 @@
+// Admin authentication handler
 export default function handler(req, res) {
   res.setHeader('Content-Type', 'application/json');
 
