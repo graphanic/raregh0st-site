@@ -16,8 +16,7 @@ import { CookieConsent } from "./components/CookieConsent";
 import { SpotifyBar } from "./components/SpotifyBar";
 
 // Pages
-import Hero from "./pages/Hero";
-import { MobileHub } from "./pages/MobileHub";
+import HomePage from "./pages/HomePage";
 import Portfolio from "./pages/Portfolio";
 import ShowcaseDetail from "./pages/ShowcaseDetail";
 import CaseStudyDetail from "./pages/CaseStudyDetail";
@@ -164,8 +163,8 @@ export default function App() {
         {loading && <Preloader onComplete={() => setLoading(false)} />}
         {!isMobile && <Particles />}
 
-        {/* Desktop nav on all pages */}
-        {!isMobile && <Nav cartCount={cart.length} />}
+        {/* Desktop nav on all pages; also on the mobile home (responsive hamburger) */}
+        {(!isMobile || isHome) && <Nav cartCount={cart.length} />}
 
         {/* Mobile: minimal sticky header for inner pages */}
         {isMobile && !isHome && (
@@ -277,16 +276,7 @@ export default function App() {
           data-protected
         >
           <Routes>
-            <Route
-              path="/"
-              element={
-                isMobile ? (
-                  <MobileHub cartCount={cart.length} />
-                ) : (
-                  <Hero />
-                )
-              }
-            />
+            <Route path="/" element={<HomePage />} />
             <Route
               path="/portfolio"
               element={
