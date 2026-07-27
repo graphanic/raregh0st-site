@@ -84,7 +84,7 @@ function HeroSection({ isMobile }) {
           style={{
             fontFamily: "'Courier New', monospace",
             fontSize: isMobile ? 46 : 104,
-            fontWeight: 700,
+            fontWeight: 400,
             letterSpacing: isMobile ? 4 : 10,
             lineHeight: 1,
             margin: 0,
