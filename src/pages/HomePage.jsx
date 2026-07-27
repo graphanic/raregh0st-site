@@ -1,10 +1,13 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { P, ART_IMGS, LOGO_IMG } from "../data/palette";
 import { PIECES } from "../data/pieces";
 import { SEO } from "../components/SEO";
 import { MorphText, HoverMorphText, ScrollMorphText } from "../components/MorphText";
 import { useIsMobile } from "../hooks/useIsMobile";
+import { GalleryFocus } from "../components/home/GalleryFocus";
+import { InquireModal } from "../components/home/InquireModal";
+import { AVAILABILITY } from "../components/home/availability";
 
 // Destination cards — functionally replace the orbiting solar-system nav
 const DESTINATIONS = [
@@ -221,7 +224,7 @@ function SectionHead({ kicker, title, color = P.cyan, link, linkLabel }) {
           style={{
             fontFamily: "'Courier New', monospace",
             fontSize: 26,
-            fontWeight: 700,
+            fontWeight: 400,
             letterSpacing: 3,
             color: P.ghost,
             margin: 0,
@@ -253,106 +256,216 @@ function SectionHead({ kicker, title, color = P.cyan, link, linkLabel }) {
   );
 }
 
-// ─── FEATURED WORKS ──────────────────────────────────────
-function WorkCard({ piece, large }) {
+// ─── GALLERY ─────────────────────────────────────────────
+function AvailabilityDot({ availability }) {
+  const av = AVAILABILITY[availability] || AVAILABILITY.available;
+  return (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: av.color, boxShadow: `0 0 6px ${av.color}` }} />
+      <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 2, color: av.color, textTransform: "uppercase" }}>{av.label}</span>
+    </span>
+  );
+}
+
+function GalleryCard({ piece, onOpen, isMobile }) {
   const [hover, setHover] = useState(false);
   const accent = piece.colors?.[0] || P.cyan;
+  const isVideo = piece.mediaType === "video";
   return (
-    <Link
-      to={`/portfolio/${piece.id}`}
+    <button
+      onClick={onOpen}
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
+      aria-label={`Open ${piece.title} in focus view`}
       style={{
         position: "relative",
         display: "block",
-        textDecoration: "none",
+        padding: 0,
+        cursor: "pointer",
+        textAlign: "left",
         borderRadius: 3,
         overflow: "hidden",
         border: `1px solid ${hover ? accent + "66" : P.steel + "22"}`,
         background: P.void,
-        gridColumn: large ? "span 2" : "span 1",
-        gridRow: large ? "span 2" : "span 1",
-        transition: "border-color 0.3s ease",
+        transition: "border-color 0.3s ease, box-shadow 0.3s ease",
         boxShadow: hover ? `0 0 32px ${accent}22` : "none",
+        minHeight: isMobile ? 260 : 300,
       }}
     >
-      <div style={{ position: "relative", width: "100%", height: "100%", minHeight: large ? 360 : 220 }}>
-        <img
+      {isVideo ? (
+        <video
           src={piece.img}
-          alt={piece.title}
-          style={{
-            position: "absolute",
-            inset: 0,
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-            opacity: hover ? 1 : 0.82,
-            transform: hover ? "scale(1.04)" : "scale(1)",
-            transition: "all 0.5s ease",
-          }}
+          muted
+          loop
+          playsInline
+          autoPlay
+          style={imgStyle(hover)}
         />
+      ) : (
+        <img src={piece.img} alt={piece.title} style={imgStyle(hover)} />
+      )}
+
+      {/* Media-type chip */}
+      {isVideo && (
+        <span style={{ position: "absolute", top: 12, left: 12, zIndex: 3, fontFamily: "'Courier New', monospace", fontSize: 7, letterSpacing: 2, color: P.abyss, background: accent, borderRadius: 2, padding: "3px 7px", textTransform: "uppercase" }}>
+          Motion
+        </span>
+      )}
+      <span style={{ position: "absolute", top: 12, right: 12, zIndex: 3, background: `${P.abyss}cc`, borderRadius: 2, padding: "4px 8px", backdropFilter: "blur(4px)" }}>
+        <AvailabilityDot availability={piece.availability} />
+      </span>
+
+      {/* Gradient + copy */}
+      <div style={{ position: "absolute", inset: 0, zIndex: 2, background: `linear-gradient(to top, ${P.abyss}f5 0%, ${P.abyss}55 50%, transparent 100%)` }} />
+      <div style={{ position: "absolute", left: 16, right: 16, bottom: 14, zIndex: 3 }}>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: accent, textTransform: "uppercase", marginBottom: 6 }}>
+          {piece.series} · {piece.year}
+        </div>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 14, fontWeight: 400, letterSpacing: 1, color: P.ghost, textTransform: "uppercase", lineHeight: 1.2 }}>
+          <HoverMorphText>{piece.title}</HoverMorphText>
+        </div>
+        {/* Hover-reveal metadata */}
         <div
           style={{
-            position: "absolute",
-            inset: 0,
-            background: `linear-gradient(to top, ${P.abyss}f2 0%, ${P.abyss}55 45%, transparent 100%)`,
+            maxHeight: hover ? 80 : 0,
+            opacity: hover ? 1 : 0,
+            overflow: "hidden",
+            transition: "max-height 0.4s ease, opacity 0.3s ease",
+            marginTop: hover ? 8 : 0,
           }}
-        />
-        <div style={{ position: "absolute", left: 16, right: 16, bottom: 14 }}>
-          <div
-            style={{
-              fontFamily: "'Courier New', monospace",
-              fontSize: 8,
-              letterSpacing: 3,
-              color: accent,
-              textTransform: "uppercase",
-              marginBottom: 6,
-            }}
-          >
-            {piece.series} · {piece.year}
+        >
+          <div style={{ fontFamily: "'Georgia', serif", fontStyle: "italic", fontSize: 11, color: P.bone, opacity: 0.7, lineHeight: 1.4 }}>
+            {piece.medium}
           </div>
-          <div
-            style={{
-              fontFamily: "'Courier New', monospace",
-              fontSize: large ? 18 : 13,
-              fontWeight: 700,
-              letterSpacing: 1,
-              color: P.ghost,
-              textTransform: "uppercase",
-              lineHeight: 1.2,
-            }}
-          >
-            <HoverMorphText>{piece.title}</HoverMorphText>
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
+            {typeof piece.price === "number" && piece.price > 0 && (
+              <span style={{ fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 1, color: P.gold }}>${piece.price} CAD</span>
+            )}
+            <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: accent, textTransform: "uppercase" }}>Open ↗</span>
           </div>
         </div>
       </div>
-    </Link>
+    </button>
   );
 }
 
-function FeaturedWorks({ isMobile }) {
-  const featured = PIECES.filter((p) => p.mediaType !== "video").slice(0, 5);
+function imgStyle(hover) {
+  return {
+    position: "absolute",
+    inset: 0,
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    opacity: hover ? 1 : 0.8,
+    transform: hover ? "scale(1.05)" : "scale(1)",
+    transition: "transform 0.6s ease, opacity 0.4s ease",
+  };
+}
+
+function FilterPill({ active, color, onClick, children }) {
+  const [hover, setHover] = useState(false);
+  const on = active || hover;
+  return (
+    <button
+      onClick={onClick}
+      onMouseEnter={() => setHover(true)}
+      onMouseLeave={() => setHover(false)}
+      style={{
+        fontFamily: "'Courier New', monospace",
+        fontSize: 9,
+        letterSpacing: 3,
+        textTransform: "uppercase",
+        cursor: "pointer",
+        color: active ? P.abyss : on ? color : P.bone,
+        background: active ? color : "transparent",
+        border: `1px solid ${on ? color : P.steel + "44"}`,
+        borderRadius: 2,
+        padding: "8px 14px",
+        transition: "all 0.25s ease",
+      }}
+    >
+      {children}
+    </button>
+  );
+}
+
+function Gallery({ isMobile, onInquire }) {
+  const navigate = useNavigate();
+  const [series, setSeries] = useState("All");
+  const [avail, setAvail] = useState("All");
+  const [focus, setFocus] = useState(null); // index into filtered list
+
+  const seriesOptions = useMemo(() => ["All", ...Array.from(new Set(PIECES.map((p) => p.series)))], []);
+  const availOptions = ["All", "available", "sold", "commission"];
+
+  const filtered = useMemo(
+    () =>
+      PIECES.filter(
+        (p) => (series === "All" || p.series === series) && (avail === "All" || p.availability === avail)
+      ),
+    [series, avail]
+  );
+
+  const onAcquire = (piece) => {
+    setFocus(null);
+    navigate(`/portfolio/${piece.id}`);
+  };
+  const handleInquire = (piece, mode) => {
+    setFocus(null);
+    onInquire(piece, mode);
+  };
+
   return (
     <section style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "60px 24px" : "90px 32px" }}>
-      <SectionHead
-        kicker="Selected Works"
-        title="The Gallery"
-        color={P.cyan}
-        link="/portfolio"
-        linkLabel="View All →"
-      />
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)",
-          gridAutoRows: isMobile ? "auto" : "180px",
-          gap: 14,
-        }}
-      >
-        {featured.map((piece, i) => (
-          <WorkCard key={piece.id} piece={piece} large={!isMobile && i === 0} />
-        ))}
+      <SectionHead kicker="Selected Works" title="The Gallery" color={P.cyan} link="/portfolio" linkLabel="View All →" />
+
+      {/* Filter rail */}
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 20, marginBottom: 28 }}>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+          <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: P.bone, opacity: 0.4, textTransform: "uppercase", marginRight: 2 }}>Series</span>
+          {seriesOptions.map((s) => (
+            <FilterPill key={s} active={series === s} color={P.cyan} onClick={() => setSeries(s)}>{s}</FilterPill>
+          ))}
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
+          <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: P.bone, opacity: 0.4, textTransform: "uppercase", marginRight: 2 }}>Status</span>
+          {availOptions.map((a) => (
+            <FilterPill key={a} active={avail === a} color={a === "All" ? P.magenta : (AVAILABILITY[a]?.color || P.magenta)} onClick={() => setAvail(a)}>
+              {a === "All" ? "All" : AVAILABILITY[a].label}
+            </FilterPill>
+          ))}
+        </div>
       </div>
+
+      {filtered.length === 0 ? (
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 2, color: P.bone, opacity: 0.5, padding: "40px 0", textAlign: "center" }}>
+          No works match this filter.
+        </div>
+      ) : (
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
+            gap: 14,
+          }}
+        >
+          {filtered.map((piece, i) => (
+            <GalleryCard key={piece.id} piece={piece} isMobile={isMobile} onOpen={() => setFocus(i)} />
+          ))}
+        </div>
+      )}
+
+      {focus !== null && filtered[focus] && (
+        <GalleryFocus
+          pieces={filtered}
+          index={focus}
+          isMobile={isMobile}
+          onClose={() => setFocus(null)}
+          onNav={(dir) => setFocus((cur) => (cur + dir + filtered.length) % filtered.length)}
+          onAcquire={onAcquire}
+          onInquire={handleInquire}
+        />
+      )}
     </section>
   );
 }
@@ -389,7 +502,7 @@ function DestinationCard({ item }) {
             letterSpacing: 4,
             color: item.color,
             textTransform: "uppercase",
-            fontWeight: 700,
+            fontWeight: 400,
           }}
         >
           <HoverMorphText>{item.label}</HoverMorphText>
@@ -527,6 +640,154 @@ function Manifesto({ isMobile }) {
   );
 }
 
+// ─── CONNECT: COMMISSION + NOTIFY ────────────────────────
+function NotifyForm({ isMobile }) {
+  const [email, setEmail] = useState("");
+  const [sent, setSent] = useState(false);
+  const [focus, setFocus] = useState(false);
+  const submit = (e) => {
+    e.preventDefault();
+    if (!email.trim()) return;
+    setSent(true);
+  };
+  return (
+    <div
+      style={{
+        border: `1px solid ${P.cyan}22`,
+        borderRadius: 4,
+        padding: isMobile ? "28px 24px" : "36px 36px",
+        background: `linear-gradient(150deg, ${P.void} 0%, ${P.surface} 100%)`,
+      }}
+    >
+      <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 5, color: P.cyan, textTransform: "uppercase", marginBottom: 12 }}>
+        The Signal
+      </div>
+      <div style={{ fontFamily: "'Courier New', monospace", fontSize: isMobile ? 18 : 22, fontWeight: 400, letterSpacing: 2, color: P.ghost, textTransform: "uppercase", marginBottom: 10 }}>
+        <ScrollMorphText>Get New Drops First</ScrollMorphText>
+      </div>
+      <p style={{ fontFamily: "'Georgia', serif", fontStyle: "italic", fontSize: 13, lineHeight: 1.6, color: P.bone, opacity: 0.6, margin: "0 0 22px" }}>
+        No noise. Just new work, print releases, and rare originals as they surface.
+      </p>
+      {sent ? (
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 2, color: P.green, textTransform: "uppercase" }}>
+          <MorphText speed={60}>✓ You're on the signal</MorphText>
+        </div>
+      ) : (
+        <form onSubmit={submit} style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 10 }}>
+          <input
+            type="email"
+            required
+            value={email}
+            onFocus={() => setFocus(true)}
+            onBlur={() => setFocus(false)}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="you@signal.void"
+            style={{
+              flex: 1,
+              fontFamily: "'Courier New', monospace",
+              fontSize: 13,
+              color: P.ghost,
+              background: P.abyss,
+              border: `1px solid ${focus ? P.cyan + "88" : P.steel + "55"}`,
+              borderRadius: 2,
+              padding: "13px 14px",
+              outline: "none",
+              transition: "border-color 0.2s ease",
+              boxSizing: "border-box",
+            }}
+          />
+          <button
+            type="submit"
+            style={{
+              fontFamily: "'Courier New', monospace",
+              fontSize: 10,
+              letterSpacing: 3,
+              textTransform: "uppercase",
+              color: P.abyss,
+              background: P.cyan,
+              border: `1px solid ${P.cyan}`,
+              borderRadius: 2,
+              padding: "13px 22px",
+              cursor: "pointer",
+              whiteSpace: "nowrap",
+            }}
+          >
+            <HoverMorphText>Notify Me</HoverMorphText>
+          </button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+function CommissionCard({ isMobile, onCommission }) {
+  const [hover, setHover] = useState(false);
+  return (
+    <div
+      style={{
+        position: "relative",
+        borderRadius: 4,
+        overflow: "hidden",
+        border: `1px solid ${P.gold}22`,
+        padding: isMobile ? "28px 24px" : "36px 36px",
+        background: `linear-gradient(150deg, ${P.void} 0%, ${P.surface} 100%)`,
+        display: "flex",
+        flexDirection: "column",
+        justifyContent: "space-between",
+        gap: 22,
+      }}
+    >
+      <div aria-hidden style={{ position: "absolute", inset: 0, backgroundImage: `url(${ART_IMGS[3]})`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.08 }} />
+      <div style={{ position: "relative", zIndex: 2 }}>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 5, color: P.gold, textTransform: "uppercase", marginBottom: 12 }}>
+          Commissions Open
+        </div>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: isMobile ? 18 : 22, fontWeight: 400, letterSpacing: 2, color: P.ghost, textTransform: "uppercase", marginBottom: 10 }}>
+          <ScrollMorphText>Make Your Story Visible</ScrollMorphText>
+        </div>
+        <p style={{ fontFamily: "'Georgia', serif", fontStyle: "italic", fontSize: 13, lineHeight: 1.6, color: P.bone, opacity: 0.6, margin: 0 }}>
+          Custom digital collage built around your own survival — a one-of-one piece made with you.
+        </p>
+      </div>
+      <button
+        onClick={onCommission}
+        onMouseEnter={() => setHover(true)}
+        onMouseLeave={() => setHover(false)}
+        style={{
+          position: "relative",
+          zIndex: 2,
+          alignSelf: "flex-start",
+          fontFamily: "'Courier New', monospace",
+          fontSize: 10,
+          letterSpacing: 3,
+          textTransform: "uppercase",
+          cursor: "pointer",
+          color: hover ? P.abyss : P.gold,
+          background: hover ? P.gold : "transparent",
+          border: `1px solid ${P.gold}`,
+          borderRadius: 2,
+          padding: "13px 22px",
+          transition: "all 0.25s ease",
+        }}
+      >
+        <HoverMorphText>Start a Commission</HoverMorphText>
+      </button>
+    </div>
+  );
+}
+
+function ConnectSection({ isMobile, onCommission }) {
+  return (
+    <section style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "60px 24px" : "90px 32px", borderTop: `1px solid ${P.steel}12` }}>
+      <SectionHead kicker="Connect" title="Own It · Make It · Follow It" color={P.gold} />
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
+        <CommissionCard isMobile={isMobile} onCommission={onCommission} />
+        <NotifyForm isMobile={isMobile} />
+      </div>
+    </section>
+  );
+}
+
 // ─── SHOP CTA ────────────────────────────────────────────
 function ShopCta({ isMobile }) {
   const [hover, setHover] = useState(false);
@@ -581,7 +842,7 @@ function ShopCta({ isMobile }) {
             style={{
               fontFamily: "'Courier New', monospace",
               fontSize: isMobile ? 22 : 30,
-              fontWeight: 700,
+              fontWeight: 400,
               letterSpacing: 2,
               color: P.ghost,
               textTransform: "uppercase",
@@ -617,6 +878,11 @@ function ShopCta({ isMobile }) {
 // ─── PAGE ────────────────────────────────────────────────
 export default function HomePage() {
   const isMobile = useIsMobile();
+  const [inquire, setInquire] = useState({ open: false, mode: "inquire", piece: null });
+
+  const openInquire = (piece, mode = "inquire") => setInquire({ open: true, mode, piece });
+  const closeInquire = () => setInquire((s) => ({ ...s, open: false }));
+
   return (
     <main
       style={{
@@ -625,10 +891,19 @@ export default function HomePage() {
     >
       <SEO />
       <HeroSection isMobile={isMobile} />
-      <FeaturedWorks isMobile={isMobile} />
+      <Gallery isMobile={isMobile} onInquire={openInquire} />
       <Destinations isMobile={isMobile} />
       <Manifesto isMobile={isMobile} />
+      <ConnectSection isMobile={isMobile} onCommission={() => openInquire(null, "commission")} />
       <ShopCta isMobile={isMobile} />
+
+      <InquireModal
+        open={inquire.open}
+        mode={inquire.mode}
+        piece={inquire.piece}
+        isMobile={isMobile}
+        onClose={closeInquire}
+      />
     </main>
   );
 }
