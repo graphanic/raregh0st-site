@@ -6,7 +6,7 @@ import { SEO } from "../components/SEO";
 
 /* ─── PORTRAIT ───────────────────────────────────────── */
 const PORTRAIT_URL =
-  "https://0at986lkng8uss8h.public.blob.vercel-storage.com/20-wvmXjmJW2nc3nnVRelNtBQYM84AmuN.png";
+  "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/IMG_20260723_215820_115-omBagqW9SaKlXl8w1Aae5mn8Ax83NJ.webp";
 
 /* ─── TOOLKIT DATA ───────────────────────────────────── */
 const TOOLKIT = [
@@ -174,19 +174,13 @@ const WeightSection = ({ vis }) => (
       }}
     >
       <p style={{ marginTop: 0, marginBottom: 28 }}>
-        The brain injury came at seven. The first time homeless, at fifteen.
-        Then the spiral &mdash; years of it. Shattered, extorted, left behind.
-        No stable frame could hold the whole of it.
+        My art began as a way to survive experiences I did not yet have language for. When ordinary words failed, images became a second nervous system—a place where trauma, beauty, contradiction, and meaning could exist together without being forced into a simple conclusion.
       </p>
       <p style={{ marginBottom: 28 }}>
-        Art was how I documented. Every piece a proof of life &mdash; evidence
-        that something inside still wanted to get better, to be healthy, for the
-        signal to be louder than the noise.
+        I create densely layered digital artworks using Photoshop, photography, illustration, symbolic collage, and emerging AI-assisted processes. Individual pieces can grow through hundreds of layers, sometimes over the course of years. Every element is placed in conversation with the whole: faces, ruins, animals, machines, religious imagery, childhood memories, cultural debris, light, darkness, humour, and grief.
       </p>
       <p style={{ marginBottom: 28 }}>
-        Nine years alone. Maybe longer. Diet, assumptions, reality testing,
-        vocabulary, inner work, outer work &mdash; brick by brick, building a
-        mind that could finally trust itself.
+        The work lives between horror and wonder, innocence and corruption, fragmentation and integration. It explores what happens when a person is broken open by the world but continues searching for something sacred inside the wreckage.
       </p>
       <p
         style={{
@@ -197,8 +191,7 @@ const WeightSection = ({ vis }) => (
           fontSize: "clamp(16px, 2.2vw, 19px)",
         }}
       >
-        I am both a beast and a god. But He who is in me is stronger than he who
-        is in me.
+        Not the erasure of darkness, but its integration. Not pretending the wound never happened, but refusing to let the wound become the whole identity.
       </p>
       <p
         style={{
@@ -211,7 +204,7 @@ const WeightSection = ({ vis }) => (
           opacity: 0.8,
         }}
       >
-        <HoverMorphText speed={60}>Still here.</HoverMorphText>
+        <HoverMorphText speed={60}>Enter the work. Follow the symbols.</HoverMorphText>
       </p>
     </div>
   </div>
@@ -240,19 +233,14 @@ const CraftSection = ({ vis }) => (
       }}
     >
       <p style={{ marginTop: 0, marginBottom: 28 }}>
-        RareGh0st is the creative identity that came out of all of it &mdash; a
-        practice of digital collage, AI-human collaboration, photography, and
-        symbolic storytelling. Each piece is a dense, layered meditation on
-        holding both shadow and light without collapsing either.
+        My process is obsessive, intuitive, and deeply cumulative. I rarely begin with a complete plan. A work develops through discovery—one image calling forth another, one symbol changing the meaning of everything around it. What initially appears chaotic gradually reveals an internal order.
+      </p>
+      <p style={{ marginBottom: 28 }}>
+        Artificial intelligence has become one of the materials within that process, but not a replacement for authorship. I use it alongside traditional digital techniques as a means of generating raw visual possibility, which is then selected, altered, composited, painted over, distorted, and integrated by hand. The final work emerges through sustained human judgment rather than a single prompt.
       </p>
       <p style={{ marginBottom: 0 }}>
-        Creator of{" "}
-        <em style={{ color: P.ghost, opacity: 0.9 }}>Codename Angel</em>{" "}
-        &mdash; an episodic series blending philosophy, gaming, and poetic
-        storytelling.         Builder of{" "}
-        <em style={{ color: P.magenta }}>Project Angel</em>{" "}
-        &mdash; an open framework for human-AI symbiosis. Based in Calgary,
-        Alberta.
+        I want the work to reward prolonged attention. From a distance, each piece offers an immediate atmosphere. Up close, it becomes an archaeological site—filled with hidden relationships, recurring figures, private jokes, cultural references, and symbolic threads that may only reveal themselves after repeated encounters.{" "}
+        <em style={{ color: P.cyan }}>Enter the signal.</em>
       </p>
     </div>
   </div>
