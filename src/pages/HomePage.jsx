@@ -91,7 +91,7 @@ function HeroSection({ isMobile }) {
             margin: 0,
           }}
         >
-          <span style={{ color: P.cyan }}>RARE</span>
+          <span style={{ color: P.ghost }}>1</span><span style={{ color: P.cyan }}>RARE</span>
           <span style={{ color: P.magenta }}>GH</span>
           <span style={{ color: P.ghost }}>0</span>
           <span style={{ color: P.magenta }}>ST</span>
