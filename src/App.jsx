@@ -21,8 +21,6 @@ import Portfolio from "./pages/Portfolio";
 import ShowcaseDetail from "./pages/ShowcaseDetail";
 import CaseStudyDetail from "./pages/CaseStudyDetail";
 import { MediaHub } from "./pages/MediaHub";
-import { TheWork } from "./pages/TheWork";
-import { NowPage } from "./pages/NowPage";
 import { About } from "./pages/About";
 import Shop from "./pages/Shop";
 import { Contact } from "./pages/Contact";
@@ -296,8 +294,7 @@ export default function App() {
               element={<CaseStudyDetail />}
             />
             <Route path="/media" element={<MediaHub />} />
-            <Route path="/the-work" element={<TheWork />} />
-            <Route path="/now" element={<NowPage />} />
+
             <Route path="/about" element={<About />} />
             <Route path="/shop" element={<Shop addToCart={addToCart} />} />
             <Route path="/contact" element={<Contact />} />

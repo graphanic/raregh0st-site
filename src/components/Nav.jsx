@@ -6,8 +6,6 @@ import { HoverMorphText } from "./MorphText";
 const NAV_ITEMS = [
   { path: "/portfolio", label: "Portfolio" },
   { path: "/media", label: "Media" },
-  { path: "/the-work", label: "The Work" },
-  { path: "/now", label: "Now" },
   { path: "/shop", label: "Shop" },
   { path: "/contact", label: "Contact" },
   { path: "/about", label: "About" },
