@@ -1,7 +1,7 @@
 import { Helmet } from "react-helmet-async";
 
 const defaults = {
-  siteName: "RareGh0st",
+  siteName: "1RareGh0st",
   siteUrl: "https://raregh0st.com",
   image: "/og-image.jpg",
   twitterHandle: "@RareGh0st",
@@ -12,7 +12,7 @@ export const SEO = ({ title, description, path = "/" }) => {
     ? `${title} | ${defaults.siteName}`
     : `${defaults.siteName} \u2014 Trauma Integration Made Visible`;
   const fullUrl = `${defaults.siteUrl}${path}`;
-  const desc = description || "Dark digital collage art, prints, apparel, and creative tools. Explore the artwork and philosophy of RareGh0st.";
+  const desc = description || "Dark digital collage art, prints, apparel, and creative tools. Explore the artwork and philosophy of 1RareGh0st.";
 
   return (
     <Helmet>

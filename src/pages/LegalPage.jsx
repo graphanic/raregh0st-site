@@ -18,11 +18,11 @@ const PAGES = {
     title: "Terms of Service", updated: "February 2026",
     sections: [
       { h: "Acceptance of Terms", p: "By accessing and using raregh0st.com, you agree to be bound by these terms. If you do not agree, please do not use this website." },
-      { h: "Intellectual Property", p: "All artwork, designs, images, text, and other content on this website are the intellectual property of RareGh0st unless otherwise stated. You may not reproduce, distribute, or create derivative works without explicit written permission." },
+      { h: "Intellectual Property", p: "All artwork, designs, images, text, and other content on this website are the intellectual property of 1RareGh0st unless otherwise stated. You may not reproduce, distribute, or create derivative works without explicit written permission." },
       { h: "Print-on-Demand Products", p: "Physical products are produced and shipped by our print-on-demand partner (Printful) through Shopify. Product quality, printing, and shipping are handled by these partners according to their respective service terms." },
       { h: "Digital Products & Courses", p: "Digital assets and courses are licensed for personal and commercial use as specified in each product's description. Redistribution of digital products is prohibited." },
       { h: "User Conduct", p: "You agree not to use this site for any unlawful purpose or in any way that could damage, disable, or impair the site's operation." },
-      { h: "Limitation of Liability", p: "RareGh0st is provided \"as is\" without warranties of any kind. We are not liable for any damages arising from your use of this website or purchase of products." },
+      { h: "Limitation of Liability", p: "1RareGh0st is provided \"as is\" without warranties of any kind. We are not liable for any damages arising from your use of this website or purchase of products." },
     ]
   },
   shipping: {
@@ -50,7 +50,7 @@ export const LegalPage = ({ page }) => {
 
   return (
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
-      <SEO title={content.title} description={`${content.title} for RareGh0st.`} path={`/${page}`} />
+      <SEO title={content.title} description={`${content.title} for 1RareGh0st.`} path={`/${page}`} />
       <div style={{ maxWidth: 700, margin: "0 auto", padding: "0 40px" }}>
         <button onClick={() => navigate("/")} style={{ background: "none", border: "none", color: P.bone, ...mono, fontSize: 10, letterSpacing: 3, cursor: "pointer", opacity: 0.3, marginBottom: 32 }}>{"<-"} BACK</button>
         <h2 style={heading}>{content.title}</h2>

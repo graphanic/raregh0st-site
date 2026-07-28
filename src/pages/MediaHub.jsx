@@ -290,7 +290,7 @@ export const MediaHub = () => {
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
       <SEO
         title="Media"
-        description="Watch, listen, and follow RareGh0st -- video content, music, and social feeds."
+        description="Watch, listen, and follow 1RareGh0st -- video content, music, and social feeds."
         path="/media"
       />
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>

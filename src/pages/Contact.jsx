@@ -27,7 +27,7 @@ export const Contact = () => {
 
   return (
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
-      <SEO title="Contact" description="Commissions, collaborations, and creative partnerships with RareGh0st." path="/contact" />
+      <SEO title="Contact" description="Commissions, collaborations, and creative partnerships with 1RareGh0st." path="/contact" />
       <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 40px" }}>
         <div style={{ marginBottom: 48 }}>
           <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.gold, textTransform: "uppercase", marginBottom: 12 }}><ScrollMorphText speed={75}>Contact</ScrollMorphText></div>

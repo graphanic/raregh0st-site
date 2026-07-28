@@ -73,7 +73,7 @@ function LoginScreen({ onLoggedIn }) {
 
   return (
     <div style={ui.page}>
-      <SEO title="Store Admin" description="RareGh0st store admin" path="/admin/store" />
+      <SEO title="Store Admin" description="1RareGh0st store admin" path="/admin/store" />
       <div style={{ ...ui.shell, maxWidth: 420 }}>
         <div style={ui.sub}>Admin</div>
         <h1 style={ui.h1}>Store Console</h1>
@@ -576,7 +576,7 @@ export default function AdminStore() {
 
   return (
     <div style={ui.page}>
-      <SEO title="Store Admin" description="RareGh0st store admin" path="/admin/store" />
+      <SEO title="Store Admin" description="1RareGh0st store admin" path="/admin/store" />
       <div style={ui.shell}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
           <div>

@@ -686,7 +686,7 @@ export const UploadAdmin = () => {
   if (!authed) {
     return (
       <div style={{ background: P.abyss, color: P.ghost, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <SEO title="Admin Login | RareGh0st" description="Restricted access" />
+        <SEO title="Admin Login | 1RareGh0st" description="Restricted access" />
         <div style={{ ...cardStyle, maxWidth: "400px", width: "100%", textAlign: "center" }}>
           <h1 style={{ color: P.cyan, fontSize: "1.6rem", marginBottom: "8px" }}>Admin Access</h1>
           <p style={{ color: P.steel, marginBottom: "24px", fontSize: "0.9rem" }}>Enter password to continue</p>
@@ -711,7 +711,7 @@ export const UploadAdmin = () => {
   /* ── MAIN ADMIN ── */
   return (
     <div style={{ background: P.abyss, color: P.ghost, minHeight: "100vh", padding: "40px 20px" }}>
-      <SEO title="Content Manager - RareGh0st" description="Portfolio content management" />
+      <SEO title="Content Manager - 1RareGh0st" description="Portfolio content management" />
 
       <div style={{ maxWidth: "960px", margin: "0 auto" }}>
         {/* Header */}

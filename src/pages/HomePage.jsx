@@ -61,7 +61,7 @@ function HeroSection({ isMobile }) {
       <div style={{ position: "relative", zIndex: 2, animation: "fadeSlideIn 1s ease both" }}>
         <img
           src={LOGO_IMG}
-          alt="RareGh0st"
+          alt="1RareGh0st"
           style={{
             width: isMobile ? 52 : 68,
             height: isMobile ? 52 : 68,

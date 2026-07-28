@@ -54,7 +54,7 @@ export const Cart = ({ cart, removeFromCart }) => {
 
   return (
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
-      <SEO title="Cart" description="Your RareGh0st cart." path="/cart" />
+      <SEO title="Cart" description="Your 1RareGh0st cart." path="/cart" />
       <div style={{ maxWidth: 640, margin: "0 auto", padding: "0 40px" }}>
         <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8, color: P.amber, textTransform: "uppercase", marginBottom: 12 }}>
           <ScrollMorphText speed={70}>Your Selection</ScrollMorphText>
