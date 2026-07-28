@@ -42,11 +42,11 @@ function HeroSection({ isMobile }) {
         style={{
           position: "absolute",
           inset: 0,
-          backgroundImage: `url(${ART_IMGS[2]})`,
+          backgroundImage: `url(https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Art%20Collage-5GLlE6Fy49KuQ8zCwDUIKhNS3BgoCi.jpg)`,
           backgroundSize: "cover",
           backgroundPosition: "center",
-          opacity: 0.16,
-          filter: "saturate(1.1)",
+          opacity: 0.18,
+          filter: "saturate(1.2)",
         }}
       />
       <div
