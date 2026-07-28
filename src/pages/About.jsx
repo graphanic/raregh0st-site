@@ -174,37 +174,28 @@ const WeightSection = ({ vis }) => (
       }}
     >
       <p style={{ marginTop: 0, marginBottom: 28 }}>
-        My art began as a way to survive experiences I did not yet have language for. When ordinary words failed, images became a second nervous system—a place where trauma, beauty, contradiction, and meaning could exist together without being forced into a simple conclusion.
+        My name is Eric Fallis, and 1RareGh0st is the studio practice through which I transform fragmented experience into visual worlds.
       </p>
       <p style={{ marginBottom: 28 }}>
         I create densely layered digital artworks using Photoshop, photography, illustration, symbolic collage, and emerging AI-assisted processes. Individual pieces can grow through hundreds of layers, sometimes over the course of years. Every element is placed in conversation with the whole: faces, ruins, animals, machines, religious imagery, childhood memories, cultural debris, light, darkness, humour, and grief.
       </p>
+      <p style={{ marginBottom: 28, fontStyle: "italic", color: P.ghost }}>
+        The result is not simply surrealism for its own sake.
+      </p>
+      <p style={{ marginBottom: 28, fontStyle: "italic", color: P.ghost }}>
+        Each work is an excavation.
+      </p>
+      <p style={{ marginBottom: 28 }}>
+        My art began as a way to survive experiences I did not yet have language for. When ordinary words failed, images became a second nervous system—a place where trauma, beauty, contradiction, and meaning could exist together without being forced into a simple conclusion.
+      </p>
+      <p style={{ marginBottom: 28, fontStyle: "italic", color: P.ghost }}>
+        That tension remains at the heart of RareGh0st.
+      </p>
       <p style={{ marginBottom: 28 }}>
         The work lives between horror and wonder, innocence and corruption, fragmentation and integration. It explores what happens when a person is broken open by the world but continues searching for something sacred inside the wreckage.
       </p>
-      <p
-        style={{
-          marginBottom: 12,
-          fontStyle: "italic",
-          color: P.ghost,
-          opacity: 1,
-          fontSize: "clamp(16px, 2.2vw, 19px)",
-        }}
-      >
-        Not the erasure of darkness, but its integration. Not pretending the wound never happened, but refusing to let the wound become the whole identity.
-      </p>
-      <p
-        style={{
-          marginBottom: 0,
-          fontFamily: "'Courier New', monospace",
-          fontSize: 12,
-          letterSpacing: 6,
-          color: P.cyan,
-          textTransform: "uppercase",
-          opacity: 0.8,
-        }}
-      >
-        <HoverMorphText speed={60}>Enter the work. Follow the symbols.</HoverMorphText>
+      <p style={{ marginBottom: 0 }}>
+        I am interested in the hidden architecture beneath human experience: the symbols we inherit, the wounds that shape perception, the systems that govern us, and the strange ways consciousness attempts to rebuild itself after rupture.
       </p>
     </div>
   </div>
@@ -238,9 +229,42 @@ const CraftSection = ({ vis }) => (
       <p style={{ marginBottom: 28 }}>
         Artificial intelligence has become one of the materials within that process, but not a replacement for authorship. I use it alongside traditional digital techniques as a means of generating raw visual possibility, which is then selected, altered, composited, painted over, distorted, and integrated by hand. The final work emerges through sustained human judgment rather than a single prompt.
       </p>
-      <p style={{ marginBottom: 0 }}>
-        I want the work to reward prolonged attention. From a distance, each piece offers an immediate atmosphere. Up close, it becomes an archaeological site—filled with hidden relationships, recurring figures, private jokes, cultural references, and symbolic threads that may only reveal themselves after repeated encounters.{" "}
-        <em style={{ color: P.cyan }}>Enter the signal.</em>
+      <p style={{ marginBottom: 28, fontStyle: "italic", color: P.ghost }}>
+        RareGh0st is ultimately about transformation.
+      </p>
+      <p style={{ marginBottom: 28, fontStyle: "italic", color: P.ghost }}>
+        Not the erasure of darkness, but its integration.
+      </p>
+      <p style={{ marginBottom: 28, fontStyle: "italic", color: P.ghost }}>
+        Not pretending the wound never happened, but refusing to let the wound become the whole identity.
+      </p>
+      <p style={{ marginBottom: 28 }}>
+        I want the work to reward prolonged attention. From a distance, each piece offers an immediate atmosphere. Up close, it becomes an archaeological site—filled with hidden relationships, recurring figures, private jokes, cultural references, and symbolic threads that may only reveal themselves after repeated encounters.
+      </p>
+      <p style={{ marginBottom: 28, fontStyle: "italic", color: P.ghost }}>
+        These artworks are records of survival, but they are also invitations.
+      </p>
+      <p style={{ marginBottom: 4, fontStyle: "italic", color: P.ghost }}>To look longer.</p>
+      <p style={{ marginBottom: 4, fontStyle: "italic", color: P.ghost }}>To question the reality we have inherited.</p>
+      <p style={{ marginBottom: 28, fontStyle: "italic", color: P.ghost }}>To recognize beauty where it should not have survived.</p>
+      <p style={{ marginBottom: 28 }}>
+        And to consider whether the fragments of a life can become something more honest, intricate, and alive than the unbroken surface ever was.
+      </p>
+      <p style={{ marginBottom: 28, fontStyle: "italic", color: P.ghost }}>
+        Welcome to 1RareGh0st.
+      </p>
+      <p
+        style={{
+          marginBottom: 0,
+          fontFamily: "'Courier New', monospace",
+          fontSize: 12,
+          letterSpacing: 6,
+          color: P.cyan,
+          textTransform: "uppercase",
+          opacity: 0.8,
+        }}
+      >
+        <HoverMorphText speed={60}>Enter the work. Follow the symbols. See what survives.</HoverMorphText>
       </p>
     </div>
   </div>
