@@ -33,7 +33,7 @@ export const Preloader = ({ onComplete }) => {
         color: P.cyan, textTransform: "uppercase",
         opacity: phase >= 1 ? 0.6 : 0, transform: phase >= 1 ? "translateY(0)" : "translateY(8px)",
         transition: "all 0.5s ease 0.1s",
-      }}><MorphText speed={80}>RareGh0st</MorphText></div>
+      }}><MorphText speed={80}>1RareGh0st</MorphText></div>
       <div style={{
         width: 120, height: 1, marginTop: 20, overflow: "hidden",
         background: `${P.steel}22`,

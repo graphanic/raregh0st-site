@@ -64,7 +64,7 @@ const ShopCard = ({ product, onAdd }) => {
 
 const ComingSoonScreen = ({ announcement }) => (
   <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
-    <SEO title="Shop \u2014 Opening Soon" description="The RareGh0st shop is being prepared." path="/shop" />
+    <SEO title="Shop \u2014 Opening Soon" description="The 1RareGh0st shop is being prepared." path="/shop" />
     <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 40px", textAlign: "center" }}>
       <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8, color: P.amber, textTransform: "uppercase", marginBottom: 16 }}>
         <ScrollMorphText speed={70}>Opening Soon</ScrollMorphText>
@@ -123,7 +123,7 @@ const Shop = ({ addToCart }) => {
 
   return (
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
-      <SEO title="Shop" description="RareGh0st shop \u2014 prints, apparel, digital assets, and creative courses." path="/shop" />
+      <SEO title="Shop" description="1RareGh0st shop \u2014 prints, apparel, digital assets, and creative courses." path="/shop" />
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
         <div style={{ marginBottom: 40 }}>
           <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.magenta, textTransform: "uppercase", marginBottom: 12 }}><ScrollMorphText speed={75}>Shop</ScrollMorphText></div>

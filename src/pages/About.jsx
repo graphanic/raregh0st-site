@@ -92,7 +92,7 @@ const PortraitSection = ({ vis }) => {
         />
         <img
           src={PORTRAIT_URL}
-          alt="Eric Mackenzie Fallis -- Winter Workday Portrait"
+          alt="Eric Fallis -- Winter Workday Portrait"
           onLoad={() => setImgLoaded(true)}
           style={{
             position: "relative",
@@ -119,7 +119,7 @@ const PortraitSection = ({ vis }) => {
           textAlign: "center",
         }}
       >
-        <ScrollMorphText speed={80}>Eric Mackenzie Fallis</ScrollMorphText>
+        <ScrollMorphText speed={80}>Eric Fallis</ScrollMorphText>
       </h1>
 
       {/* Tagline */}
@@ -189,7 +189,7 @@ const WeightSection = ({ vis }) => (
         My art began as a way to survive experiences I did not yet have language for. When ordinary words failed, images became a second nervous system—a place where trauma, beauty, contradiction, and meaning could exist together without being forced into a simple conclusion.
       </p>
       <p style={{ marginBottom: 28, fontStyle: "italic", color: P.ghost }}>
-        That tension remains at the heart of RareGh0st.
+        That tension remains at the heart of 1RareGh0st.
       </p>
       <p style={{ marginBottom: 28 }}>
         The work lives between horror and wonder, innocence and corruption, fragmentation and integration. It explores what happens when a person is broken open by the world but continues searching for something sacred inside the wreckage.
@@ -230,7 +230,7 @@ const CraftSection = ({ vis }) => (
         Artificial intelligence has become one of the materials within that process, but not a replacement for authorship. I use it alongside traditional digital techniques as a means of generating raw visual possibility, which is then selected, altered, composited, painted over, distorted, and integrated by hand. The final work emerges through sustained human judgment rather than a single prompt.
       </p>
       <p style={{ marginBottom: 28, fontStyle: "italic", color: P.ghost }}>
-        RareGh0st is ultimately about transformation.
+        1RareGh0st is ultimately about transformation.
       </p>
       <p style={{ marginBottom: 28, fontStyle: "italic", color: P.ghost }}>
         Not the erasure of darkness, but its integration.
@@ -457,7 +457,7 @@ const BridgeSection = ({ vis }) => (
   </div>
 );
 
-/* ─── MAIN ABOUT PAGE ────────────────────────────────── */
+/* ─── MAIN ABOUT PAGE ─────────���──────────────────────── */
 export const About = () => {
   const [vis, setVis] = useState(false);
   useEffect(() => {
@@ -468,7 +468,7 @@ export const About = () => {
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
       <SEO
         title="About"
-        description="Eric Mackenzie Fallis is RareGh0st -- a digital artist, consciousness architect, and survivor who transforms lived experience into visual philosophy."
+        description="Eric Fallis is 1RareGh0st -- a digital artist, consciousness architect, and survivor who transforms lived experience into visual philosophy."
         path="/about"
       />
       <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 40px" }}>
