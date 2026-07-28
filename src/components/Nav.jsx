@@ -24,7 +24,7 @@ export const Nav = ({ cartCount }) => {
         <div onClick={() => handleNav("/")} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 10, zIndex: 102 }}>
           <img src={LOGO_IMG} alt="" style={{ width: 22, height: 22, opacity: 0.7 }} />
           <span style={{ fontFamily: "'Courier New', monospace", fontSize: 14, fontWeight: 700, letterSpacing: 5 }}>
-            <span style={{ color: P.cyan }}>RARE</span><span style={{ color: P.magenta }}>GH</span><span style={{ color: P.ghost }}>0</span><span style={{ color: P.magenta }}>ST</span>
+            <span style={{ color: P.ghost }}>1</span><span style={{ color: P.cyan }}>RARE</span><span style={{ color: P.magenta }}>GH</span><span style={{ color: P.ghost }}>0</span><span style={{ color: P.magenta }}>ST</span>
           </span>
         </div>
         {/* Desktop nav */}
