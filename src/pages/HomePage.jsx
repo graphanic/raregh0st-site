@@ -14,8 +14,6 @@ const DESTINATIONS = [
   { label: "Portfolio", dest: "/portfolio", color: P.cyan, desc: "Curated Works" },
   { label: "Shop", dest: "/shop", color: P.gold, desc: "Prints & Originals" },
   { label: "Media", dest: "/media", color: P.magenta, desc: "Motion & Sound" },
-  { label: "The Work", dest: "/the-work", color: P.purple, desc: "Process & Philosophy" },
-  { label: "Now", dest: "/now", color: P.green, desc: "Current Status" },
   { label: "About", dest: "/about", color: P.bone, desc: "The Artist" },
   { label: "Contact", dest: "/contact", color: P.bone, desc: "Get In Touch" },
 ];

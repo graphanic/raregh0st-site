@@ -40,22 +40,10 @@ const TOOLKIT = [
 /* ─── BRIDGE LINKS ───────────────────────────────────── */
 const BRIDGES = [
   {
-    label: "The Work",
-    sub: "The framework. The philosophy.",
-    path: "/the-work",
-    color: P.magenta,
-  },
-  {
     label: "Portfolio",
     sub: "The evidence. The documentation.",
     path: "/portfolio",
     color: P.cyan,
-  },
-  {
-    label: "Now",
-    sub: "Where I am right now.",
-    path: "/now",
-    color: P.green,
   },
 ];
 
@@ -261,17 +249,8 @@ const CraftSection = ({ vis }) => (
         Creator of{" "}
         <em style={{ color: P.ghost, opacity: 0.9 }}>Codename Angel</em>{" "}
         &mdash; an episodic series blending philosophy, gaming, and poetic
-        storytelling. Builder of{" "}
-        <Link
-          to="/the-work"
-          style={{
-            color: P.magenta,
-            textDecoration: "none",
-            borderBottom: `1px solid ${P.magenta}33`,
-          }}
-        >
-          Project Angel
-        </Link>{" "}
+        storytelling.         Builder of{" "}
+        <em style={{ color: P.magenta }}>Project Angel</em>{" "}
         &mdash; an open framework for human-AI symbiosis. Based in Calgary,
         Alberta.
       </p>
