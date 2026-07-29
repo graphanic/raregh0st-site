@@ -9,7 +9,7 @@ const FFPROBE = require("ffprobe-static").path;
 
 const ROOT = "public";
 const MAX_DIM = 1080;      // cap longest side
-const CRF = 23;            // visually-lossless-ish for H.264
+const CRF = 26;            // balanced: strong size savings, subtle-only softening
 const mb = (b) => (b / 1048576).toFixed(1);
 
 function walk(dir, acc = []) {
@@ -38,7 +38,15 @@ console.log(`Found ${files.length} mp4 files\n`);
 for (const file of files) {
   const origSize = statSync(file).size;
   before += origSize;
-  const { w, h } = probe(file);
+
+  let w, h;
+  try {
+    ({ w, h } = probe(file));
+  } catch {
+    after += origSize;
+    console.log(`✗ ${basename(file).padEnd(38)} SKIPPED — corrupt/unreadable (${mb(origSize)}MB)`);
+    continue;
+  }
 
   // scale so the longest side <= MAX_DIM, keep even dims, never upscale.
   // Works for landscape, portrait, AND square (uses force_original_aspect_ratio).
