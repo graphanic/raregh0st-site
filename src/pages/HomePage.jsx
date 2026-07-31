@@ -8,6 +8,7 @@ import { useIsMobile } from "../hooks/useIsMobile";
 import { GalleryFocus } from "../components/home/GalleryFocus";
 import { InquireModal } from "../components/home/InquireModal";
 import { AVAILABILITY } from "../components/home/availability";
+import { submitForm } from "../lib/api";
 
 // Destination cards — functionally replace the orbiting solar-system nav
 const DESTINATIONS = [
@@ -639,15 +640,26 @@ function Manifesto({ isMobile }) {
 }
 
 // ─── CONNECT: COMMISSION + NOTIFY ────────────────────────
-function NotifyForm({ isMobile }) {
-  const [email, setEmail] = useState("");
-  const [sent, setSent] = useState(false);
-  const [focus, setFocus] = useState(false);
-  const submit = (e) => {
-    e.preventDefault();
-    if (!email.trim()) return;
-    setSent(true);
-  };
+  function NotifyForm({ isMobile }) {
+    const [email, setEmail] = useState("");
+    const [sent, setSent] = useState(false);
+    const [focus, setFocus] = useState(false);
+    const [busy, setBusy] = useState(false);
+    const [err, setErr] = useState("");
+    const submit = async (e) => {
+      e.preventDefault();
+      if (!email.trim() || busy) return;
+      setBusy(true);
+      setErr("");
+      try {
+        await submitForm({ kind: "newsletter", email: email.trim(), source: "home-signal" });
+        setSent(true);
+      } catch (e2) {
+        setErr(e2.message || "Could not subscribe. Try again.");
+      } finally {
+        setBusy(false);
+      }
+    };
   return (
     <div
       style={{
@@ -696,6 +708,7 @@ function NotifyForm({ isMobile }) {
           />
           <button
             type="submit"
+            disabled={busy}
             style={{
               fontFamily: "'Courier New', monospace",
               fontSize: 10,
@@ -706,13 +719,17 @@ function NotifyForm({ isMobile }) {
               border: `1px solid ${P.cyan}`,
               borderRadius: 2,
               padding: "13px 22px",
-              cursor: "pointer",
+              cursor: busy ? "wait" : "pointer",
               whiteSpace: "nowrap",
+              opacity: busy ? 0.6 : 1,
             }}
           >
-            <HoverMorphText>Notify Me</HoverMorphText>
+            {busy ? "Sending\u2026" : <HoverMorphText>Notify Me</HoverMorphText>}
           </button>
         </form>
+      )}
+      {err && !sent && (
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.red, letterSpacing: 1, marginTop: 10 }}>{err}</div>
       )}
     </div>
   );

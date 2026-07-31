@@ -23,6 +23,15 @@ export const startCheckout = (items) =>
 export const getOrder = (sessionId) =>
   fetch(`/api/order?session_id=${encodeURIComponent(sessionId)}`).then(j);
 
+// Contact messages, artwork inquiries/commissions, and newsletter signups.
+// payload: { kind, name?, email, category?, subject?, message?, source?, meta?, company? }
+export const submitForm = (payload) =>
+  fetch("/api/submit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  }).then(j);
+
 // ─── Admin ───────────────────────────────────────────────────────────────────
 function adminHeaders(token, extra = {}) {
   return { ...extra, "x-admin-token": token || "" };
@@ -78,6 +87,25 @@ export const adminAishCsvUrl = (month) => `/api/admin/dashboard?report=aish&mont
 export const adminSyncPrintful = (token) =>
   fetch("/api/admin/printful", {
     method: "POST",
+    headers: adminHeaders(token),
+  }).then(j);
+
+export const adminGetSubmissions = (token, params = {}) => {
+  const q = new URLSearchParams();
+  Object.entries(params).forEach(([k, v]) => v != null && v !== "" && q.set(k, String(v)));
+  return fetch(`/api/admin/submissions?${q.toString()}`, { headers: adminHeaders(token) }).then(j);
+};
+
+export const adminUpdateSubmission = (token, id, status) =>
+  fetch("/api/admin/submissions", {
+    method: "PATCH",
+    headers: adminHeaders(token, { "Content-Type": "application/json" }),
+    body: JSON.stringify({ id, status }),
+  }).then(j);
+
+export const adminDeleteSubmission = (token, id) =>
+  fetch(`/api/admin/submissions?id=${id}`, {
+    method: "DELETE",
     headers: adminHeaders(token),
   }).then(j);
 

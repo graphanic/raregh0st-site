@@ -2,21 +2,59 @@ import { useState } from "react";
 import { P } from "../data/palette";
 import { ScrollMorphText } from "../components/MorphText";
 import { SEO } from "../components/SEO";
+import { submitForm } from "../lib/api";
+import { SOCIALS } from "../data/socials";
+
+// Build the "Connect" list from the single source of truth in socials.js,
+// plus a direct email row.
+const CONNECT_IDS = ["instagram", "x", "youtube", "tiktok"];
+const CONNECT = [
+  ...CONNECT_IDS
+    .map(id => SOCIALS.find(s => s.id === id))
+    .filter(Boolean)
+    .map(s => ({ platform: s.label, handle: s.handle.startsWith("@") ? s.handle : `@${s.handle}`, url: s.profileUrl })),
+  { platform: "Email", handle: "hello@raregh0st.com", url: "mailto:hello@raregh0st.com" },
+];
 
 export const Contact = () => {
   const [form, setForm] = useState({ name: "", email: "", type: "general", message: "" });
   const [submitted, setSubmitted] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [error, setError] = useState("");
   const [newsletter, setNewsletter] = useState("");
   const [subscribed, setSubscribed] = useState(false);
+  const [subError, setSubError] = useState("");
 
-  const handleSubmit = () => {
-    if (!form.name || !form.email || !form.message) return;
-    setSubmitted(true);
+  const handleSubmit = async () => {
+    if (!form.name || !form.email || !form.message || sending) return;
+    setSending(true);
+    setError("");
+    try {
+      await submitForm({
+        kind: "contact",
+        name: form.name,
+        email: form.email,
+        category: form.type,
+        message: form.message,
+        source: "contact-page",
+      });
+      setSubmitted(true);
+    } catch (err) {
+      setError(err.message || "Something went wrong. Please try again.");
+    } finally {
+      setSending(false);
+    }
   };
 
-  const handleSubscribe = () => {
+  const handleSubscribe = async () => {
     if (!newsletter || !newsletter.includes("@")) return;
-    setSubscribed(true);
+    setSubError("");
+    try {
+      await submitForm({ kind: "newsletter", email: newsletter, source: "contact-page" });
+      setSubscribed(true);
+    } catch (err) {
+      setSubError(err.message || "Could not subscribe. Please try again.");
+    }
   };
 
   const inputStyle = {
@@ -73,15 +111,18 @@ export const Contact = () => {
                     onFocus={(e) => e.target.style.borderColor = P.gold + "44"}
                     onBlur={(e) => e.target.style.borderColor = P.steel + "22"} />
                 </div>
-                <button onClick={handleSubmit} style={{
+                <button onClick={handleSubmit} disabled={sending} style={{
                   background: "none", border: `1px solid ${P.gold}33`, color: P.gold,
                   fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 5,
-                  padding: "14px 28px", cursor: "pointer", textTransform: "uppercase",
-                  transition: "all 0.3s", marginTop: 4,
+                  padding: "14px 28px", cursor: sending ? "wait" : "pointer", textTransform: "uppercase",
+                  transition: "all 0.3s", marginTop: 4, opacity: sending ? 0.5 : 1,
                 }}
-                  onMouseEnter={(e) => { e.target.style.borderColor = P.gold; e.target.style.boxShadow = `0 0 20px ${P.gold}15`; }}
+                  onMouseEnter={(e) => { if (sending) return; e.target.style.borderColor = P.gold; e.target.style.boxShadow = `0 0 20px ${P.gold}15`; }}
                   onMouseLeave={(e) => { e.target.style.borderColor = P.gold + "33"; e.target.style.boxShadow = "none"; }}
-                >Send Message</button>
+                >{sending ? "Sending\u2026" : "Send Message"}</button>
+                {error && (
+                  <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.red, letterSpacing: 1, marginTop: 4 }}>{error}</div>
+                )}
               </div>
             )}
           </div>
@@ -111,15 +152,13 @@ export const Contact = () => {
                   >Subscribe</button>
                 </div>
               )}
+              {subError && (
+                <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.red, letterSpacing: 1, marginTop: 10 }}>{subError}</div>
+              )}
             </div>
             <div>
               <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: P.bone, opacity: 0.3, textTransform: "uppercase", marginBottom: 16 }}>Connect</div>
-              {[
-                { platform: "Instagram", handle: "@raregh0st", url: "#" },
-                { platform: "Twitter / X", handle: "@raregh0st", url: "#" },
-                { platform: "Behance", handle: "raregh0st", url: "#" },
-                { platform: "Email", handle: "hello@raregh0st.com", url: "mailto:hello@raregh0st.com" },
-              ].map(({ platform, handle, url }) => (
+              {CONNECT.map(({ platform, handle, url }) => (
                 <a key={platform} href={url} target="_blank" rel="noopener noreferrer" style={{
                   display: "flex", justifyContent: "space-between", padding: "10px 0",
                   borderBottom: `1px solid ${P.steel}0a`, textDecoration: "none", transition: "all 0.3s",

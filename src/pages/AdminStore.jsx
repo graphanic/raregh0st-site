@@ -15,6 +15,9 @@ import {
   adminUpdateSettings,
   adminSyncPrintful,
   adminUploadDigital,
+  adminGetSubmissions,
+  adminUpdateSubmission,
+  adminDeleteSubmission,
 } from "../lib/api";
 
 // ─── shared styles ────────────────────────────────────────────────────────────
@@ -247,6 +250,121 @@ function OrdersTab({ token }) {
           </table>
         </div>
       )}
+    </div>
+  );
+}
+
+// ─── Inbox tab (contact / inquiries / newsletter) ─────────────────────────────
+function InboxTab({ token }) {
+  const [subs, setSubs] = useState([]);
+  const [err, setErr] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [kind, setKind] = useState("all");     // all | contact | inquiry | newsletter
+  const [open, setOpen] = useState(null);       // expanded submission id
+
+  const load = () => {
+    setLoading(true);
+    adminGetSubmissions(token, kind === "all" ? {} : { kind })
+      .then(d => setSubs(d.submissions || []))
+      .catch(e => setErr(e.message))
+      .finally(() => setLoading(false));
+  };
+
+  useEffect(() => { load(); /* eslint-disable-next-line */ }, [token, kind]);
+
+  const setStatus = async (id, status) => {
+    try {
+      await adminUpdateSubmission(token, id, status);
+      setSubs(prev => prev.map(s => (s.id === id ? { ...s, status } : s)));
+    } catch (e) { setErr(e.message); }
+  };
+
+  const remove = async (id) => {
+    if (!window.confirm("Delete this submission permanently?")) return;
+    try {
+      await adminDeleteSubmission(token, id);
+      setSubs(prev => prev.filter(s => s.id !== id));
+    } catch (e) { setErr(e.message); }
+  };
+
+  const KIND_COLOR = { contact: P.cyan, inquiry: P.magenta, newsletter: P.amber };
+  const newCount = subs.filter(s => s.status === "new").length;
+  const FILTERS = ["all", "contact", "inquiry", "newsletter"];
+
+  return (
+    <div style={ui.card}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 12, marginBottom: 16 }}>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 4, color: P.cyan, textTransform: "uppercase" }}>
+          Inbox {newCount > 0 && <span style={{ color: P.magenta }}>· {newCount} new</span>}
+        </div>
+        <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+          {FILTERS.map(f => (
+            <button key={f} onClick={() => setKind(f)} style={ui.tab(kind === f, KIND_COLOR[f] || P.ghost)}>
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {err && <div style={ui.err}>{err}</div>}
+      {loading && <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.bone, opacity: 0.4 }}>Loading…</div>}
+      {!loading && subs.length === 0 && (
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.bone, opacity: 0.4 }}>Nothing here yet.</div>
+      )}
+
+      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+        {subs.map(s => {
+          const accent = KIND_COLOR[s.kind] || P.ghost;
+          const isOpen = open === s.id;
+          const isNew = s.status === "new";
+          return (
+            <div key={s.id} style={{
+              border: `1px solid ${isNew ? accent + "40" : P.steel + "15"}`,
+              background: isNew ? `${accent}08` : "transparent",
+              borderRadius: 2,
+            }}>
+              <div
+                onClick={() => { setOpen(isOpen ? null : s.id); if (isNew) setStatus(s.id, "read"); }}
+                style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer", flexWrap: "wrap" }}
+              >
+                <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 2, color: accent, textTransform: "uppercase", border: `1px solid ${accent}40`, borderRadius: 2, padding: "3px 6px", minWidth: 74, textAlign: "center" }}>
+                  {s.kind}
+                </span>
+                <span style={{ fontFamily: "'Courier New', monospace", fontSize: 12, color: P.ghost, flex: 1, minWidth: 160 }}>
+                  {s.email}
+                  {s.subject && <span style={{ color: P.bone, opacity: 0.6 }}> · {s.subject}</span>}
+                </span>
+                {s.status === "archived" && <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 2, color: P.bone, opacity: 0.5, textTransform: "uppercase" }}>archived</span>}
+                <span style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.bone, opacity: 0.5, whiteSpace: "nowrap" }}>
+                  {s.created_at?.slice(0, 10)}
+                </span>
+              </div>
+
+              {isOpen && (
+                <div style={{ padding: "0 14px 14px", display: "flex", flexDirection: "column", gap: 12 }}>
+                  <div style={{ display: "flex", gap: 20, flexWrap: "wrap", fontFamily: "'Courier New', monospace", fontSize: 10, color: P.bone }}>
+                    {s.name && <span>Name: <span style={{ color: P.ghost }}>{s.name}</span></span>}
+                    {s.category && <span>Category: <span style={{ color: P.ghost }}>{s.category}</span></span>}
+                    {s.source && <span>Source: <span style={{ color: P.ghost }}>{s.source}</span></span>}
+                  </div>
+                  {s.message && (
+                    <div style={{ fontFamily: "'Georgia', serif", fontSize: 14, lineHeight: 1.6, color: P.ghost, whiteSpace: "pre-wrap", borderLeft: `2px solid ${accent}44`, paddingLeft: 14 }}>
+                      {s.message}
+                    </div>
+                  )}
+                  <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                    <a href={`mailto:${s.email}${s.subject ? `?subject=${encodeURIComponent("Re: " + s.subject)}` : ""}`} style={{ ...ui.btn("primary"), textDecoration: "none", display: "inline-block" }}>Reply</a>
+                    {s.status !== "archived"
+                      ? <button onClick={() => setStatus(s.id, "archived")} style={ui.btn("ghost")}>Archive</button>
+                      : <button onClick={() => setStatus(s.id, "read")} style={ui.btn("ghost")}>Unarchive</button>}
+                    <button onClick={() => remove(s.id)} style={ui.btn("danger")}>Delete</button>
+                  </div>
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -588,6 +706,7 @@ export default function AdminStore() {
 
         <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>
           <button style={ui.tab(tab === "dashboard", P.cyan)} onClick={() => setTab("dashboard")}>Dashboard</button>
+          <button style={ui.tab(tab === "inbox",     P.magenta)} onClick={() => setTab("inbox")}>Inbox</button>
           <button style={ui.tab(tab === "orders",    P.magenta)} onClick={() => setTab("orders")}>Orders</button>
           <button style={ui.tab(tab === "products",  P.amber)} onClick={() => setTab("products")}>Products</button>
           <button style={ui.tab(tab === "settings",  P.green)} onClick={() => setTab("settings")}>Settings</button>
@@ -595,6 +714,7 @@ export default function AdminStore() {
         </div>
 
         {tab === "dashboard" && <DashboardTab token={token} />}
+        {tab === "inbox" && <InboxTab token={token} />}
         {tab === "orders" && <OrdersTab token={token} />}
         {tab === "products" && <ProductsTab token={token} />}
         {tab === "settings" && <SettingsTab token={token} />}
