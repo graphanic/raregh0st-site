@@ -86,6 +86,42 @@ body[data-calm] *:not([data-morph]) { font-family: inherit !important; animation
   100% { filter: brightness(1.1) hue-rotate(0deg) drop-shadow(0 0 24px #00e5ff40) drop-shadow(0 0 48px #ff006620); }
 }
 
+/* Hero logo: glow + chromatic-aberration fringe.
+   The offset colored drop-shadows create the RGB-split fringe (magenta left,
+   cyan right); the large blurred shadows create the holographic glow. */
+@keyframes heroLogoAura {
+  0%, 100% {
+    filter:
+      drop-shadow(-2px 0 1px rgba(255, 0, 102, 0.55))
+      drop-shadow(2px 0 1px rgba(0, 229, 255, 0.55))
+      drop-shadow(0 0 26px rgba(0, 229, 255, 0.30))
+      drop-shadow(0 0 52px rgba(255, 0, 102, 0.20));
+  }
+  50% {
+    filter:
+      drop-shadow(-3px 0 1px rgba(255, 0, 102, 0.72))
+      drop-shadow(3px 0 1px rgba(0, 229, 255, 0.72))
+      drop-shadow(0 0 34px rgba(0, 229, 255, 0.44))
+      drop-shadow(0 0 66px rgba(255, 0, 102, 0.28));
+  }
+}
+
+.hero-logo {
+  animation: heroLogoAura 6s ease-in-out infinite;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: filter, transform;
+  cursor: pointer;
+}
+.hero-logo:hover {
+  transform: scale(1.06);
+  /* Speed the aura up so the aberration "buzzes" like a glitch on hover. */
+  animation-duration: 1.4s;
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-logo { animation: none; filter: drop-shadow(0 0 24px rgba(0, 229, 255, 0.30)); }
+  .hero-logo:hover { transform: none; }
+}
+
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }

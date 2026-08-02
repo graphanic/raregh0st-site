@@ -8,6 +8,13 @@ import { HScrollRow } from "../components/HScrollRow";
 import { PortfolioPlaceholder, Lightbox } from "../components/PortfolioPlaceholder";
 import { SEO } from "../components/SEO";
 
+// Local videos have a first-frame poster (same path, .jpg) generated alongside them.
+// External (blob) videos have no poster; return undefined so the tile shows its gradient.
+const posterFor = (src) =>
+  src && src.startsWith("/") && /\.mp4$/i.test(src)
+    ? src.replace(/\.mp4$/i, ".jpg")
+    : undefined;
+
 const CuratedCard = ({ piece, onClick }) => {
   const [hov, setHov] = useState(false);
   const videoRef = useRef(null);
@@ -30,10 +37,11 @@ const CuratedCard = ({ piece, onClick }) => {
             <video
               ref={videoRef}
               src={piece.img}
+              poster={posterFor(piece.img)}
               muted
               loop
               playsInline
-              preload="metadata"
+              preload="none"
               style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block", transform: hov ? "scale(1.03)" : "scale(1)", transition: "transform 0.6s cubic-bezier(0.16,1,0.3,1)" }}
             />
             {!hov && (
@@ -132,10 +140,11 @@ const GridItem = ({ item, onClick, showProcess, index = 0 }) => {
               <video
                 ref={videoRef}
                 src={item.img}
+                poster={posterFor(item.img)}
                 muted
                 loop
                 playsInline
-                preload="metadata"
+                preload="none"
                 style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }}
               />
               {!hov && (
@@ -193,10 +202,11 @@ const MotionItem = ({ work, onClick }) => {
           <video
             ref={videoRef}
             src={work.img}
+            poster={posterFor(work.img)}
             muted
             loop
             playsInline
-            preload="metadata"
+            preload="none"
             style={{ width: "100%", aspectRatio: "16/9", objectFit: "cover", display: "block" }}
           />
         ) : (

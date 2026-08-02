@@ -2,16 +2,20 @@ import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { P } from "../../data/palette";
 import { MorphText, HoverMorphText } from "../MorphText";
+import { submitForm } from "../../lib/api";
 
-// Frontend-only inquiry / commission form. Submitting shows a success state;
-// no data is persisted yet (wire to a backend later).
+// Inquiry / commission form. Persists submissions to the leads inbox via /api/submit.
 export function InquireModal({ open, mode, piece, onClose, isMobile }) {
   const [form, setForm] = useState({ name: "", email: "", message: "" });
   const [sent, setSent] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState("");
 
   useEffect(() => {
     if (open) {
       setSent(false);
+      setBusy(false);
+      setErr("");
       setForm({ name: "", email: "", message: "" });
       const prev = document.body.style.overflow;
       document.body.style.overflow = "hidden";
@@ -34,10 +38,28 @@ export function InquireModal({ open, mode, piece, onClose, isMobile }) {
   const kicker = piece ? `${piece.title} · ${piece.year}` : "Direct to the studio";
   const canSend = form.email.trim() && form.message.trim();
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (!canSend) return;
-    setSent(true);
+    if (!canSend || busy) return;
+    setBusy(true);
+    setErr("");
+    try {
+      await submitForm({
+        kind: "inquiry",
+        name: form.name,
+        email: form.email,
+        category: isCommission ? "commission" : "inquiry",
+        subject: piece ? `${piece.title} (${piece.year})` : null,
+        message: form.message,
+        source: "inquire-modal",
+        meta: piece ? { pieceId: piece.id, pieceTitle: piece.title } : {},
+      });
+      setSent(true);
+    } catch (e2) {
+      setErr(e2.message || "Could not send. Please try again.");
+    } finally {
+      setBusy(false);
+    }
   };
 
   return createPortal(
@@ -104,9 +126,14 @@ export function InquireModal({ open, mode, piece, onClose, isMobile }) {
               <Field label="Name" value={form.name} onChange={(v) => setForm((f) => ({ ...f, name: v }))} accent={accent} />
               <Field label="Email" type="email" required value={form.email} onChange={(v) => setForm((f) => ({ ...f, email: v }))} accent={accent} />
               <Field label={isCommission ? "Your vision" : "Message"} textarea required value={form.message} onChange={(v) => setForm((f) => ({ ...f, message: v }))} accent={accent} />
-              <button type="submit" disabled={!canSend} style={{ ...actionBtn(accent), opacity: canSend ? 1 : 0.4, cursor: canSend ? "pointer" : "not-allowed" }}>
-                <HoverMorphText>{isCommission ? "Send Commission Request" : "Send Inquiry"}</HoverMorphText>
+              <button type="submit" disabled={!canSend || busy} style={{ ...actionBtn(accent), opacity: (canSend && !busy) ? 1 : 0.4, cursor: busy ? "wait" : (canSend ? "pointer" : "not-allowed") }}>
+                {busy
+                  ? "Sending\u2026"
+                  : <HoverMorphText>{isCommission ? "Send Commission Request" : "Send Inquiry"}</HoverMorphText>}
               </button>
+              {err && (
+                <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.red, letterSpacing: 1 }}>{err}</div>
+              )}
             </form>
           </>
         )}

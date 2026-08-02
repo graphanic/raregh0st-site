@@ -17,11 +17,11 @@ export const SOCIALS = [
   },
   {
     id: "twitch", label: "Twitch", icon: "\u25C6", color: "#9146ff",
-    handle: "raregh0stgames",
-    profileUrl: "https://twitch.tv/raregh0stgames",
+    handle: "raregh0starchitect",
+    profileUrl: "https://twitch.tv/raregh0starchitect",
     embed: {
       type: "twitch",
-      channel: "raregh0stgames",
+      channel: "raregh0starchitect",
     },
   },
   {
