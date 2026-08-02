@@ -108,18 +108,10 @@ body[data-calm] *:not([data-morph]) { font-family: inherit !important; animation
 
 .hero-logo {
   animation: heroLogoAura 6s ease-in-out infinite;
-  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  will-change: filter, transform;
-  cursor: pointer;
-}
-.hero-logo:hover {
-  transform: scale(1.06);
-  /* Speed the aura up so the aberration "buzzes" like a glitch on hover. */
-  animation-duration: 1.4s;
+  will-change: filter;
 }
 @media (prefers-reduced-motion: reduce) {
   .hero-logo { animation: none; filter: drop-shadow(0 0 24px rgba(0, 229, 255, 0.30)); }
-  .hero-logo:hover { transform: none; }
 }
 
 @keyframes spin {
