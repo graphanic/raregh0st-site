@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { P, ART_IMGS, LOGO_IMG } from "../data/palette";
+import { P, ART_IMGS, HERO_LOGO_IMG } from "../data/palette";
 import { PIECES } from "../data/pieces";
 import { SEO } from "../components/SEO";
 import { MorphText, HoverMorphText, ScrollMorphText } from "../components/MorphText";
@@ -61,13 +61,13 @@ function HeroSection({ isMobile }) {
 
       <div style={{ position: "relative", zIndex: 2, animation: "fadeSlideIn 1s ease both" }}>
         <img
-          src={LOGO_IMG}
+          src={HERO_LOGO_IMG}
           alt="1RareGh0st"
+          className="hero-logo"
           style={{
-            width: isMobile ? 52 : 68,
-            height: isMobile ? 52 : 68,
-            marginBottom: 28,
-            animation: "logoHueShift 8s ease-in-out infinite",
+            width: isMobile ? 132 : 188,
+            height: "auto",
+            marginBottom: isMobile ? 22 : 30,
           }}
         />
         <div

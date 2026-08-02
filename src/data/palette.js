@@ -8,6 +8,8 @@ export const P = {
 
 // ─── IMAGE ASSETS ───────────────────────────────────────
 export const LOGO_IMG = "/logo.png";
+// Full-color chrome/holographic skull — used as the home-page hero centerpiece.
+export const HERO_LOGO_IMG = "/images/logo-chrome.png";
 export const ART_IMGS = [
   "/Sanity-Is-In-Rare-Supply.jpg",
   "/Please-Wake-Up.jpg",
