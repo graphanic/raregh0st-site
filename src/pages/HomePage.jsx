@@ -1,6 +1,6 @@
-import { useState, useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { P, ART_IMGS, HERO_LOGO_IMG } from "../data/palette";
+import { P, ART_IMGS, HERO_LOGO_STATIONARY_IMG, HERO_LOGO_TURN_IMG } from "../data/palette";
 import { PIECES } from "../data/pieces";
 import { SEO } from "../components/SEO";
 import { MorphText, HoverMorphText, ScrollMorphText } from "../components/MorphText";
@@ -20,9 +20,65 @@ const DESTINATIONS = [
 ];
 
 const MANTRAS = ["Coherence over intensity", "Presence over performance", "Join the signal"];
+const HERO_LOGO_TURN_MS = 1000;
+const HERO_LOGO_SETTLE_BUFFER_MS = 40;
 
 // ─── HERO ────────────────────────────────────────────────
 function HeroSection({ isMobile }) {
+  const [heroLogoSrc, setHeroLogoSrc] = useState(HERO_LOGO_STATIONARY_IMG);
+  const turnStartedAt = useRef(0);
+  const settleTimer = useRef(null);
+  const pointerOverLogo = useRef(false);
+  const isTurning = useRef(false);
+
+  useEffect(() => {
+    const turnPreload = new Image();
+    turnPreload.src = HERO_LOGO_TURN_IMG;
+    return () => {
+      if (settleTimer.current) window.clearTimeout(settleTimer.current);
+    };
+  }, []);
+
+  const startLogoTurn = (event) => {
+    if (event.pointerType !== "mouse") return;
+    pointerOverLogo.current = true;
+
+    if (settleTimer.current) {
+      window.clearTimeout(settleTimer.current);
+      settleTimer.current = null;
+    }
+
+    if (
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+      document.body.hasAttribute("data-calm")
+    ) return;
+
+    if (!isTurning.current) {
+      isTurning.current = true;
+      turnStartedAt.current = performance.now();
+      setHeroLogoSrc(HERO_LOGO_TURN_IMG);
+    }
+  };
+
+  const finishLogoTurn = (event) => {
+    if (event.pointerType !== "mouse") return;
+    pointerOverLogo.current = false;
+    if (!isTurning.current) return;
+
+    const elapsed = performance.now() - turnStartedAt.current;
+    const cycleProgress = elapsed % HERO_LOGO_TURN_MS;
+    const remaining = elapsed >= HERO_LOGO_TURN_MS && cycleProgress < 20
+      ? 0
+      : HERO_LOGO_TURN_MS - cycleProgress;
+
+    settleTimer.current = window.setTimeout(() => {
+      if (pointerOverLogo.current) return;
+      isTurning.current = false;
+      settleTimer.current = null;
+      setHeroLogoSrc(HERO_LOGO_STATIONARY_IMG);
+    }, remaining + HERO_LOGO_SETTLE_BUFFER_MS);
+  };
+
   return (
     <section
       style={{
@@ -61,9 +117,11 @@ function HeroSection({ isMobile }) {
 
       <div style={{ position: "relative", zIndex: 2, animation: "fadeSlideIn 1s ease both" }}>
         <img
-          src={HERO_LOGO_IMG}
+          src={heroLogoSrc}
           alt="1RareGh0st"
           className="hero-logo"
+          onPointerEnter={startLogoTurn}
+          onPointerLeave={finishLogoTurn}
           style={{
             width: isMobile ? 132 : 188,
             height: "auto",

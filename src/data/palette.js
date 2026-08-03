@@ -8,8 +8,9 @@ export const P = {
 
 // ─── IMAGE ASSETS ───────────────────────────────────────
 export const LOGO_IMG = "/logo.png";
-// Animated realistic mark — used as the home-page hero centerpiece.
-export const HERO_LOGO_IMG = "/images/final-realistic-logo-fast.gif";
+// Matching rest and turn states for the interactive home-page hero mark.
+export const HERO_LOGO_STATIONARY_IMG = "/images/logo-stationary.gif";
+export const HERO_LOGO_TURN_IMG = "/images/logo-360-turn.gif";
 export const ART_IMGS = [
   "/Sanity-Is-In-Rare-Supply.jpg",
   "/Please-Wake-Up.jpg",
