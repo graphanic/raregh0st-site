@@ -88,6 +88,23 @@ function HeroSection({ isMobile }) {
     if (isTurning.current) scheduleLogoSettle();
   };
 
+  const playLogoTurnOnce = (event) => {
+    if (event.pointerType === "mouse" || isTurning.current) return;
+    if (
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
+      document.body.hasAttribute("data-calm")
+    ) return;
+
+    pointerOverLogo.current = false;
+    if (settleTimer.current) {
+      window.clearTimeout(settleTimer.current);
+      settleTimer.current = null;
+    }
+    isTurning.current = true;
+    turnReady.current = false;
+    setHeroLogoSrc(HERO_LOGO_TURN_IMG);
+  };
+
   const handleLogoLoad = () => {
     if (!isTurning.current) return;
     turnStartedAt.current = performance.now();
@@ -139,6 +156,7 @@ function HeroSection({ isMobile }) {
           draggable="false"
           onPointerEnter={startLogoTurn}
           onPointerLeave={finishLogoTurn}
+          onPointerUp={playLogoTurnOnce}
           onLoad={handleLogoLoad}
           onError={returnLogoToRest}
           style={{
