@@ -20,8 +20,8 @@ const DESTINATIONS = [
 ];
 
 const MANTRAS = ["Coherence over intensity", "Presence over performance", "Join the signal"];
-const HERO_LOGO_TURN_MS = 1000;
-const HERO_LOGO_SETTLE_BUFFER_MS = 40;
+const HERO_LOGO_TURN_MS = 1533;
+const HERO_LOGO_SETTLE_BUFFER_MS = 34;
 
 // ─── HERO ────────────────────────────────────────────────
 function HeroSection({ isMobile }) {
@@ -30,14 +30,36 @@ function HeroSection({ isMobile }) {
   const settleTimer = useRef(null);
   const pointerOverLogo = useRef(false);
   const isTurning = useRef(false);
+  const turnReady = useRef(false);
 
   useEffect(() => {
-    const turnPreload = new Image();
-    turnPreload.src = HERO_LOGO_TURN_IMG;
+    fetch(HERO_LOGO_TURN_IMG, { cache: "force-cache" }).catch(() => {});
     return () => {
       if (settleTimer.current) window.clearTimeout(settleTimer.current);
     };
   }, []);
+
+  const returnLogoToRest = () => {
+    isTurning.current = false;
+    turnReady.current = false;
+    settleTimer.current = null;
+    setHeroLogoSrc(HERO_LOGO_STATIONARY_IMG);
+  };
+
+  const scheduleLogoSettle = () => {
+    if (!turnReady.current) return;
+    if (settleTimer.current) window.clearTimeout(settleTimer.current);
+
+    const elapsed = performance.now() - turnStartedAt.current;
+    const cycleProgress = elapsed % HERO_LOGO_TURN_MS;
+    const remaining = elapsed >= HERO_LOGO_TURN_MS && cycleProgress < 20
+      ? 0
+      : HERO_LOGO_TURN_MS - cycleProgress;
+
+    settleTimer.current = window.setTimeout(() => {
+      if (!pointerOverLogo.current) returnLogoToRest();
+    }, remaining + HERO_LOGO_SETTLE_BUFFER_MS);
+  };
 
   const startLogoTurn = (event) => {
     if (event.pointerType !== "mouse") return;
@@ -55,7 +77,7 @@ function HeroSection({ isMobile }) {
 
     if (!isTurning.current) {
       isTurning.current = true;
-      turnStartedAt.current = performance.now();
+      turnReady.current = false;
       setHeroLogoSrc(HERO_LOGO_TURN_IMG);
     }
   };
@@ -63,20 +85,14 @@ function HeroSection({ isMobile }) {
   const finishLogoTurn = (event) => {
     if (event.pointerType !== "mouse") return;
     pointerOverLogo.current = false;
+    if (isTurning.current) scheduleLogoSettle();
+  };
+
+  const handleLogoLoad = () => {
     if (!isTurning.current) return;
-
-    const elapsed = performance.now() - turnStartedAt.current;
-    const cycleProgress = elapsed % HERO_LOGO_TURN_MS;
-    const remaining = elapsed >= HERO_LOGO_TURN_MS && cycleProgress < 20
-      ? 0
-      : HERO_LOGO_TURN_MS - cycleProgress;
-
-    settleTimer.current = window.setTimeout(() => {
-      if (pointerOverLogo.current) return;
-      isTurning.current = false;
-      settleTimer.current = null;
-      setHeroLogoSrc(HERO_LOGO_STATIONARY_IMG);
-    }, remaining + HERO_LOGO_SETTLE_BUFFER_MS);
+    turnStartedAt.current = performance.now();
+    turnReady.current = true;
+    if (!pointerOverLogo.current) scheduleLogoSettle();
   };
 
   return (
@@ -120,8 +136,11 @@ function HeroSection({ isMobile }) {
           src={heroLogoSrc}
           alt="1RareGh0st"
           className="hero-logo"
+          draggable="false"
           onPointerEnter={startLogoTurn}
           onPointerLeave={finishLogoTurn}
+          onLoad={handleLogoLoad}
+          onError={returnLogoToRest}
           style={{
             width: isMobile ? 132 : 188,
             height: "auto",
