@@ -255,7 +255,12 @@ const Portfolio = () => {
   const filterOptions = [...new Set(categoryWorks.map(getWorkFilterValue).filter(Boolean))];
   const filteredWorks = categoryWorks.filter((work) => !tagFilter || getWorkFilterValue(work) === tagFilter);
   const visibleWorks = filteredWorks.slice(0, visibleCount);
+  const remainingWorks = Math.max(filteredWorks.length - visibleWorks.length, 0);
   const lightboxWorks = filteredWorks.filter((work) => work.sourceKind !== "case-study" && work.sourceKind !== "showcase");
+
+  const loadNextBatch = () => {
+    setVisibleCount((previous) => Math.min(previous + BATCH_SIZE, filteredWorks.length));
+  };
 
   const updateParams = (updates, options) => {
     const next = new URLSearchParams(searchParams);
@@ -310,21 +315,21 @@ const Portfolio = () => {
     setLightboxItem(work && work.primaryCategory === tab ? work : null);
   }, [searchParams, tab]);
 
-  // Infinite scroll observer
+  // Infinite scroll enhancement; the visible button remains a reliable fallback.
   useEffect(() => {
     const el = loadMoreRef.current;
-    if (!el) return;
+    if (!el || typeof IntersectionObserver === "undefined") return;
     const observer = new IntersectionObserver(
       ([entry]) => {
         if (entry.isIntersecting) {
-          setVisibleCount(prev => prev + BATCH_SIZE);
+          setVisibleCount((previous) => Math.min(previous + BATCH_SIZE, filteredWorks.length));
         }
       },
       { rootMargin: "200px" }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [tab, tagFilter]);
+  }, [tab, tagFilter, visibleCount, filteredWorks.length]);
 
   return (
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
@@ -411,7 +416,23 @@ const Portfolio = () => {
 
         {visibleWorks.length < filteredWorks.length && (
           <div ref={loadMoreRef} style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
-            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 3, color: P.bone, opacity: 0.25, textTransform: "uppercase" }}>Loading more...</div>
+            <button
+              type="button"
+              onClick={loadNextBatch}
+              style={{
+                background: `${activeTab.color}0d`,
+                border: `1px solid ${activeTab.color}33`,
+                color: activeTab.color,
+                fontFamily: "'Courier New', monospace",
+                fontSize: 9,
+                letterSpacing: 3,
+                padding: "12px 18px",
+                cursor: "pointer",
+                textTransform: "uppercase",
+              }}
+            >
+              Load {Math.min(BATCH_SIZE, remainingWorks)} more {Math.min(BATCH_SIZE, remainingWorks) === 1 ? "work" : "works"}
+            </button>
           </div>
         )}
       </div>

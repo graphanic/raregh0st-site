@@ -31,7 +31,7 @@ const CATEGORIES = {
   photography: {
     label: "Photography",
     subcategoryLabel: "Subject",
-    subcategories: ["landscape", "portrait", "urban", "abstract", "studio", "street", "night", "nature", "event", "editorial"],
+    subcategories: ["landscape", "portrait", "urban", "abstract", "still-life", "studio", "street", "night", "nature", "event", "editorial"],
     fields: ["title", "year", "medium", "tags", "colors", "description", "catalog"],
     folder: "photography",
     allowPrint: true,
