@@ -2,11 +2,12 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { P } from "../data/palette";
 import { PIECES } from "../data/pieces";
+import { getAdaptationsForWork, getCategory, getWorkHref } from "../data/catalog";
 import { ScrollMorphText } from "../components/MorphText";
 import { PortfolioPlaceholder } from "../components/PortfolioPlaceholder";
 import { SEO } from "../components/SEO";
 
-const ShowcaseDetail = ({ addToCart }) => {
+const ShowcaseDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const piece = PIECES.find(p => String(p.id) === id);
@@ -19,7 +20,8 @@ const ShowcaseDetail = ({ addToCart }) => {
   if (!piece) return null;
 
   const isVideo = piece.mediaType === "video" && piece.img;
-  const hasPrice = typeof piece.price === "number" && piece.price > 0;
+  const category = getCategory("photoshop-originals");
+  const adaptations = getAdaptationsForWork(piece.id);
   const galleryImages = [
     // Skip the hero src in the image lightbox if it's a video — video gets its own native player.
     ...(!isVideo && piece.img ? [{ src: piece.img, label: piece.title }] : []),
@@ -30,30 +32,39 @@ const ShowcaseDetail = ({ addToCart }) => {
     <div style={{ minHeight: "100vh", paddingTop: 100, paddingBottom: 80 }}>
       <SEO title={piece.title} description={piece.description} path={`/portfolio/${id}`} />
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
-        <button onClick={() => navigate("/portfolio")} style={{ background: "none", border: "none", color: P.bone, fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 4, cursor: "pointer", opacity: 0.4, marginBottom: 32, textTransform: "uppercase" }}>&larr; Portfolio</button>
+        <button onClick={() => navigate("/portfolio?category=photoshop-originals")} style={{ background: "none", border: "none", color: P.bone, fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 4, cursor: "pointer", opacity: 0.4, marginBottom: 32, textTransform: "uppercase" }}>&larr; Photoshop Originals</button>
         <div style={{ opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(12px)", transition: "all 0.6s cubic-bezier(0.16,1,0.3,1)" }}>
           <div className="showcase-grid" style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 52, marginBottom: 48 }}>
             <div>
-              <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 5, color: piece.colors[0], textTransform: "uppercase", marginBottom: 12 }}>{piece.series} &mdash; {piece.year}</div>
+              <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 5, color: piece.colors[0], textTransform: "uppercase", marginBottom: 12 }}>{category.label} &mdash; {piece.series} &mdash; {piece.year}</div>
               <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 3.5vw, 42px)", fontWeight: 400, color: P.ghost, margin: "0 0 16px 0", lineHeight: 1.1 }}><ScrollMorphText speed={80}>{piece.title}</ScrollMorphText></h2>
               <p style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.7, color: P.bone, opacity: 0.6, margin: 0, maxWidth: 480, animation: "morphBreathSoft 1s ease-in-out infinite" }}>{piece.description}</p>
             </div>
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 28, paddingTop: 16, borderTop: `1px solid ${P.steel}20` }}>
-                {[["Medium", piece.medium], ["Edition", piece.edition], ["Tags", piece.tags.join(" \u00B7 ")]].map(([l, v]) => (
+                {[["Medium", piece.medium], ["Edition", piece.printEdition ? `Signed print edition of ${piece.printEdition.size}` : null], ["Tags", piece.tags.join(" \u00B7 ")]].filter(([, value]) => value).map(([l, v]) => (
                   <div key={l} style={{ display: "flex", gap: 12 }}>
                     <span style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 3, color: P.bone, opacity: 0.3, textTransform: "uppercase", minWidth: 55 }}>{l}</span>
                     <span style={{ fontFamily: "'Georgia', serif", fontSize: 12, color: P.bone, opacity: 0.55 }}>{v}</span>
                   </div>
                 ))}
               </div>
-              {hasPrice && (
-                <div style={{ display: "flex", alignItems: "center", gap: 16 }}>
-                  <span style={{ fontFamily: "'Courier New', monospace", fontSize: 22, fontWeight: 700, color: P.ghost }}>${piece.price}<span style={{ fontSize: 10, opacity: 0.3, marginLeft: 3 }}>CAD</span></span>
-                  <button onClick={() => addToCart(piece)} style={{ background: `${piece.colors[0]}12`, border: `1px solid ${piece.colors[0]}30`, color: P.ghost, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 4, padding: "11px 24px", cursor: "pointer", textTransform: "uppercase", transition: "all 0.3s" }}
-                    onMouseEnter={(e) => { e.target.style.background = `${piece.colors[0]}22`; }}
-                    onMouseLeave={(e) => { e.target.style.background = `${piece.colors[0]}12`; }}
-                  >Add to Cart</button>
+              {piece.printEdition && (
+                <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6, padding: "14px 16px", border: `1px solid ${P.gold}25`, background: `${P.gold}08` }}>
+                  <span style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 3, color: P.gold, textTransform: "uppercase" }}>Print release coming soon</span>
+                  <span style={{ fontFamily: "'Georgia', serif", fontSize: 11, color: P.bone, opacity: 0.45, lineHeight: 1.5 }}>One shared, signed edition of ten across all future print formats.</span>
+                </div>
+              )}
+              {adaptations.length > 0 && (
+                <div style={{ marginTop: 18 }}>
+                  <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: P.purple, textTransform: "uppercase", marginBottom: 8 }}>AI Adaptations</div>
+                  <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+                    {adaptations.map((adaptation) => (
+                      <button key={adaptation.id} onClick={() => navigate(getWorkHref(adaptation))} style={{ background: `${P.purple}0a`, border: `1px solid ${P.purple}25`, color: P.bone, fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 1, padding: "7px 10px", cursor: "pointer" }}>
+                        {adaptation.title} ↗
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>

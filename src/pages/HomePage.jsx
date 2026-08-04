@@ -1,19 +1,18 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { P, ART_IMGS, HERO_LOGO_STATIONARY_IMG, HERO_LOGO_TURN_IMG } from "../data/palette";
-import { PIECES } from "../data/pieces";
+import { FEATURED_WORKS, getCategory, getWorkHref } from "../data/catalog";
 import { SEO } from "../components/SEO";
 import { MorphText, HoverMorphText, ScrollMorphText } from "../components/MorphText";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { GalleryFocus } from "../components/home/GalleryFocus";
 import { InquireModal } from "../components/home/InquireModal";
-import { AVAILABILITY } from "../components/home/availability";
 import { submitForm } from "../lib/api";
 
 // Destination cards — functionally replace the orbiting solar-system nav
 const DESTINATIONS = [
-  { label: "Portfolio", dest: "/portfolio", color: P.cyan, desc: "Curated Works" },
-  { label: "Shop", dest: "/shop", color: P.gold, desc: "Prints & Originals" },
+  { label: "Portfolio", dest: "/portfolio", color: P.cyan, desc: "Five Creative Disciplines" },
+  { label: "Shop", dest: "/shop", color: P.gold, desc: "Apparel & Prints" },
   { label: "Media", dest: "/media", color: P.magenta, desc: "Motion & Sound" },
   { label: "About", dest: "/about", color: P.bone, desc: "The Artist" },
   { label: "Contact", dest: "/contact", color: P.bone, desc: "Get In Touch" },
@@ -351,20 +350,11 @@ function SectionHead({ kicker, title, color = P.cyan, link, linkLabel }) {
 }
 
 // ─── GALLERY ─────────────────────────────────────────────
-function AvailabilityDot({ availability }) {
-  const av = AVAILABILITY[availability] || AVAILABILITY.available;
-  return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
-      <span style={{ width: 6, height: 6, borderRadius: "50%", background: av.color, boxShadow: `0 0 6px ${av.color}` }} />
-      <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 2, color: av.color, textTransform: "uppercase" }}>{av.label}</span>
-    </span>
-  );
-}
-
 function GalleryCard({ piece, onOpen, isMobile }) {
   const [hover, setHover] = useState(false);
   const accent = piece.colors?.[0] || P.cyan;
   const isVideo = piece.mediaType === "video";
+  const category = getCategory(piece.primaryCategory);
   return (
     <button
       onClick={onOpen}
@@ -402,18 +392,20 @@ function GalleryCard({ piece, onOpen, isMobile }) {
       {/* Media-type chip */}
       {isVideo && (
         <span style={{ position: "absolute", top: 12, left: 12, zIndex: 3, fontFamily: "'Courier New', monospace", fontSize: 7, letterSpacing: 2, color: P.abyss, background: accent, borderRadius: 2, padding: "3px 7px", textTransform: "uppercase" }}>
-          Motion
+          Film
         </span>
       )}
-      <span style={{ position: "absolute", top: 12, right: 12, zIndex: 3, background: `${P.abyss}cc`, borderRadius: 2, padding: "4px 8px", backdropFilter: "blur(4px)" }}>
-        <AvailabilityDot availability={piece.availability} />
-      </span>
+      {piece.printEdition && (
+        <span style={{ position: "absolute", top: 12, right: 12, zIndex: 3, background: `${P.abyss}dd`, border: `1px solid ${accent}44`, borderRadius: 2, padding: "4px 8px", backdropFilter: "blur(4px)", fontFamily: "'Courier New', monospace", fontSize: 7, letterSpacing: 2, color: accent, textTransform: "uppercase" }}>
+          Edition of {piece.printEdition.size}
+        </span>
+      )}
 
       {/* Gradient + copy */}
       <div style={{ position: "absolute", inset: 0, zIndex: 2, background: `linear-gradient(to top, ${P.abyss}f5 0%, ${P.abyss}55 50%, transparent 100%)` }} />
       <div style={{ position: "absolute", left: 16, right: 16, bottom: 14, zIndex: 3 }}>
         <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: accent, textTransform: "uppercase", marginBottom: 6 }}>
-          {piece.series} · {piece.year}
+          {category?.label}{piece.year ? ` · ${piece.year}` : ""}
         </div>
         <div style={{ fontFamily: "'Courier New', monospace", fontSize: 14, fontWeight: 400, letterSpacing: 1, color: P.ghost, textTransform: "uppercase", lineHeight: 1.2 }}>
           <HoverMorphText>{piece.title}</HoverMorphText>
@@ -429,13 +421,10 @@ function GalleryCard({ piece, onOpen, isMobile }) {
           }}
         >
           <div style={{ fontFamily: "'Georgia', serif", fontStyle: "italic", fontSize: 11, color: P.bone, opacity: 0.7, lineHeight: 1.4 }}>
-            {piece.medium}
+            {piece.medium || piece.series || category?.description}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
-            {typeof piece.price === "number" && piece.price > 0 && (
-              <span style={{ fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 1, color: P.gold }}>${piece.price} CAD</span>
-            )}
-            <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: accent, textTransform: "uppercase" }}>Open ↗</span>
+            <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: accent, textTransform: "uppercase" }}>Explore work ↗</span>
           </div>
         </div>
       </div>
@@ -456,108 +445,36 @@ function imgStyle(hover) {
   };
 }
 
-function FilterPill({ active, color, onClick, children }) {
-  const [hover, setHover] = useState(false);
-  const on = active || hover;
-  return (
-    <button
-      onClick={onClick}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        fontFamily: "'Courier New', monospace",
-        fontSize: 9,
-        letterSpacing: 3,
-        textTransform: "uppercase",
-        cursor: "pointer",
-        color: active ? P.abyss : on ? color : P.bone,
-        background: active ? color : "transparent",
-        border: `1px solid ${on ? color : P.steel + "44"}`,
-        borderRadius: 2,
-        padding: "8px 14px",
-        transition: "all 0.25s ease",
-      }}
-    >
-      {children}
-    </button>
-  );
-}
-
-function Gallery({ isMobile, onInquire }) {
+function Gallery({ isMobile }) {
   const navigate = useNavigate();
-  const [series, setSeries] = useState("All");
-  const [avail, setAvail] = useState("All");
-  const [focus, setFocus] = useState(null); // index into filtered list
+  const [focus, setFocus] = useState(null);
+  const featured = FEATURED_WORKS;
 
-  const seriesOptions = useMemo(() => ["All", ...Array.from(new Set(PIECES.map((p) => p.series)))], []);
-  const availOptions = ["All", "available", "sold", "commission"];
-
-  const filtered = useMemo(
-    () =>
-      PIECES.filter(
-        (p) => (series === "All" || p.series === series) && (avail === "All" || p.availability === avail)
-      ),
-    [series, avail]
-  );
-
-  const onAcquire = (piece) => {
+  const onView = (piece) => {
     setFocus(null);
-    navigate(`/portfolio/${piece.id}`);
-  };
-  const handleInquire = (piece, mode) => {
-    setFocus(null);
-    onInquire(piece, mode);
+    navigate(getWorkHref(piece));
   };
 
   return (
     <section style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "60px 24px" : "90px 32px" }}>
       <SectionHead kicker="Selected Works" title="The Gallery" color={P.cyan} link="/portfolio" linkLabel="View All →" />
-
-      {/* Filter rail */}
-      <div style={{ display: "flex", flexWrap: "wrap", gap: 20, marginBottom: 28 }}>
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
-          <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: P.bone, opacity: 0.4, textTransform: "uppercase", marginRight: 2 }}>Series</span>
-          {seriesOptions.map((s) => (
-            <FilterPill key={s} active={series === s} color={P.cyan} onClick={() => setSeries(s)}>{s}</FilterPill>
-          ))}
-        </div>
-        <div style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 8 }}>
-          <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: P.bone, opacity: 0.4, textTransform: "uppercase", marginRight: 2 }}>Status</span>
-          {availOptions.map((a) => (
-            <FilterPill key={a} active={avail === a} color={a === "All" ? P.magenta : (AVAILABILITY[a]?.color || P.magenta)} onClick={() => setAvail(a)}>
-              {a === "All" ? "All" : AVAILABILITY[a].label}
-            </FilterPill>
-          ))}
-        </div>
+      <p style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.45, lineHeight: 1.7, maxWidth: 620, margin: "-18px 0 28px" }}>
+        A hand-picked path through originals, film, adaptation, photography, and design.
+      </p>
+      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 14 }}>
+        {featured.map((piece, index) => (
+          <GalleryCard key={piece.id} piece={piece} isMobile={isMobile} onOpen={() => setFocus(index)} />
+        ))}
       </div>
 
-      {filtered.length === 0 ? (
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 2, color: P.bone, opacity: 0.5, padding: "40px 0", textAlign: "center" }}>
-          No works match this filter.
-        </div>
-      ) : (
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
-            gap: 14,
-          }}
-        >
-          {filtered.map((piece, i) => (
-            <GalleryCard key={piece.id} piece={piece} isMobile={isMobile} onOpen={() => setFocus(i)} />
-          ))}
-        </div>
-      )}
-
-      {focus !== null && filtered[focus] && (
+      {focus !== null && featured[focus] && (
         <GalleryFocus
-          pieces={filtered}
+          pieces={featured}
           index={focus}
           isMobile={isMobile}
           onClose={() => setFocus(null)}
-          onNav={(dir) => setFocus((cur) => (cur + dir + filtered.length) % filtered.length)}
-          onAcquire={onAcquire}
-          onInquire={handleInquire}
+          onNav={(dir) => setFocus((cur) => (cur + dir + featured.length) % featured.length)}
+          onView={onView}
         />
       )}
     </section>
@@ -946,7 +863,7 @@ function ShopCta({ isMobile }) {
               marginBottom: 12,
             }}
           >
-            Prints & Originals
+            Apparel & Prints
           </div>
           <div
             style={{
@@ -1001,7 +918,7 @@ export default function HomePage() {
     >
       <SEO />
       <HeroSection isMobile={isMobile} />
-      <Gallery isMobile={isMobile} onInquire={openInquire} />
+      <Gallery isMobile={isMobile} />
       <Destinations isMobile={isMobile} />
       <Manifesto isMobile={isMobile} />
       <ConnectSection isMobile={isMobile} onCommission={() => openInquire(null, "commission")} />

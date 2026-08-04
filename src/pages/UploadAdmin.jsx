@@ -1,40 +1,47 @@
 import { useState, useRef, useEffect } from "react";
 import { SEO } from "../components/SEO";
 import { P } from "../data/palette";
-import { DESIGN_PROJECTS, PHOTO_GALLERY, AI_WORKS, MOTION_WORKS } from "../data/portfolio";
-import { PIECES } from "../data/pieces";
+import { PORTFOLIO_CATEGORIES, PORTFOLIO_WORKS } from "../data/catalog";
 
 // ─── Category / Subcategory map ─────────────────────────
 const CATEGORIES = {
-  design: {
-    label: "Design",
-    subcategories: ["esports", "sports", "merch", "branding", "identity", "broadcast", "apparel", "print", "events", "web"],
-    fields: ["title", "year", "role", "brief", "approach", "description", "deliverables", "tags", "colors"],
-    folder: "design",
+  "photoshop-originals": {
+    label: "Photoshop Originals",
+    subcategoryLabel: "Series",
+    subcategories: ["Kaleidoscope", "Revelations"],
+    fields: ["title", "year", "medium", "description", "tags", "colors", "catalog"],
+    folder: "curated",
+    allowPrint: true,
+  },
+  "short-films": {
+    label: "Short Films",
+    subcategoryLabel: "Series",
+    subcategories: ["Independent", "Codename Angel", "Experimental"],
+    fields: ["title", "year", "duration", "medium", "description", "tags", "colors", "catalog"],
+    folder: "curated",
+  },
+  "ai-adaptations": {
+    label: "AI Adaptations",
+    subcategoryLabel: "Series",
+    subcategories: ["Independent Adaptations", "Glitchcore"],
+    fields: ["title", "process", "year", "medium", "description", "tags", "colors", "catalog", "sourceWorkId"],
+    folder: "ai",
+    allowPrint: true,
   },
   photography: {
     label: "Photography",
+    subcategoryLabel: "Subject",
     subcategories: ["landscape", "portrait", "urban", "abstract", "studio", "street", "night", "nature", "event", "editorial"],
-    fields: ["title", "tags", "colors", "description"],
+    fields: ["title", "year", "medium", "tags", "colors", "description", "catalog"],
     folder: "photography",
+    allowPrint: true,
   },
-  "ai-human": {
-    label: "AI x Human",
-    subcategories: ["photoshop", "hybridized", "stable-diffusion", "midjourney", "angel"],
-    fields: ["title", "process", "type", "year", "description", "tags", "colors"],
-    folder: "ai",
-  },
-  motion: {
-    label: "Motion",
-    subcategories: ["animated-artwork", "video-art", "motion-design", "loop", "generative", "parallax"],
-    fields: ["title", "duration", "type", "description", "tags", "colors"],
-    folder: "motion",
-  },
-  curated: {
-    label: "Curated Works",
-    subcategories: ["Kaleidoscope", "Revelations"],
-    fields: ["title", "year", "medium", "price", "edition", "description", "tags", "colors"],
-    folder: "curated",
+  "graphic-design": {
+    label: "Graphic Design",
+    subcategoryLabel: "Project Type",
+    subcategories: ["esports", "sports", "merch", "branding", "identity", "broadcast", "apparel", "print", "events", "web"],
+    fields: ["title", "year", "role", "brief", "approach", "description", "deliverables", "tags", "colors", "catalog"],
+    folder: "design",
   },
 };
 
@@ -310,7 +317,7 @@ const ItemEditor = ({ item, index, onUpdate, onRemove, categoryConfig }) => {
           </div>
           <div style={{ display: "flex", gap: "12px" }}>
             <div style={{ flex: 1 }}>
-              <label style={labelStyle}>Subcategory</label>
+              <label style={labelStyle}>{categoryConfig.subcategoryLabel || "Series"}</label>
               <select value={item.subcategory || ""} onChange={e => update("subcategory", e.target.value)} style={inputStyle}>
                 <option value="">Select...</option>
                 {categoryConfig.subcategories.map(s => <option key={s} value={s}>{s}</option>)}
@@ -384,20 +391,36 @@ const ItemEditor = ({ item, index, onUpdate, onRemove, categoryConfig }) => {
             <input value={item.medium || ""} onChange={e => update("medium", e.target.value)} style={inputStyle} placeholder="Digital Collage / Photoshop + AI Composite" />
           </div>
         )}
-        {(fields.includes("price") || fields.includes("edition")) && (
-          <div style={{ display: "flex", gap: "12px" }}>
-            {fields.includes("price") && (
-              <div style={{ flex: 1 }}>
-                <label style={labelStyle}>Price (CAD)</label>
-                <input type="number" value={item.price || ""} onChange={e => update("price", e.target.value)} style={inputStyle} placeholder="250 (leave empty for non-sale)" />
+        {fields.includes("catalog") && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "12px", padding: "14px", border: `1px solid ${P.cyan}20`, background: `${P.cyan}05` }}>
+            <div>
+              <label style={labelStyle}>Category Order</label>
+              <input type="number" min="1" value={item.sortOrder || ""} onChange={e => update("sortOrder", e.target.value)} style={inputStyle} placeholder="1" />
+            </div>
+            <div>
+              <label style={labelStyle}>Homepage Order</label>
+              <input type="number" min="1" value={item.homeOrder || ""} onChange={e => update("homeOrder", e.target.value)} style={inputStyle} placeholder="Leave empty unless featured" />
+            </div>
+            <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 8, alignSelf: "end", minHeight: 38, cursor: "pointer" }}>
+              <input type="checkbox" checked={Boolean(item.featured)} onChange={e => update("featured", e.target.checked)} />
+              Feature on homepage
+            </label>
+            {categoryConfig.allowPrint && item.mediaType !== "video" ? (
+              <label style={{ ...labelStyle, display: "flex", alignItems: "center", gap: 8, alignSelf: "end", minHeight: 38, cursor: "pointer" }}>
+                <input type="checkbox" checked={Boolean(item.printEligible)} onChange={e => update("printEligible", e.target.checked)} />
+                Signed print edition of 10
+              </label>
+            ) : (
+              <div style={{ ...labelStyle, alignSelf: "end", minHeight: 38, display: "flex", alignItems: "center", opacity: 0.45 }}>
+                Portfolio-only media
               </div>
             )}
-            {fields.includes("edition") && (
-              <div style={{ flex: 2 }}>
-                <label style={labelStyle}>Edition</label>
-                <input value={item.edition || ""} onChange={e => update("edition", e.target.value)} style={inputStyle} placeholder="1/1 Original + 10 Prints" />
-              </div>
-            )}
+          </div>
+        )}
+        {fields.includes("sourceWorkId") && (
+          <div>
+            <label style={labelStyle}>Source Artwork ID</label>
+            <input value={item.sourceWorkId || ""} onChange={e => update("sourceWorkId", e.target.value)} style={inputStyle} placeholder="Stable ID of the original work" />
           </div>
         )}
         {fields.includes("deliverables") && (
@@ -439,12 +462,12 @@ const ItemEditor = ({ item, index, onUpdate, onRemove, categoryConfig }) => {
 };
 
 // ─── Map existing data into uniform shape ───────────────
-function mapExisting(items, cat) {
+function mapExisting(items) {
   return items.map((item, i) => ({
-    id: item.id || `${cat}-existing-${i}`,
+    id: item.id || `catalog-existing-${i}`,
     title: item.title || item.name || "Untitled",
-    category: cat,
-    subcategory: item.category || item.type || item.series || "",
+    category: item.primaryCategory,
+    subcategory: item.series || item.subject || item.projectType || "",
     description: item.description || item.desc || "",
     brief: item.brief || "",
     approach: item.approach || "",
@@ -456,8 +479,11 @@ function mapExisting(items, cat) {
     duration: item.duration || "",
     type: item.type || "",
     medium: item.medium || "",
-    price: item.price != null ? String(item.price) : "",
-    edition: item.edition || "",
+    sortOrder: item.sortOrder || "",
+    homeOrder: item.homeOrder || "",
+    featured: Boolean(item.featured),
+    printEligible: Boolean(item.printEdition),
+    sourceWorkId: item.sourceWorkId || "",
     colors: (item.colors || []).map(c => {
       const found = AVAILABLE_COLORS.find(ac => COLOR_MAP[ac.value] === c);
       return found ? found.value : null;
@@ -484,7 +510,7 @@ export const UploadAdmin = () => {
   const [authError, setAuthError] = useState("");
 
   /* content state */
-  const [category, setCategory] = useState("design");
+  const [category, setCategory] = useState("photoshop-originals");
   const [items, setItems] = useState([]);
   const [liveItems, setLiveItems] = useState([]);
   const [activeView, setActiveView] = useState("new");
@@ -507,14 +533,7 @@ export const UploadAdmin = () => {
   /* load existing data once authed */
   useEffect(() => {
     if (!authed) return;
-    const all = [
-      ...mapExisting(PIECES, "curated"),
-      ...mapExisting(DESIGN_PROJECTS, "design"),
-      ...mapExisting(PHOTO_GALLERY, "photography"),
-      ...mapExisting(AI_WORKS, "ai-human"),
-      ...mapExisting(MOTION_WORKS, "motion"),
-    ];
-    setLiveItems(all);
+    setLiveItems(mapExisting(PORTFOLIO_WORKS));
   }, [authed]);
 
   /* login — client-side only, no API needed */
@@ -559,12 +578,15 @@ export const UploadAdmin = () => {
         duration: "",
         type: "",
         medium: "",
-        price: "",
-        edition: "",
+        sortOrder: "",
+        homeOrder: "",
+        featured: false,
+        printEligible: false,
+        sourceWorkId: "",
         deliverables: [],
         tags: [],
         colors: [],
-        gallery: category === "design" ? [
+        gallery: category === "graphic-design" ? [
           { file: null, filename: "", thumbnailUrl: "", title: "", caption: "" },
           { file: null, filename: "", thumbnailUrl: "", title: "", caption: "" },
         ] : [],
@@ -591,67 +613,49 @@ export const UploadAdmin = () => {
     if (items.length === 0) return "// No items staged yet.";
 
     const folder = categoryConfig.folder;
-
-    // ── Curated is a SPECIAL CASE — it lives in src/data/pieces.js with its own schema (PIECES array). ──
-    if (category === "curated") {
-      const maxId = Math.max(0, ...PIECES.map(p => (typeof p.id === "number" ? p.id : 0)));
-      const lines = items.map((it, i) => {
-        const newId = maxId + i + 1;
-        const colorsStr = it.colors.length > 0 ? `[${it.colors.join(", ")}]` : "[]";
-        const tagsStr = it.tags.length > 0 ? `[${it.tags.map(t => `"${t}"`).join(", ")}]` : "[]";
-        const filePath = `/images/curated/${it.filename}`;
-        let obj = `  { id: ${newId}, title: "${it.title.replace(/"/g, '\\"')}"`;
-        if (it.year) obj += `, year: "${it.year}"`;
-        if (it.subcategory) obj += `, series: "${it.subcategory}"`;
-        if (it.medium) obj += `, medium: "${it.medium.replace(/"/g, '\\"')}"`;
-        if (it.description) obj += `, description: "${it.description.replace(/"/g, '\\"')}"`;
-        if (it.price) obj += `, price: ${Number(it.price)}`;
-        if (it.edition) obj += `, edition: "${it.edition.replace(/"/g, '\\"')}"`;
-        obj += `, colors: ${colorsStr}, tags: ${tagsStr}, img: "${filePath}"`;
-        if (it.mediaType === "video") obj += `, mediaType: "video"`;
-        obj += ` }`;
-        return obj;
-      });
-      const fileList = items.map(it => `//   ${it.filename}  -->  public/images/curated/${it.filename}`).join("\n");
-      return `// ─── STEP 1: Copy these files into your public/ folder ───\n${fileList}\n\n// ─── STEP 2: Add these entries to the PIECES array in src/data/pieces.js ───\n${lines.join(",\n")}`;
-    }
-
-    const arrayName = category === "design" ? "DESIGN_PROJECTS" :
-                      category === "photography" ? "PHOTO_GALLERY" :
-                      category === "ai-human" ? "AI_WORKS" :
-                      category === "motion" ? "MOTION_WORKS" : "CURATED_WORKS";
+    const escapeText = (value = "") => value.replace(/\\/g, "\\\\").replace(/"/g, '\\"').replace(/\n/g, "\\n");
+    const sourceKind = category === "graphic-design"
+      ? "case-study"
+      : category === "short-films"
+        ? "film"
+        : "gallery";
 
     const lines = items.map((it, i) => {
-      const id = `${category.charAt(0)}${Date.now().toString(36)}${i}`;
+      const id = `w${Date.now().toString(36)}${i}`;
       const colorsStr = it.colors.length > 0 ? `[${it.colors.join(", ")}]` : "[]";
-      const tagsStr = it.tags.length > 0 ? `[${it.tags.map(t => `"${t}"`).join(", ")}]` : "[]";
+      const tagsStr = it.tags.length > 0 ? `[${it.tags.map(t => `"${escapeText(t)}"`).join(", ")}]` : "[]";
 
-      // Build the public/ path from the filename
       const filePath = `/images/${folder}/${it.filename}`;
-
       const slug = slugify(it.title);
-      let obj = `  { id: "${id}", slug: "${slug}", title: "${it.title}", img: "${filePath}"`;
+      let obj = `  { id: "${id}", slug: "${slug}", primaryCategory: "${category}", sourceKind: "${sourceKind}", title: "${escapeText(it.title)}", img: "${filePath}"`;
       if (it.mediaType === "video") obj += `, mediaType: "video"`;
 
-      if (it.subcategory) obj += `, category: "${it.subcategory}"`;
-      if (it.year && categoryConfig.fields.includes("year")) obj += `, year: "${it.year}"`;
-      if (it.role) obj += `, role: "${it.role}"`;
-      if (it.brief) obj += `, brief: "${it.brief.replace(/"/g, '\\"')}"`;
-      if (it.approach) obj += `, approach: "${it.approach.replace(/"/g, '\\"')}"`;
-      if (it.description) obj += `, description: "${it.description.replace(/"/g, '\\"')}"`;
-      if (it.process) obj += `, process: "${it.process}"`;
-      if (it.duration) obj += `, duration: "${it.duration}"`;
-      if (it.type) obj += `, type: "${it.type}"`;
-      if (it.deliverables && it.deliverables.length > 0) obj += `, deliverables: [${it.deliverables.map(d => `"${d}"`).join(", ")}]`;
+      if (it.subcategory) {
+        const field = category === "photography" ? "subject" : category === "graphic-design" ? "projectType" : "series";
+        obj += `, ${field}: "${escapeText(it.subcategory)}"`;
+      }
+      if (it.year) obj += `, year: "${escapeText(it.year)}"`;
+      if (it.medium) obj += `, medium: "${escapeText(it.medium)}"`;
+      if (it.role) obj += `, role: "${escapeText(it.role)}"`;
+      if (it.brief) obj += `, brief: "${escapeText(it.brief)}"`;
+      if (it.approach) obj += `, approach: "${escapeText(it.approach)}"`;
+      if (it.description) obj += `, description: "${escapeText(it.description)}"`;
+      if (it.process) obj += `, process: "${escapeText(it.process)}"`;
+      if (it.duration) obj += `, duration: "${escapeText(it.duration)}"`;
+      if (it.sourceWorkId) obj += `, sourceWorkId: "${escapeText(it.sourceWorkId)}"`;
+      if (it.sortOrder) obj += `, sortOrder: ${Number(it.sortOrder)}`;
+      if (it.featured) obj += `, featured: true`;
+      if (it.featured && it.homeOrder) obj += `, homeOrder: ${Number(it.homeOrder)}`;
+      if (it.printEligible) obj += `, printEdition: { size: 10, status: "coming-soon" }`;
+      if (it.deliverables && it.deliverables.length > 0) obj += `, deliverables: [${it.deliverables.map(d => `"${escapeText(d)}"`).join(", ")}]`;
       obj += `, colors: ${colorsStr}, tags: ${tagsStr}`;
 
-      // Gallery images (design only)
       const galleryWithFiles = (it.gallery || []).filter(g => g.filename);
       if (galleryWithFiles.length > 0) {
         const galleryStr = galleryWithFiles.map(g => {
           let gObj = `{ img: "/images/${folder}/${g.filename}"`;
-          if (g.title) gObj += `, title: "${g.title.replace(/"/g, '\\"')}"`;
-          if (g.caption) gObj += `, caption: "${g.caption.replace(/"/g, '\\"')}"`;
+          if (g.title) gObj += `, title: "${escapeText(g.title)}"`;
+          if (g.caption) gObj += `, caption: "${escapeText(g.caption)}"`;
           gObj += ` }`;
           return gObj;
         }).join(", ");
@@ -662,12 +666,11 @@ export const UploadAdmin = () => {
       return obj;
     });
 
-    // Include gallery filenames in the file list
     const galleryFiles = items.flatMap(it => (it.gallery || []).filter(g => g.filename).map(g => `//   ${g.filename}  -->  public/images/${folder}/${g.filename}`));
     const mainFiles = items.map(it => `//   ${it.filename}  -->  public/images/${folder}/${it.filename}`);
     const fileList = [...mainFiles, ...galleryFiles].join("\n");
 
-    return `// ─── STEP 1: Copy these files into your public/ folder ───\n${fileList}\n\n// ─── STEP 2: Add to ${arrayName} in src/data/portfolio.js ───\n[\n${lines.join(",\n")}\n]`;
+    return `// ─── STEP 1: Copy these files into your public/ folder ───\n${fileList}\n\n// ─── STEP 2: Add these records to CATALOG_ADDITIONS in src/data/catalog.js ───\n[\n${lines.join(",\n")}\n]`;
   };
 
   const handleGenerateCode = () => {
@@ -758,7 +761,7 @@ export const UploadAdmin = () => {
             <>
               <select value={filterCat} onChange={e => setFilterCat(e.target.value)} style={{ ...inputStyle, width: "auto" }}>
                 <option value="all">All Categories</option>
-                {Object.entries(CATEGORIES).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                {PORTFOLIO_CATEGORIES.map((portfolioCategory) => <option key={portfolioCategory.id} value={portfolioCategory.id}>{portfolioCategory.label}</option>)}
               </select>
               <input type="text" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} placeholder="Search..." style={{ ...inputStyle, width: "160px" }} />
             </>
@@ -899,8 +902,8 @@ export const UploadAdmin = () => {
               <div style={{ flex: "1 1 200px" }}>
                 <label style={labelStyle}>Category</label>
                 <select value={category} onChange={e => setCategory(e.target.value)} style={inputStyle}>
-                  {Object.entries(CATEGORIES).map(([key, val]) => (
-                    <option key={key} value={key}>{val.label}</option>
+                  {PORTFOLIO_CATEGORIES.map((portfolioCategory) => (
+                    <option key={portfolioCategory.id} value={portfolioCategory.id}>{portfolioCategory.label}</option>
                   ))}
                 </select>
               </div>

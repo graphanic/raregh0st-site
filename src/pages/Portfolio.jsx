@@ -1,10 +1,16 @@
-import { useState, useCallback, useRef, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useRef, useEffect } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { P } from "../data/palette";
-import { PIECES, ART_IMGS } from "../data/pieces";
-import { PORTFOLIO_TABS, DESIGN_PROJECTS, PHOTO_GALLERY, AI_WORKS, AI_TYPES, MOTION_WORKS } from "../data/portfolio";
+import {
+  DEFAULT_PORTFOLIO_CATEGORY,
+  PORTFOLIO_CATEGORIES,
+  getCategory,
+  getWorkById,
+  getWorkFilterValue,
+  getWorksByCategory,
+  normalizeCategoryId,
+} from "../data/catalog";
 import { HoverMorphText, ScrollMorphText } from "../components/MorphText";
-import { HScrollRow } from "../components/HScrollRow";
 import { PortfolioPlaceholder, Lightbox } from "../components/PortfolioPlaceholder";
 import { SEO } from "../components/SEO";
 
@@ -19,6 +25,7 @@ const CuratedCard = ({ piece, onClick }) => {
   const [hov, setHov] = useState(false);
   const videoRef = useRef(null);
   const isVideo = piece.mediaType === "video" && piece.img;
+  const category = getCategory(piece.primaryCategory);
 
   useEffect(() => {
     if (!isVideo || !videoRef.current) return;
@@ -59,7 +66,7 @@ const CuratedCard = ({ piece, onClick }) => {
         )}
       </div>
       <div style={{ marginTop: 14 }}>
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: piece.colors[0], textTransform: "uppercase", opacity: 0.7 }}>{piece.series} &mdash; {piece.year}</div>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: piece.colors[0], textTransform: "uppercase", opacity: 0.7 }}>{piece.series || category?.label}{piece.year ? <> &mdash; {piece.year}</> : null}</div>
         <div style={{ fontFamily: "'Georgia', serif", fontSize: 16, color: P.ghost, marginTop: 4, lineHeight: 1.3 }}><HoverMorphText>{piece.title}</HoverMorphText></div>
         <div style={{ fontFamily: "'Georgia', serif", fontSize: 11, color: P.bone, opacity: 0.4, marginTop: 6, lineHeight: 1.5, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", animation: "morphBreathSoft 1.2s ease-in-out infinite" }}>{piece.description}</div>
       </div>
@@ -234,20 +241,74 @@ const MotionItem = ({ work, onClick }) => {
 
 const BATCH_SIZE = 20;
 
-const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
+const Portfolio = () => {
   const navigate = useNavigate();
-  const tab = portfolioTab;
-  const setTab = setPortfolioTab;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const storedTab = typeof window !== "undefined" ? window.localStorage.getItem("tab") : null;
+  const tab = normalizeCategoryId(searchParams.get("category") || storedTab || DEFAULT_PORTFOLIO_CATEGORY);
+  const tagFilter = searchParams.get("filter");
   const [lightboxItem, setLightboxItem] = useState(null);
-  const [tagFilter, setTagFilter] = useState(null);
   const [visibleCount, setVisibleCount] = useState(BATCH_SIZE);
   const loadMoreRef = useRef(null);
-  const activeTab = PORTFOLIO_TABS.find(t => t.id === tab);
+  const activeTab = getCategory(tab);
+  const categoryWorks = getWorksByCategory(tab);
+  const filterOptions = [...new Set(categoryWorks.map(getWorkFilterValue).filter(Boolean))];
+  const filteredWorks = categoryWorks.filter((work) => !tagFilter || getWorkFilterValue(work) === tagFilter);
+  const visibleWorks = filteredWorks.slice(0, visibleCount);
+  const lightboxWorks = filteredWorks.filter((work) => work.sourceKind !== "case-study" && work.sourceKind !== "showcase");
+
+  const updateParams = (updates, options) => {
+    const next = new URLSearchParams(searchParams);
+    Object.entries(updates).forEach(([key, value]) => {
+      if (value) next.set(key, value);
+      else next.delete(key);
+    });
+    setSearchParams(next, options);
+  };
+
+  const setTab = (categoryId) => {
+    const normalized = normalizeCategoryId(categoryId);
+    window.localStorage.setItem("tab", normalized);
+    updateParams({ category: normalized, filter: null, work: null });
+    setLightboxItem(null);
+  };
+
+  const setTagFilter = (value) => updateParams({ filter: value, work: null });
+
+  const openWork = (work) => {
+    if (work.sourceKind === "showcase") {
+      navigate(`/portfolio/${work.id}`);
+      return;
+    }
+    if (work.sourceKind === "case-study") {
+      navigate(`/portfolio/design/${work.slug || work.id}`);
+      return;
+    }
+    setLightboxItem(work);
+    updateParams({ category: work.primaryCategory, work: work.id });
+  };
+
+  const closeLightbox = () => {
+    setLightboxItem(null);
+    updateParams({ work: null }, { replace: true });
+  };
 
   // Reset visible count when tab or filter changes
   useEffect(() => {
     setVisibleCount(BATCH_SIZE);
   }, [tab, tagFilter]);
+
+  // Normalize old saved tab values and support direct links to a focused work.
+  useEffect(() => {
+    const requestedCategory = searchParams.get("category");
+    if (requestedCategory !== tab) {
+      updateParams({ category: tab }, { replace: true });
+      return;
+    }
+    const requestedWork = searchParams.get("work");
+    const work = requestedWork ? getWorkById(requestedWork) : null;
+    setLightboxItem(work && work.primaryCategory === tab ? work : null);
+  }, [searchParams, tab]);
 
   // Infinite scroll observer
   useEffect(() => {
@@ -265,32 +326,20 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
     return () => observer.disconnect();
   }, [tab, tagFilter]);
 
-  const PHOTO_SUBCATEGORIES = ["landscape", "portrait", "urban", "abstract", "studio", "street", "night", "nature", "event", "editorial"];
-
-  const getTagsForTab = () => {
-    if (tab === "design") return [...new Set(DESIGN_PROJECTS.map(p => p.category))];
-    if (tab === "photography") return PHOTO_SUBCATEGORIES;
-    if (tab === "ai-human") return AI_TYPES;
-    if (tab === "motion") return [...new Set(MOTION_WORKS.map(p => p.type).filter(Boolean))];
-    return [];
-  };
-  const tags = getTagsForTab();
-  const isAiTab = tab === "ai-human";
-
   return (
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
-      <SEO title="Portfolio" description="Multi-disciplinary creative portfolio by 1RareGh0st — art, design, photography, motion, and AI collaboration." path="/portfolio" />
+      <SEO title="Portfolio" description="Photoshop originals, short films, AI adaptations, photography, and graphic design by 1RareGh0st." path="/portfolio" />
       <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
         <div style={{ marginBottom: 40 }}>
           <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.cyan, textTransform: "uppercase", marginBottom: 12 }}><ScrollMorphText speed={75}>Portfolio</ScrollMorphText></div>
           <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: 0 }}><ScrollMorphText speed={85}>The Work</ScrollMorphText></h2>
           <div style={{ width: 40, height: 1, background: `linear-gradient(to right, ${P.cyan}, transparent)`, marginTop: 20, marginBottom: 8 }} />
-          <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.4, lineHeight: 1.6 }}>Multi-disciplinary creative — art, design, photography, motion, and AI collaboration.</div>
+          <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.4, lineHeight: 1.6 }}>One creative practice, organized by how each work came into the world.</div>
         </div>
 
-        <div className="portfolio-tabs" style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
-          {PORTFOLIO_TABS.map(t => (
-            <button key={t.id} onClick={() => { setTab(t.id); setTagFilter(null); }} style={{
+        <div className="portfolio-tabs" role="tablist" aria-label="Portfolio categories" style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
+          {PORTFOLIO_CATEGORIES.map(t => (
+            <button key={t.id} role="tab" aria-selected={tab === t.id} onClick={() => setTab(t.id)} style={{
               background: tab === t.id ? `${t.color}11` : "none",
               border: `1px solid ${tab === t.id ? t.color + "33" : P.steel + "15"}`,
               color: tab === t.id ? t.color : P.bone,
@@ -306,106 +355,71 @@ const Portfolio = ({ addToCart, portfolioTab, setPortfolioTab }) => {
 
         <div style={{ fontFamily: "'Georgia', serif", fontSize: 12, color: P.bone, opacity: 0.35, marginBottom: 28, lineHeight: 1.5 }}>{activeTab?.description}</div>
 
-        {tags.length > 0 && (
-          <div style={{ display: "flex", gap: 6, marginBottom: 28, flexWrap: "wrap" }}>
+        {filterOptions.length > 1 && (
+          <div aria-label={activeTab?.filterLabel || "Filter works"} style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 28, flexWrap: "wrap" }}>
+            <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: P.bone, opacity: 0.3, textTransform: "uppercase", marginRight: 4 }}>{activeTab?.filterLabel}</span>
             <button onClick={() => setTagFilter(null)} style={{ background: !tagFilter ? `${activeTab.color}11` : "none", border: `1px solid ${!tagFilter ? activeTab.color + "22" : P.steel + "11"}`, color: !tagFilter ? activeTab.color : P.bone, fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2, padding: "6px 12px", cursor: "pointer", textTransform: "uppercase", opacity: !tagFilter ? 1 : 0.4, transition: "all 0.3s" }}>All</button>
-            {isAiTab
-              ? tags.map(t => (
-                <button key={t.id} onClick={() => setTagFilter(tagFilter === t.id ? null : t.id)} style={{ background: tagFilter === t.id ? `${t.color}11` : "none", border: `1px solid ${tagFilter === t.id ? t.color + "22" : P.steel + "11"}`, color: tagFilter === t.id ? t.color : P.bone, fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2, padding: "6px 12px", cursor: "pointer", textTransform: "uppercase", opacity: tagFilter === t.id ? 1 : 0.4, transition: "all 0.3s" }}>{t.label}</button>
-              ))
-              : tags.map(t => (
-                <button key={t} onClick={() => setTagFilter(tagFilter === t ? null : t)} style={{ background: tagFilter === t ? `${activeTab.color}11` : "none", border: `1px solid ${tagFilter === t ? activeTab.color + "22" : P.steel + "11"}`, color: tagFilter === t ? activeTab.color : P.bone, fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2, padding: "6px 12px", cursor: "pointer", textTransform: "uppercase", opacity: tagFilter === t ? 1 : 0.4, transition: "all 0.3s" }}>{t.replace(/-/g, " ")}</button>
-              ))
-            }
+            {filterOptions.map((option) => (
+              <button key={option} onClick={() => setTagFilter(tagFilter === option ? null : option)} style={{ background: tagFilter === option ? `${activeTab.color}11` : "none", border: `1px solid ${tagFilter === option ? activeTab.color + "22" : P.steel + "11"}`, color: tagFilter === option ? activeTab.color : P.bone, fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2, padding: "6px 12px", cursor: "pointer", textTransform: "uppercase", opacity: tagFilter === option ? 1 : 0.4, transition: "all 0.3s" }}>{option.replace(/-/g, " ")}</button>
+            ))}
           </div>
         )}
 
-        {tab === "curated" && (
+        {tab === "photoshop-originals" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 28, alignItems: "start" }}>
-            {PIECES.map(p => <CuratedCard key={p.id} piece={p} onClick={() => navigate(`/portfolio/${p.id}`)} />)}
+            {visibleWorks.map((work) => <CuratedCard key={work.id} piece={work} onClick={() => openWork(work)} />)}
           </div>
         )}
 
-        {tab === "design" && (
+        {tab === "graphic-design" && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(340px, 1fr))", gap: 24 }}>
-            {DESIGN_PROJECTS.filter(p => !tagFilter || p.category === tagFilter).map(p => (
-              <CaseStudyCard key={p.id} project={p} onClick={() => navigate(`/portfolio/design/${p.slug || p.id}`)} />
+            {visibleWorks.map((work) => (
+              <CaseStudyCard key={work.id} project={work} onClick={() => openWork(work)} />
             ))}
           </div>
         )}
 
-        {tab === "photography" && (() => {
-          const filtered = PHOTO_GALLERY.filter(p => !tagFilter || p.category === tagFilter);
-          const visible = filtered.slice(0, visibleCount);
-          const hasMore = visible.length < filtered.length;
-          return (
-            <>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
-                {visible.map((p, idx) => (
-                  <GridItem key={p.id} item={p} index={idx} onClick={setLightboxItem} />
-                ))}
-              </div>
-              {hasMore && (
-                <div ref={loadMoreRef} style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
-                  <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 3, color: P.bone, opacity: 0.25, textTransform: "uppercase" }}>Loading more...</div>
+        {tab === "photography" && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))", gap: 8 }}>
+            {visibleWorks.map((work, index) => <GridItem key={work.id} item={work} index={index} onClick={openWork} />)}
+          </div>
+        )}
+
+        {tab === "ai-adaptations" && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
+            {visibleWorks.map((work, index) => (
+              <div key={work.id}>
+                <GridItem item={work} index={index} onClick={openWork} showProcess />
+                <div style={{ paddingTop: 8 }}>
+                  <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.ghost, lineHeight: 1.3 }}>{work.title}</div>
+                  <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 2, color: activeTab.color, textTransform: "uppercase", marginTop: 5, opacity: 0.65 }}>
+                    {work.sourceTitle ? `Adapted from ${work.sourceTitle}` : "Independent adaptation"}
+                  </div>
                 </div>
-              )}
-            </>
-          );
-        })()}
-
-        {tab === "ai-human" && (() => {
-          const filtered = AI_WORKS.filter(p => !tagFilter || p.type === tagFilter);
-          const activeType = tagFilter ? AI_TYPES.find(t => t.id === tagFilter) : null;
-          return (
-            <div>
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))", gap: 12 }}>
-                {filtered.map((p, idx) => {
-                  const typeInfo = AI_TYPES.find(t => t.id === p.type);
-                  return (
-                    <div key={p.id}>
-                      <GridItem item={p} index={idx} onClick={setLightboxItem} showProcess />
-                      <div style={{ padding: "8px 0 0 0" }}>
-                        <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.ghost, lineHeight: 1.3, marginBottom: 4 }}>{p.title}</div>
-                        {typeInfo && (
-                          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: typeInfo.color, textTransform: "uppercase", marginBottom: 6, opacity: 0.7 }}>
-                            {typeInfo.label}
-                          </div>
-                        )}
-                        {p.tags && p.tags.length > 0 && (
-                          <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-                            {p.tags.map(tag => (
-                              <span key={tag} style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 1, color: P.bone, opacity: 0.3, padding: "2px 7px", background: `${P.steel}0d`, border: `1px solid ${P.steel}0a` }}>{tag}</span>
-                            ))}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
               </div>
-            </div>
-          );
-        })()}
-
-        {tab === "motion" && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
-            {MOTION_WORKS.filter(p => !tagFilter || p.type === tagFilter).map(p => (
-              <MotionItem key={p.id} work={p} onClick={setLightboxItem} />
             ))}
+          </div>
+        )}
+
+        {tab === "short-films" && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(300px, 1fr))", gap: 20 }}>
+            {visibleWorks.map((work) => (
+              <MotionItem key={work.id} work={work} onClick={openWork} />
+            ))}
+          </div>
+        )}
+
+        {visibleWorks.length < filteredWorks.length && (
+          <div ref={loadMoreRef} style={{ display: "flex", justifyContent: "center", padding: "40px 0" }}>
+            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 3, color: P.bone, opacity: 0.25, textTransform: "uppercase" }}>Loading more...</div>
           </div>
         )}
       </div>
       <Lightbox
         item={lightboxItem}
-        items={
-          tab === "photography" ? PHOTO_GALLERY.filter(p => !tagFilter || p.category === tagFilter) :
-          tab === "ai-human" ? AI_WORKS.filter(p => !tagFilter || p.type === tagFilter) :
-          tab === "motion" ? MOTION_WORKS.filter(p => !tagFilter || p.type === tagFilter) :
-          undefined
-        }
-        onNavigate={setLightboxItem}
-        onClose={() => setLightboxItem(null)}
+        items={lightboxWorks}
+        onNavigate={(work) => { setLightboxItem(work); updateParams({ work: work?.id || null }, { replace: true }); }}
+        onClose={closeLightbox}
       />
     </div>
   );

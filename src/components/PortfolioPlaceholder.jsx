@@ -1,5 +1,7 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { Link } from "react-router-dom";
 import { P } from "../data/palette";
+import { getCategory, getWorkById, getWorkHref } from "../data/catalog";
 
 export const PortfolioPlaceholder = ({ colors, aspect = "4/5" }) => (
   <div style={{
@@ -357,6 +359,8 @@ export const Lightbox = ({ item, items, onClose, onNavigate }) => {
   const extraCount = item.tags ? item.tags.length - 8 : 0;
   const isVideo = item.mediaType === "video" && item.img;
   const showCounter = items && items.length > 1;
+  const category = item.primaryCategory ? getCategory(item.primaryCategory) : null;
+  const sourceWork = item.sourceWorkId ? getWorkById(item.sourceWorkId) : null;
 
   return (
     <div
@@ -473,7 +477,22 @@ export const Lightbox = ({ item, items, onClose, onNavigate }) => {
           flexShrink: 0,
         }}
       >
+        {category && (
+          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: category.color || item.colors?.[0] || P.cyan, letterSpacing: 3, textTransform: "uppercase", marginBottom: 5 }}>
+            {category.label}
+            {item.year ? ` · ${item.year}` : ""}
+          </div>
+        )}
         <div style={{ fontFamily: "'Georgia', serif", fontSize: 17, color: P.ghost }}>{item.title}</div>
+        {sourceWork && (
+          <Link
+            to={getWorkHref(sourceWork)}
+            onClick={(event) => event.stopPropagation()}
+            style={{ display: "inline-block", fontFamily: "'Courier New', monospace", fontSize: 8, color: P.cyan, letterSpacing: 2, textTransform: "uppercase", textDecoration: "none", marginTop: 7, borderBottom: `1px solid ${P.cyan}44`, paddingBottom: 2 }}
+          >
+            View original: {sourceWork.title} ↗
+          </Link>
+        )}
         {item.process && (
           <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: item.colors?.[0] || P.cyan, letterSpacing: 3, marginTop: 6 }}>{item.process}</div>
         )}

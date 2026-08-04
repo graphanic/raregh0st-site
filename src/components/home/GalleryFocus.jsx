@@ -1,12 +1,12 @@
 import { useEffect, useRef, useCallback } from "react";
 import { createPortal } from "react-dom";
 import { P } from "../../data/palette";
+import { getCategory } from "../../data/catalog";
 import { MorphText, HoverMorphText } from "../MorphText";
-import { AVAILABILITY } from "./availability";
 
 // Fullscreen "flip through the portfolio" focus mode.
 // Keyboard: ← / → to move, Esc to close. Touch: swipe left/right.
-export function GalleryFocus({ pieces, index, onClose, onNav, onAcquire, onInquire, isMobile }) {
+export function GalleryFocus({ pieces, index, onClose, onNav, onView, isMobile }) {
   const touchX = useRef(null);
   const piece = pieces[index];
 
@@ -32,7 +32,7 @@ export function GalleryFocus({ pieces, index, onClose, onNav, onAcquire, onInqui
   if (!piece) return null;
 
   const accent = piece.colors?.[0] || P.cyan;
-  const av = AVAILABILITY[piece.availability] || AVAILABILITY.available;
+  const category = getCategory(piece.primaryCategory);
   const isVideo = piece.mediaType === "video";
 
   const onTouchStart = (e) => { touchX.current = e.touches[0].clientX; };
@@ -148,16 +148,16 @@ export function GalleryFocus({ pieces, index, onClose, onNav, onAcquire, onInqui
               fontSize: 8,
               letterSpacing: 2,
               textTransform: "uppercase",
-              color: av.color,
-              border: `1px solid ${av.color}55`,
+              color: category?.color || accent,
+              border: `1px solid ${category?.color || accent}55`,
               borderRadius: 2,
               padding: "3px 8px",
             }}
           >
-            {av.label}
+            {category?.label}
           </span>
           <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: accent, textTransform: "uppercase" }}>
-            {piece.series} · {piece.year}
+            {[piece.series, piece.year].filter(Boolean).join(" · ")}
           </span>
         </div>
 
@@ -182,24 +182,19 @@ export function GalleryFocus({ pieces, index, onClose, onNav, onAcquire, onInqui
 
         <dl style={{ margin: "0 0 24px", display: "grid", gap: 10 }}>
           <MetaRow label="Medium" value={piece.medium} />
-          <MetaRow label="Edition" value={piece.edition} />
+          {piece.sourceTitle ? <MetaRow label="Source" value={piece.sourceTitle} /> : null}
+          {piece.printEdition ? <MetaRow label="Edition" value={`Signed print edition of ${piece.printEdition.size}`} accent={P.gold} /> : null}
           {piece.tags?.length ? <MetaRow label="Motifs" value={piece.tags.join(" · ")} /> : null}
-          {typeof piece.price === "number" && piece.price > 0 ? (
-            <MetaRow label="From" value={`$${piece.price} CAD`} accent={P.gold} />
-          ) : null}
         </dl>
 
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          {piece.availability === "available" && typeof piece.price === "number" ? (
-            <FocusBtn color={P.gold} filled onClick={() => onAcquire(piece)}>Acquire</FocusBtn>
-          ) : null}
-          <FocusBtn
-            color={piece.availability === "commission" ? P.cyan : accent}
-            onClick={() => onInquire(piece, piece.availability === "commission" ? "commission" : "inquire")}
-          >
-            {piece.availability === "sold" ? "Inquire on Prints" : piece.availability === "commission" ? "Commission This" : "Inquire"}
-          </FocusBtn>
+          <FocusBtn color={accent} filled onClick={() => onView(piece)}>View Work</FocusBtn>
         </div>
+        {piece.printEdition ? (
+          <div style={{ marginTop: 14, fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 2, color: P.gold, opacity: 0.7, textTransform: "uppercase" }}>
+            Print release coming soon
+          </div>
+        ) : null}
 
         <div style={{ marginTop: 22, fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: P.bone, opacity: 0.35, textTransform: "uppercase" }}>
           {isMobile ? "Swipe to move · tap outside to close" : "← → to move · Esc to close"}
@@ -211,6 +206,7 @@ export function GalleryFocus({ pieces, index, onClose, onNav, onAcquire, onInqui
 }
 
 function MetaRow({ label, value, accent }) {
+  if (!value) return null;
   return (
     <div style={{ display: "flex", gap: 12, alignItems: "baseline" }}>
       <dt style={{ flex: "0 0 62px", fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 2, color: P.bone, opacity: 0.4, textTransform: "uppercase" }}>{label}</dt>

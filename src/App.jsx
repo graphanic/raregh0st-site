@@ -48,7 +48,6 @@ export default function App() {
   const isMobile = useIsMobile();
   const location = useLocation();
   const [loading, setLoading] = useState(true);
-  const [portfolioTab, setPortfolioTab] = useState(() => loadLocal("tab", "curated"));
   const [cart, setCart] = useState(() => loadLocal("cart", []));
   const [calm, setCalm] = useState(() => loadLocal("calm", false));
   const [toast, setToast] = useState(null);
@@ -139,11 +138,6 @@ export default function App() {
     setCart([]);
     saveLocal("cart", []);
   }, []);
-
-  // Persist tab state
-  useEffect(() => {
-    saveLocal("tab", portfolioTab);
-  }, [portfolioTab]);
 
   const isHome = location.pathname === "/";
 
@@ -275,19 +269,10 @@ export default function App() {
         >
           <Routes>
             <Route path="/" element={<HomePage />} />
-            <Route
-              path="/portfolio"
-              element={
-                <Portfolio
-                  addToCart={addToCart}
-                  portfolioTab={portfolioTab}
-                  setPortfolioTab={setPortfolioTab}
-                />
-              }
-            />
+            <Route path="/portfolio" element={<Portfolio />} />
             <Route
               path="/portfolio/:id"
-              element={<ShowcaseDetail addToCart={addToCart} />}
+              element={<ShowcaseDetail />}
             />
             <Route
               path="/portfolio/design/:slug"

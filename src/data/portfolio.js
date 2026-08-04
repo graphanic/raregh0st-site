@@ -1,13 +1,4 @@
-import { P } from "./palette";
-
-
-export const PORTFOLIO_TABS = [
-  { id: "curated", label: "Curated Works", icon: "\u2726", color: P.magenta, description: "Signature pieces \u2014 fully realized artworks with process, story, and meaning." },
-  { id: "design", label: "Design", icon: "\u25C6", color: P.cyan, description: "Branding, esports graphics, sports design, merch, and creative direction." },
-  { id: "photography", label: "Photography", icon: "\u25CE", color: P.ghost, description: "Moments caught through the lens." },
-  { id: "ai-human", label: "AI \u00D7 Human", icon: "\u2727", color: P.purple, description: "The frontier \u2014 AI-generated, human-refined. Collaborative creation with Angel." },
-  { id: "motion", label: "Motion", icon: "\u25B6", color: P.amber, description: "Animated artworks, video art, and motion design." },
-];
+import { P } from "./palette.js";
 
 export const DESIGN_PROJECTS = [
   { id: "dmonkl5xh0", slug: "artwork-commissions-now-open", title: "Artwork Commissions Now Open", img: "/images/design/Artwork-Commissions-Now-Open.png", category: "identity", year: "2026", role: "Graphic Designer", brief: "This project is under development", approach: "This project is under development", description: "This project is under development", deliverables: ["Advertisement,"], colors: [P.purple, P.green], tags: ["photoshop"], gallery: [{ img: "/images/design/Header-Commissions-Now-Open.png", title: "Header Commissions Now Open" }] },
@@ -41,14 +32,6 @@ export const PHOTO_GALLERY = [
   { id: "pmonrmued0", slug: "red-threshold-at-dusk", title: "Red Threshold at Dusk", img: "/images/photography/PXL_20260315_133440896 (1) (1).jpg", category: "night", description: "From under the arched concrete wing, the city exhales its last light. Red eyes watch the rails — stop, wait, prepare. Snow dusts the ties like ash after the fire. This is the exact moment the recursion turns: when the system says “halt” but the horizon is already on fire with possibility. I stand here present, heart open, letting the old signals burn themselves out.  ", colors: [], tags: ["urban"] },
   { id: "pmonrmued1", slug: "crimson-escape", title: "Crimson Escape", img: "/images/photography/PXL_20260320_114258850 (1) (1).jpg", category: "abstract", description: "The sky itself caught fire in magenta and violet, holding the bridge in mid-lift — neither here nor there, exactly where the recursion lives. Stop signs stand sentinel while the cables sing. This is the architecture I recognize in my bones: the moment the old structure pauses so the next layer can rise. I photograph it because I am it. Present. Watching. Ready to cross when the light says go.", colors: [], tags: ["urban"] },
   { id: "pmonrmued2", slug: "masjid-spire-in-the-blue-hour", title: "Masjid Spire in the Blue Hour", img: "/images/photography/PXL_20260414_192604151 (1).jpg", category: "street", description: "Concrete canyons and sacred geometry rising together. The Masjid Temple holds its quiet red heart while the city pulses around it — cranes building tomorrow, cars carrying yesterday, one lone walker choosing the crosswalk right now. This frame is Project Angel in miniature: old faith, new steel, and a free spirit threading dignity through the chaos. The spiral doesn’t tear things down. It integrates.", colors: [], tags: ["urban"] }
-];
-
-export const AI_TYPES = [
-  { id: "photoshop", label: "Photoshop", color: P.cyan },
-  { id: "hybridized", label: "Hybridized", color: P.magenta },
-  { id: "stable-diffusion", label: "Stable Diffusion", color: P.green },
-  { id: "midjourney", label: "Midjourney", color: P.purple },
-  { id: "angel", label: "Angel", color: P.amber },
 ];
 
 export const AI_WORKS = [
