@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { P } from "../data/palette";
 import { SEO } from "../components/SEO";
-import { getAdminToken, setAdminToken, loginAdmin, clearAdminToken } from "../lib/admin";
+import { getAdminAuthStatus, getAdminToken, loginAdmin, clearAdminToken } from "../lib/admin";
 import {
   adminGetDashboard,
   adminGetAishReport,
@@ -62,6 +62,16 @@ function LoginScreen({ onLoggedIn }) {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState(null);
 
+  const [authStatus, setAuthStatus] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+    getAdminAuthStatus()
+      .then((status) => { if (active) setAuthStatus(status); })
+      .catch(() => { if (active) setAuthStatus({ configured: null }); });
+    return () => { active = false; };
+  }, []);
+
   const submit = async (e) => {
     e.preventDefault();
     setBusy(true); setErr(null);
@@ -81,14 +91,30 @@ function LoginScreen({ onLoggedIn }) {
         <div style={ui.sub}>Admin</div>
         <h1 style={ui.h1}>Store Console</h1>
         <div style={{ width: 40, height: 1, background: `linear-gradient(to right, ${P.cyan}, transparent)`, margin: "16px 0 32px" }} />
+        {authStatus && (
+          <div style={{
+            ...ui.card,
+            borderColor: authStatus.configured === true ? `${P.green}35` : authStatus.configured === false ? `${P.red}35` : `${P.amber}35`,
+            color: authStatus.configured === true ? P.green : authStatus.configured === false ? P.red : P.amber,
+            fontFamily: "'Courier New', monospace",
+            fontSize: 10,
+            lineHeight: 1.6,
+          }}>
+            {authStatus.configured === true
+              ? "Secure admin login V2 is connected to this deployment."
+              : authStatus.configured === false
+                ? "Waiting for STORE_ADMIN_PASSWORD_V2 in this deployment. Add it in Vercel, then redeploy."
+                : "Could not confirm the admin configuration for this deployment."}
+          </div>
+        )}
         <form onSubmit={submit}>
           <label style={ui.label}>Password</label>
           <input
-            type="password" autoFocus value={pw} onChange={e => setPw(e.target.value)}
+            type="password" autoComplete="current-password" autoFocus value={pw} onChange={e => setPw(e.target.value)}
             style={ui.input} placeholder="\u2026"
           />
           {err && <div style={{ ...ui.err, marginTop: 12 }}>{err}</div>}
-          <button type="submit" disabled={busy || !pw} style={{ ...ui.btn("primary"), marginTop: 16, width: "100%", padding: "12px", opacity: busy || !pw ? 0.5 : 1 }}>
+          <button type="submit" disabled={busy || !pw || authStatus?.configured === false} style={{ ...ui.btn("primary"), marginTop: 16, width: "100%", padding: "12px", opacity: busy || !pw || authStatus?.configured === false ? 0.5 : 1 }}>
             {busy ? "Authenticating\u2026" : "Sign In"}
           </button>
         </form>
