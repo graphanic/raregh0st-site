@@ -15,7 +15,16 @@ export default function handler(req, res) {
     }
 
     if (submitted !== expected) {
-      return res.status(401).json({ error: 'Invalid password' });
+      // Safe diagnostic: lengths only, never the actual values.
+      return res.status(401).json({
+        error: 'Invalid password',
+        debug: {
+          submittedLength: submitted.length,
+          expectedLength: expected.length,
+          firstCharMatches: submitted.charAt(0) === expected.charAt(0),
+          lastCharMatches: submitted.charAt(submitted.length - 1) === expected.charAt(expected.length - 1),
+        },
+      });
     }
 
     const today = new Date().toISOString().split('T')[0];
