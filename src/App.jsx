@@ -14,6 +14,7 @@ import { Preloader } from "./components/Preloader";
 
 import { CookieConsent } from "./components/CookieConsent";
 import { SpotifyBar } from "./components/SpotifyBar";
+import { ProtectedRoute } from "./components/ProtectedRoute";
 
 // Pages
 import HomePage from "./pages/HomePage";
@@ -31,6 +32,7 @@ import { LegalPage } from "./pages/LegalPage";
 import { NotFound } from "./pages/NotFound";
 import { UploadAdmin } from "./pages/UploadAdmin";
 import AdminStore from "./pages/AdminStore";
+import AdminLogin from "./pages/AdminLogin";
 
 // Styles
 import "./styles/global.css";
@@ -295,8 +297,11 @@ export default function App() {
           <Route path="/privacy" element={<LegalPage page="privacy" />} />
           <Route path="/terms" element={<LegalPage page="terms" />} />
           <Route path="/shipping" element={<LegalPage page="shipping" />} />
-          <Route path="/admin/upload" element={<UploadAdmin />} />
-          <Route path="/admin/store" element={<AdminStore />} />
+          <Route path="/admin/login" element={<AdminLogin />} />
+          <Route element={<ProtectedRoute />}>
+            <Route path="/admin/upload" element={<UploadAdmin />} />
+            <Route path="/admin/store" element={<AdminStore />} />
+          </Route>
           <Route path="*" element={<NotFound />} />
           </Routes>
           <Footer />

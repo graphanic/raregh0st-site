@@ -34,7 +34,7 @@ export const submitForm = (payload) =>
 
 // ─── Admin ───────────────────────────────────────────────────────────────────
 function adminHeaders(token, extra = {}) {
-  return { ...extra, "x-admin-token": token || "" };
+  return { ...extra, Authorization: `Bearer ${token || ""}` };
 }
 
 export const adminGetSettings = (token) =>
@@ -82,7 +82,16 @@ export const adminGetDashboard = (token) =>
 export const adminGetAishReport = (token, month) =>
   fetch(`/api/admin/dashboard?report=aish&month=${month}`, { headers: adminHeaders(token) }).then(j);
 
-export const adminAishCsvUrl = (month) => `/api/admin/dashboard?report=aish&month=${month}&format=csv`;
+export async function adminDownloadAishCsv(token, month) {
+  const response = await fetch(`/api/admin/dashboard?report=aish&month=${month}&format=csv`, {
+    headers: adminHeaders(token),
+  });
+  if (!response.ok) {
+    const data = await response.json().catch(() => ({}));
+    throw new Error(data?.error || `HTTP ${response.status}`);
+  }
+  return response.blob();
+}
 
 export const adminSyncPrintful = (token) =>
   fetch("/api/admin/printful", {
@@ -113,7 +122,7 @@ export const adminUploadDigital = (token, productId, file) =>
   fetch("/api/admin/digital-upload", {
     method: "POST",
     headers: {
-      "x-admin-token": token || "",
+      Authorization: `Bearer ${token || ""}`,
       "x-filename": file.name,
       "x-product-id": String(productId),
       "Content-Type": file.type || "application/octet-stream",

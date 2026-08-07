@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       '@supabase/supabase-js':
-        specifier: ^2.105.1
+        specifier: 2.105.1
         version: 2.105.1
       '@vercel/blob':
         specifier: ^0.23.4

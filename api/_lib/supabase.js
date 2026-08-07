@@ -1,23 +1,43 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Server-side Supabase client. Uses the SERVICE ROLE KEY so it bypasses RLS.
-// Never import this file from any code that ships to the browser.
-let _client = null;
+let client = null;
 
-export function supabaseAdmin() {
-  if (_client) return _client;
-  const url = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) {
-    throw new Error("Supabase env vars missing (SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY)");
-  }
-  _client = createClient(url, key, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-  return _client;
+function getServerConfig() {
+  return {
+    url: String(
+      process.env.SUPABASE_URL ||
+      process.env.NEXT_PUBLIC_SUPABASE_URL ||
+      ""
+    ).trim(),
+    secretKey: String(
+      process.env.SUPABASE_SECRET_KEY ||
+      process.env.SUPABASE_SERVICE_ROLE_KEY ||
+      ""
+    ).trim(),
+  };
 }
 
-// Convenience helper — bumps updated_at to now() on a row.
+export function isSupabaseServerConfigured() {
+  const { url, secretKey } = getServerConfig();
+  return Boolean(url && secretKey);
+}
+
+// Server-only client. The secret/service-role key bypasses RLS and must never
+// be imported by browser code or returned from an API response.
+export function supabaseAdmin() {
+  if (client) return client;
+
+  const { url, secretKey } = getServerConfig();
+  if (!url || !secretKey) {
+    throw new Error("Supabase server credentials are not configured");
+  }
+
+  client = createClient(url, secretKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+  return client;
+}
+
 export function nowIso() {
   return new Date().toISOString();
 }

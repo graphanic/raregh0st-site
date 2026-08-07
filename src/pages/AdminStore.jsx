@@ -1,11 +1,11 @@
 import { useState, useEffect, useMemo } from "react";
 import { P } from "../data/palette";
 import { SEO } from "../components/SEO";
-import { getAdminAuthStatus, getAdminToken, loginAdmin, clearAdminToken } from "../lib/admin";
+import { useAuth } from "../components/AuthContext";
 import {
   adminGetDashboard,
   adminGetAishReport,
-  adminAishCsvUrl,
+  adminDownloadAishCsv,
   adminGetOrders,
   adminGetProducts,
   adminCreateProduct,
@@ -56,73 +56,6 @@ const todayMonth = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 };
 
-// ─── Login screen ─────────────────────────────────────────────────────────────
-function LoginScreen({ onLoggedIn }) {
-  const [pw, setPw] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState(null);
-
-  const [authStatus, setAuthStatus] = useState(null);
-
-  useEffect(() => {
-    let active = true;
-    getAdminAuthStatus()
-      .then((status) => { if (active) setAuthStatus(status); })
-      .catch(() => { if (active) setAuthStatus({ configured: null }); });
-    return () => { active = false; };
-  }, []);
-
-  const submit = async (e) => {
-    e.preventDefault();
-    setBusy(true); setErr(null);
-    try {
-      await loginAdmin(pw);
-      onLoggedIn();
-    } catch (e) {
-      setErr(e.message);
-      setBusy(false);
-    }
-  };
-
-  return (
-    <div style={ui.page}>
-      <SEO title="Store Admin" description="1RareGh0st store admin" path="/admin/store" />
-      <div style={{ ...ui.shell, maxWidth: 420 }}>
-        <div style={ui.sub}>Admin</div>
-        <h1 style={ui.h1}>Store Console</h1>
-        <div style={{ width: 40, height: 1, background: `linear-gradient(to right, ${P.cyan}, transparent)`, margin: "16px 0 32px" }} />
-        {authStatus && (
-          <div style={{
-            ...ui.card,
-            borderColor: authStatus.configured === true ? `${P.green}35` : authStatus.configured === false ? `${P.red}35` : `${P.amber}35`,
-            color: authStatus.configured === true ? P.green : authStatus.configured === false ? P.red : P.amber,
-            fontFamily: "'Courier New', monospace",
-            fontSize: 10,
-            lineHeight: 1.6,
-          }}>
-            {authStatus.configured === true
-              ? "Secure admin login V2 is connected to this deployment."
-              : authStatus.configured === false
-                ? "Waiting for STORE_ADMIN_PASSWORD_V2 in this deployment. Add it in Vercel, then redeploy."
-                : "Could not confirm the admin configuration for this deployment."}
-          </div>
-        )}
-        <form onSubmit={submit}>
-          <label style={ui.label}>Password</label>
-          <input
-            type="password" autoComplete="current-password" autoFocus value={pw} onChange={e => setPw(e.target.value)}
-            style={ui.input} placeholder="\u2026"
-          />
-          {err && <div style={{ ...ui.err, marginTop: 12 }}>{err}</div>}
-          <button type="submit" disabled={busy || !pw || authStatus?.configured === false} style={{ ...ui.btn("primary"), marginTop: 16, width: "100%", padding: "12px", opacity: busy || !pw || authStatus?.configured === false ? 0.5 : 1 }}>
-            {busy ? "Authenticating\u2026" : "Sign In"}
-          </button>
-        </form>
-      </div>
-    </div>
-  );
-}
-
 // ─── Dashboard tab ────────────────────────────────────────────────────────────
 function DashboardTab({ token }) {
   const [data, setData] = useState(null);
@@ -130,6 +63,20 @@ function DashboardTab({ token }) {
   const [aishMonth, setAishMonth] = useState(todayMonth());
   const [aishData, setAishData] = useState(null);
   const [aishLoading, setAishLoading] = useState(false);
+
+  const downloadAishCsv = async () => {
+    try {
+      const blob = await adminDownloadAishCsv(token, aishMonth);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `aish-report-${aishMonth}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      setErr(error.message);
+    }
+  };
 
   useEffect(() => {
     adminGetDashboard(token).then(setData).catch(e => setErr(e.message));
@@ -173,9 +120,9 @@ function DashboardTab({ token }) {
         </div>
         <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16, flexWrap: "wrap" }}>
           <input type="month" value={aishMonth} onChange={e => setAishMonth(e.target.value)} style={{ ...ui.input, width: 200 }} />
-          <a href={adminAishCsvUrl(aishMonth)} target="_blank" rel="noopener" style={{ ...ui.btn("good"), textDecoration: "none", display: "inline-block" }}>
+          <button type="button" onClick={downloadAishCsv} style={ui.btn("good")}>
             Download CSV
-          </a>
+          </button>
         </div>
         {aishLoading && <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.bone, opacity: 0.4 }}>Loading\u2026</div>}
         {aishData && (
@@ -711,12 +658,11 @@ function ToolsTab({ token }) {
 
 // ─── Root admin shell ─────────────────────────────────────────────────────────
 export default function AdminStore() {
-  const [token, setToken] = useState(getAdminToken());
+  const { session, signOut } = useAuth();
   const [tab, setTab] = useState("dashboard");
+  const token = session?.access_token;
 
-  if (!token) return <LoginScreen onLoggedIn={() => setToken(getAdminToken())} />;
-
-  const logout = () => { clearAdminToken(); setToken(""); };
+  if (!token) return null;
 
   return (
     <div style={ui.page}>
@@ -727,7 +673,7 @@ export default function AdminStore() {
             <div style={ui.sub}>Admin</div>
             <h1 style={ui.h1}>Store Console</h1>
           </div>
-          <button onClick={logout} style={ui.btn("ghost")}>Sign Out</button>
+          <button onClick={() => void signOut()} style={ui.btn("ghost")}>Sign Out</button>
         </div>
 
         <div style={{ display: "flex", gap: 8, marginBottom: 24, flexWrap: "wrap" }}>

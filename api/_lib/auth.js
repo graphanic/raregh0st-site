@@ -1,99 +1,67 @@
-import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { isSupabaseServerConfigured, supabaseAdmin } from "./supabase.js";
 
-// V2 deliberately uses a new variable and session format so a stale V1 password
-// or browser token can never be mistaken for the active store-admin credential.
-export const STORE_ADMIN_PASSWORD_ENV = "STORE_ADMIN_PASSWORD_V2";
+export const SUPABASE_ADMIN_USER_IDS_ENV = "SUPABASE_ADMIN_USER_IDS";
 
-function getAdminPassword() {
-  return (process.env[STORE_ADMIN_PASSWORD_ENV] || "").trim();
+export function parseAdminUserIds(value) {
+  return [...new Set(
+    String(value || "")
+      .split(/[\s,]+/)
+      .map((id) => id.trim())
+      .filter(Boolean)
+  )];
 }
 
-function utcDate() {
-  return new Date().toISOString().split("T")[0];
-}
-
-function constantTimeStringEqual(left, right) {
-  const leftHash = createHash("sha256").update(String(left), "utf8").digest();
-  const rightHash = createHash("sha256").update(String(right), "utf8").digest();
-  return timingSafeEqual(leftHash, rightHash);
-}
-
-function sign(payload, password) {
-  return createHmac("sha256", password).update(payload, "utf8").digest("base64url");
+function configuredAdminUserIds() {
+  return parseAdminUserIds(process.env[SUPABASE_ADMIN_USER_IDS_ENV]);
 }
 
 export function isAdminConfigured() {
-  return getAdminPassword().length > 0;
+  return isSupabaseServerConfigured() && configuredAdminUserIds().length > 0;
 }
 
-export function authenticateAdminPassword(submittedPassword) {
-  const expected = getAdminPassword();
-  if (!expected) {
-    return {
-      ok: false,
-      status: 500,
-      error: `${STORE_ADMIN_PASSWORD_ENV} is not configured on this deployment`,
-    };
-  }
-
-  if (!constantTimeStringEqual(String(submittedPassword || "").trim(), expected)) {
-    return { ok: false, status: 401, error: "Invalid password" };
-  }
-
-  return { ok: true };
+export function getBearerToken(req) {
+  const header = req?.headers?.authorization || req?.headers?.Authorization || "";
+  const match = /^Bearer\s+(.+)$/i.exec(String(header).trim());
+  return match?.[1]?.trim() || "";
 }
 
-export function issueAdminToken() {
-  const password = getAdminPassword();
-  if (!password) throw new Error(`${STORE_ADMIN_PASSWORD_ENV} is not configured`);
-
-  const payload = Buffer.from(
-    JSON.stringify({ version: 2, date: utcDate() }),
-    "utf8"
-  ).toString("base64url");
-
-  return `${payload}.${sign(payload, password)}`;
+export function isAuthorizedAdmin(userId, allowedIds = configuredAdminUserIds()) {
+  return Boolean(userId && allowedIds.includes(String(userId)));
 }
 
-export function verifyAdminToken(req) {
-  const password = getAdminPassword();
-  if (!password) {
-    return {
-      ok: false,
-      status: 500,
-      error: `${STORE_ADMIN_PASSWORD_ENV} is not configured on this deployment`,
-    };
+export async function verifyAdminToken(req) {
+  if (!isSupabaseServerConfigured()) {
+    return { ok: false, status: 500, error: "Supabase server credentials are not configured" };
   }
 
-  const header = req.headers["x-admin-token"] || req.headers["X-Admin-Token"] || "";
-  if (!header) return { ok: false, status: 401, error: "Missing admin token" };
-
-  const [payload, providedSignature, ...extra] = String(header).split(".");
-  if (!payload || !providedSignature || extra.length > 0) {
-    return { ok: false, status: 401, error: "Invalid admin session" };
+  const allowedIds = configuredAdminUserIds();
+  if (allowedIds.length === 0) {
+    return { ok: false, status: 500, error: `${SUPABASE_ADMIN_USER_IDS_ENV} is not configured` };
   }
 
-  const expectedSignature = sign(payload, password);
-  if (!constantTimeStringEqual(providedSignature, expectedSignature)) {
-    return { ok: false, status: 401, error: "Invalid admin session" };
-  }
+  const token = getBearerToken(req);
+  if (!token) return { ok: false, status: 401, error: "Missing bearer token" };
 
   try {
-    const session = JSON.parse(Buffer.from(payload, "base64url").toString("utf8"));
-    if (session.version !== 2 || session.date !== utcDate()) {
-      return { ok: false, status: 401, error: "Admin session expired — please sign in again" };
+    const { data: { user }, error } = await supabaseAdmin().auth.getUser(token);
+    if (error || !user) {
+      return { ok: false, status: 401, error: "Invalid or expired Supabase session" };
     }
-  } catch {
-    return { ok: false, status: 401, error: "Invalid admin session" };
+    if (!isAuthorizedAdmin(user.id, allowedIds)) {
+      return { ok: false, status: 403, error: "This account is not authorized for admin access" };
+    }
+    return { ok: true, user };
+  } catch (error) {
+    console.error("[admin-auth] Supabase token verification failed", error);
+    return { ok: false, status: 503, error: "Could not verify the Supabase session" };
   }
-
-  return { ok: true };
 }
 
 export function requireAdmin(handler) {
   return async (req, res) => {
-    const result = verifyAdminToken(req);
+    const result = await verifyAdminToken(req);
     if (!result.ok) return res.status(result.status).json({ error: result.error });
+    req.adminUser = result.user;
     return handler(req, res);
   };
 }

@@ -6,11 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test": "node --test",
     "preview": "vite preview",
     "validate:catalog": "node scripts/validate-catalog.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.105.1",
+    "@supabase/supabase-js": "2.105.1",
     "@vercel/blob": "^0.23.4",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",

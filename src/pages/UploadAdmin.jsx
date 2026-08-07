@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { SEO } from "../components/SEO";
+import { useAuth } from "../components/AuthContext";
 import { P } from "../data/palette";
 import { PORTFOLIO_CATEGORIES, PORTFOLIO_WORKS } from "../data/catalog";
 
@@ -504,11 +505,7 @@ function slugify(str) {
 
 // ─── Main Component ─────────────────────────────────────
 export const UploadAdmin = () => {
-  /* auth state — simple client-side gate (no server needed) */
-  const [authed, setAuthed] = useState(false);
-  const [password, setPassword] = useState("");
-  const [authError, setAuthError] = useState("");
-
+  const { signOut } = useAuth();
   /* content state */
   const [category, setCategory] = useState("photoshop-originals");
   const [items, setItems] = useState([]);
@@ -524,31 +521,10 @@ export const UploadAdmin = () => {
 
   const categoryConfig = CATEGORIES[category];
 
-  /* check stored session */
+  /* load existing catalog data */
   useEffect(() => {
-    const token = sessionStorage.getItem("admin_token");
-    if (token) setAuthed(true);
-  }, []);
-
-  /* load existing data once authed */
-  useEffect(() => {
-    if (!authed) return;
     setLiveItems(mapExisting(PORTFOLIO_WORKS));
-  }, [authed]);
-
-  /* login — client-side only, no API needed */
-  const handleLogin = () => {
-    // Simple hash check — not military-grade, but keeps random visitors out.
-    // Change this passphrase to whatever you want.
-    const ADMIN_PASS = "gh0st2024";
-    if (password === ADMIN_PASS) {
-      sessionStorage.setItem("admin_token", "local-admin");
-      setAuthed(true);
-      setAuthError("");
-    } else {
-      setAuthError("Invalid password");
-    }
-  };
+  }, []);
 
   /* delete a live item */
   const handleDeleteLive = (id) => {
@@ -685,32 +661,6 @@ export const UploadAdmin = () => {
     return true;
   });
 
-  /* ── LOGIN GATE ── */
-  if (!authed) {
-    return (
-      <div style={{ background: P.abyss, color: P.ghost, minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
-        <SEO title="Admin Login | 1RareGh0st" description="Restricted access" />
-        <div style={{ ...cardStyle, maxWidth: "400px", width: "100%", textAlign: "center" }}>
-          <h1 style={{ color: P.cyan, fontSize: "1.6rem", marginBottom: "8px" }}>Admin Access</h1>
-          <p style={{ color: P.steel, marginBottom: "24px", fontSize: "0.9rem" }}>Enter password to continue</p>
-          <input
-            type="password"
-            value={password}
-            onChange={e => setPassword(e.target.value)}
-            onKeyDown={e => { if (e.key === "Enter") handleLogin(); }}
-            placeholder="Password"
-            style={{ ...inputStyle, textAlign: "center", fontSize: "1rem", marginBottom: "16px" }}
-            autoFocus
-          />
-          {authError && <p style={{ color: P.magenta, fontSize: "0.85rem", marginBottom: "12px" }}>{authError}</p>}
-          <button onClick={handleLogin} style={{ ...btnPrimary(false), width: "100%" }}>
-            Enter
-          </button>
-        </div>
-      </div>
-    );
-  }
-
   /* ── MAIN ADMIN ── */
   return (
     <div style={{ background: P.abyss, color: P.ghost, minHeight: "100vh", padding: "40px 20px" }}>
@@ -725,7 +675,7 @@ export const UploadAdmin = () => {
           </div>
           <div style={{ display: "flex", gap: "12px", alignItems: "center", fontSize: "0.85rem" }}>
             {itemCount > 0 && <span style={{ color: P.amber }}>{itemCount} staged</span>}
-            <button onClick={() => { sessionStorage.removeItem("admin_token"); setAuthed(false); }} style={{ background: "none", border: `1px solid ${P.magenta}40`, color: P.magenta, padding: "6px 14px", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem" }}>Logout</button>
+            <button onClick={() => void signOut()} style={{ background: "none", border: `1px solid ${P.magenta}40`, color: P.magenta, padding: "6px 14px", borderRadius: "4px", cursor: "pointer", fontSize: "0.8rem" }}>Logout</button>
           </div>
         </div>
 
