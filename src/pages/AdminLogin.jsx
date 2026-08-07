@@ -2,17 +2,16 @@ import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { SEO } from "../components/SEO";
 import { useAuth } from "../components/AuthContext";
-import { verifyAdminAccess } from "../lib/admin";
 import { P } from "../data/palette";
 
 export default function AdminLogin() {
-  const { session, loading: authLoading, error: authError, signIn, signOut } = useAuth();
+  const { session, loading: authLoading, error: authError, sendMagicLink } = useAuth();
   const location = useLocation();
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const [sent, setSent] = useState(false);
   const destination = location.state?.from || "/admin/store";
 
   useEffect(() => {
@@ -25,20 +24,13 @@ export default function AdminLogin() {
     setError(null);
 
     try {
-      const { data, error: signInError } = await signIn(email, password);
+      const normalizedEmail = email.trim().toLowerCase();
+      const { error: signInError } = await sendMagicLink(normalizedEmail);
       if (signInError) throw signInError;
-      if (!data.session?.access_token) throw new Error("Supabase did not return a session.");
-
-      try {
-        await verifyAdminAccess(data.session.access_token);
-      } catch (accessError) {
-        await signOut().catch(() => {});
-        throw accessError;
-      }
-
-      navigate(destination, { replace: true });
+      setSent(true);
+      setBusy(false);
     } catch (submitError) {
-      setError(submitError.message || "Sign in failed.");
+      setError(submitError.message || "Could not send the secure sign-in link.");
       setBusy(false);
     }
   };
@@ -56,38 +48,38 @@ export default function AdminLogin() {
         {authError && <Notice color={P.red}>{authError}</Notice>}
         {error && <Notice color={P.red}>{error}</Notice>}
 
-        <form onSubmit={submit}>
-          <label htmlFor="admin-email" style={labelStyle}>Email</label>
-          <input
-            id="admin-email"
-            type="email"
-            autoComplete="username"
-            autoFocus
-            required
-            value={email}
-            onChange={(event) => setEmail(event.target.value)}
-            style={inputStyle}
-          />
+        {sent ? (
+          <>
+            <Notice color={P.cyan}>
+              A secure sign-in link was sent to {email}. Open it on this device to continue to the store admin.
+            </Notice>
+            <button type="button" onClick={() => setSent(false)} style={buttonStyle}>
+              Send another link
+            </button>
+          </>
+        ) : (
+          <form onSubmit={submit}>
+            <label htmlFor="admin-email" style={labelStyle}>Authorized email</label>
+            <input
+              id="admin-email"
+              type="email"
+              autoComplete="username"
+              autoFocus
+              required
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              style={inputStyle}
+            />
 
-          <label htmlFor="admin-password" style={{ ...labelStyle, marginTop: 18 }}>Password</label>
-          <input
-            id="admin-password"
-            type="password"
-            autoComplete="current-password"
-            required
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            style={inputStyle}
-          />
-
-          <button
-            type="submit"
-            disabled={busy || authLoading || Boolean(authError)}
-            style={{ ...buttonStyle, opacity: busy || authLoading || authError ? 0.5 : 1 }}
-          >
-            {busy ? "Verifying…" : "Sign in with Supabase"}
-          </button>
-        </form>
+            <button
+              type="submit"
+              disabled={busy || authLoading || Boolean(authError)}
+              style={{ ...buttonStyle, opacity: busy || authLoading || authError ? 0.5 : 1 }}
+            >
+              {busy ? "Sending…" : "Email me a secure sign-in link"}
+            </button>
+          </form>
+        )}
       </div>
     </div>
   );

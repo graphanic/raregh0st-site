@@ -50,6 +50,16 @@ export function AuthProvider({ children }) {
       if (!supabase) throw new Error(supabaseConfigError || "Supabase Auth is unavailable.");
       return supabase.auth.signInWithPassword({ email: email.trim(), password });
     },
+    async sendMagicLink(email) {
+      if (!supabase) throw new Error(supabaseConfigError || "Supabase Auth is unavailable.");
+      return supabase.auth.signInWithOtp({
+        email: email.trim().toLowerCase(),
+        options: {
+          shouldCreateUser: true,
+          emailRedirectTo: `${window.location.origin}/admin/store`,
+        },
+      });
+    },
     async signOut() {
       if (!supabase) return;
       const { error: signOutError } = await supabase.auth.signOut({ scope: "local" });

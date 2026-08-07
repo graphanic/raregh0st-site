@@ -1,14 +1,15 @@
 import { createClient } from "@supabase/supabase-js";
+import { resolveSupabaseUrl } from "../../config/supabase.js";
 
 let client = null;
 
 function getServerConfig() {
   return {
-    url: String(
+    url: resolveSupabaseUrl(
       process.env.SUPABASE_URL ||
       process.env.NEXT_PUBLIC_SUPABASE_URL ||
       ""
-    ).trim(),
+    ),
     secretKey: String(
       process.env.SUPABASE_SECRET_KEY ||
       process.env.SUPABASE_SERVICE_ROLE_KEY ||
