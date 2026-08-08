@@ -3,7 +3,7 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { HERO_LOGO_STATIONARY_IMG } from "../../data/palette";
 
-const MODEL_URL = "/models/RareGh0st_Logo_WEB_v1.glb";
+const MODEL_URL = "/models/rareghost-logo-original.glb";
 const CYAN = new THREE.Color("#00e5ff");
 const MAGENTA = new THREE.Color("#ff2d7d");
 
