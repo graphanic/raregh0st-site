@@ -35,11 +35,18 @@ export function InteractiveHeroLogoBridge() {
     const measure = () => {
       const imageRect = target.getBoundingClientRect();
       const parentRect = parent.getBoundingClientRect();
-      const size = Math.max(imageRect.width, imageRect.height, isMobile ? 132 : 188);
+
+      // Give the 3D model room to breathe beyond the legacy image crop,
+      // especially above the skull where the halo needs extra headroom.
+      const width = Math.max(imageRect.width * (isMobile ? 1.5 : 1.7), isMobile ? 210 : 300);
+      const height = Math.max(imageRect.height * (isMobile ? 1.8 : 2.0), isMobile ? 245 : 340);
+      const extraHeight = height - imageRect.height;
+
       setBox({
-        left: imageRect.left - parentRect.left + imageRect.width / 2 - size / 2,
-        top: imageRect.top - parentRect.top + imageRect.height / 2 - size / 2,
-        size,
+        left: imageRect.left - parentRect.left + imageRect.width / 2 - width / 2,
+        top: imageRect.top - parentRect.top - extraHeight * 0.72,
+        width,
+        height,
       });
     };
 
@@ -61,14 +68,17 @@ export function InteractiveHeroLogoBridge() {
 
   return createPortal(
     <div
+      aria-hidden="true"
       style={{
         position: "absolute",
         left: box.left,
         top: box.top,
-        width: box.size,
-        height: box.size,
+        width: box.width,
+        height: box.height,
         zIndex: 6,
-        pointerEvents: "auto",
+        background: "transparent",
+        pointerEvents: "none",
+        overflow: "visible",
       }}
     >
       <InteractiveSkullLogo isMobile={isMobile} />
