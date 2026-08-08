@@ -36,7 +36,7 @@ export function InteractiveSkullLogo({ isMobile }) {
     renderer.setClearAlpha(0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.36;
+    renderer.toneMappingExposure = 1.2;
     renderer.domElement.style.display = "block";
     renderer.domElement.style.width = "100%";
     renderer.domElement.style.height = "100%";
@@ -44,43 +44,41 @@ export function InteractiveSkullLogo({ isMobile }) {
     renderer.domElement.style.pointerEvents = "none";
     host.appendChild(renderer.domElement);
 
-    // Give metallic surfaces something broad and neutral to reflect while keeping
-    // the WebGL canvas itself transparent. This reveals the model's sculpted and
-    // baked detail instead of letting large metal faces collapse into black.
+    // Give metallic surfaces enough neutral reflection to reveal the sculpt while
+    // preserving the dark, high-contrast RareGh0st presentation.
     const pmremGenerator = new THREE.PMREMGenerator(renderer);
     const roomEnvironment = new RoomEnvironment();
     const environmentTexture = pmremGenerator.fromScene(roomEnvironment, 0.04).texture;
     scene.environment = environmentTexture;
-    scene.environmentIntensity = 1.45;
+    scene.environmentIntensity = 0.98;
     roomEnvironment.dispose();
     pmremGenerator.dispose();
 
-    // Neutral studio illumination carries the form; cyan/magenta lights remain
-    // as the RareGh0st colour signature rather than being forced to do all of the
-    // visibility work themselves.
-    scene.add(new THREE.HemisphereLight(0xf4f8ff, 0x17101a, 1.65));
+    // Balanced studio illumination: neutral light reveals form, while cyan and
+    // magenta remain the dominant colour accents instead of washing the model out.
+    scene.add(new THREE.HemisphereLight(0xf4f8ff, 0x17101a, 1.18));
 
-    const frontFill = new THREE.PointLight(0xf4f7ff, 22, 10, 2);
+    const frontFill = new THREE.PointLight(0xf4f7ff, 14, 10, 2);
     frontFill.position.set(0, 0.15, 4.0);
     scene.add(frontFill);
 
-    const key = new THREE.DirectionalLight(0xffffff, 3.2);
+    const key = new THREE.DirectionalLight(0xffffff, 2.35);
     key.position.set(1.4, 2.1, 3.5);
     scene.add(key);
 
-    const softFill = new THREE.DirectionalLight(0xcfe7ff, 2.0);
+    const softFill = new THREE.DirectionalLight(0xcfe7ff, 1.2);
     softFill.position.set(-2.8, -0.7, 2.8);
     scene.add(softFill);
 
-    const cyanLight = new THREE.PointLight(CYAN, 24, 10, 2);
+    const cyanLight = new THREE.PointLight(CYAN, 22, 10, 2);
     cyanLight.position.set(-2.25, 1.05, 2.5);
     scene.add(cyanLight);
 
-    const magentaLight = new THREE.PointLight(MAGENTA, 22, 10, 2);
+    const magentaLight = new THREE.PointLight(MAGENTA, 20, 10, 2);
     magentaLight.position.set(2.25, 0.85, 2.35);
     scene.add(magentaLight);
 
-    const rim = new THREE.PointLight(0xffffff, 14, 8, 2);
+    const rim = new THREE.PointLight(0xffffff, 10, 8, 2);
     rim.position.set(0, 2.7, -1.5);
     scene.add(rim);
 
@@ -128,16 +126,15 @@ export function InteractiveSkullLogo({ isMobile }) {
             child.material = new THREE.MeshStandardMaterial({
               color: 0xffffff,
               emissive: 0xffffff,
-              emissiveIntensity: 2.2,
+              emissiveIntensity: 1.85,
               metalness: 0.05,
               roughness: 0.12,
             });
           } else if (child.material) {
             child.material = child.material.clone();
 
-            // Preserve the imported artwork, but make the metal respond more like
-            // a detail-revealing studio render: slightly broader reflections and
-            // a strong neutral environment response.
+            // Preserve the imported artwork while giving the metal broad enough
+            // reflections to show fine surface detail without turning chrome-white.
             if (typeof child.material.metalness === "number") {
               child.material.metalness = Math.min(child.material.metalness, 0.9);
             }
@@ -145,13 +142,13 @@ export function InteractiveSkullLogo({ isMobile }) {
               child.material.roughness = Math.max(child.material.roughness, 0.22);
             }
             if ("envMapIntensity" in child.material) {
-              child.material.envMapIntensity = 1.6;
+              child.material.envMapIntensity = 1.08;
             }
 
-            // Lift only the deepest imported base colours; the original texture
-            // and cyan/magenta identity remain intact.
+            // Only gently lift the deepest imported colours; keep the original
+            // darkness and cyan/magenta identity intact.
             if (child.material.color) {
-              child.material.color.lerp(new THREE.Color("#667080"), 0.16);
+              child.material.color.lerp(new THREE.Color("#667080"), 0.1);
             }
 
             child.material.needsUpdate = true;
