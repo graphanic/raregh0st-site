@@ -33,7 +33,7 @@ export function InteractiveSkullLogo({ isMobile }) {
 
     const composer = new EffectComposer(renderer);
     composer.addPass(new RenderPass(scene, camera));
-    const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.85, 0.55, 0.72);
+    const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.45, 0.55, 0.72);
     composer.addPass(bloom);
 
     scene.add(new THREE.HemisphereLight(0xddeeff, 0x050308, 0.8));
@@ -83,7 +83,7 @@ export function InteractiveSkullLogo({ isMobile }) {
             child.material = new THREE.MeshStandardMaterial({
               color: 0xffffff,
               emissive: 0xffffff,
-              emissiveIntensity: 5.5,
+              emissiveIntensity: 2.2,
               metalness: 0.05,
               roughness: 0.12,
             });
