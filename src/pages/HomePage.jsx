@@ -27,7 +27,6 @@ function HeroSection({ isMobile }) {
   const [heroLogoSrc, setHeroLogoSrc] = useState(HERO_LOGO_STATIONARY_IMG);
   const turnStartedAt = useRef(0);
   const settleTimer = useRef(null);
-  const pointerOverLogo = useRef(false);
   const isTurning = useRef(false);
   const turnReady = useRef(false);
 
@@ -55,46 +54,19 @@ function HeroSection({ isMobile }) {
       ? 0
       : HERO_LOGO_TURN_MS - cycleProgress;
 
-    settleTimer.current = window.setTimeout(() => {
-      if (!pointerOverLogo.current) returnLogoToRest();
-    }, remaining + HERO_LOGO_SETTLE_BUFFER_MS);
+    settleTimer.current = window.setTimeout(
+      returnLogoToRest,
+      remaining + HERO_LOGO_SETTLE_BUFFER_MS,
+    );
   };
 
-  const startLogoTurn = (event) => {
-    if (event.pointerType !== "mouse") return;
-    pointerOverLogo.current = true;
-
-    if (settleTimer.current) {
-      window.clearTimeout(settleTimer.current);
-      settleTimer.current = null;
-    }
-
+  const playLogoTurnOnce = () => {
+    if (isTurning.current) return;
     if (
       window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
       document.body.hasAttribute("data-calm")
     ) return;
 
-    if (!isTurning.current) {
-      isTurning.current = true;
-      turnReady.current = false;
-      setHeroLogoSrc(HERO_LOGO_TURN_IMG);
-    }
-  };
-
-  const finishLogoTurn = (event) => {
-    if (event.pointerType !== "mouse") return;
-    pointerOverLogo.current = false;
-    if (isTurning.current) scheduleLogoSettle();
-  };
-
-  const playLogoTurnOnce = (event) => {
-    if (event.pointerType === "mouse" || isTurning.current) return;
-    if (
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches ||
-      document.body.hasAttribute("data-calm")
-    ) return;
-
-    pointerOverLogo.current = false;
     if (settleTimer.current) {
       window.clearTimeout(settleTimer.current);
       settleTimer.current = null;
@@ -104,11 +76,17 @@ function HeroSection({ isMobile }) {
     setHeroLogoSrc(HERO_LOGO_TURN_IMG);
   };
 
+  const handleLogoKeyDown = (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    playLogoTurnOnce();
+  };
+
   const handleLogoLoad = () => {
     if (!isTurning.current) return;
     turnStartedAt.current = performance.now();
     turnReady.current = true;
-    if (!pointerOverLogo.current) scheduleLogoSettle();
+    scheduleLogoSettle();
   };
 
   return (
@@ -153,15 +131,19 @@ function HeroSection({ isMobile }) {
           alt="1RareGh0st"
           className="hero-logo"
           draggable="false"
-          onPointerEnter={startLogoTurn}
-          onPointerLeave={finishLogoTurn}
-          onPointerUp={playLogoTurnOnce}
+          role="button"
+          tabIndex={0}
+          aria-label="Spin the 1RareGh0st logo"
+          onClick={playLogoTurnOnce}
+          onKeyDown={handleLogoKeyDown}
           onLoad={handleLogoLoad}
           onError={returnLogoToRest}
           style={{
             width: isMobile ? 132 : 188,
             height: "auto",
             marginBottom: isMobile ? 22 : 30,
+            cursor: "pointer",
+            touchAction: "manipulation",
           }}
         />
         <div
