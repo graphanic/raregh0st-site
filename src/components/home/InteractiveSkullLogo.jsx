@@ -35,7 +35,7 @@ export function InteractiveSkullLogo({ isMobile }) {
     renderer.setClearAlpha(0);
     renderer.outputColorSpace = THREE.SRGBColorSpace;
     renderer.toneMapping = THREE.ACESFilmicToneMapping;
-    renderer.toneMappingExposure = 1.08;
+    renderer.toneMappingExposure = 1.18;
     renderer.domElement.style.display = "block";
     renderer.domElement.style.width = "100%";
     renderer.domElement.style.height = "100%";
@@ -43,17 +43,23 @@ export function InteractiveSkullLogo({ isMobile }) {
     renderer.domElement.style.pointerEvents = "none";
     host.appendChild(renderer.domElement);
 
-    scene.add(new THREE.HemisphereLight(0xddeeff, 0x050308, 0.7));
+    // Brighter, layered lighting so the neutral metal keeps its detail without
+    // losing the cyan/magenta RareGh0st split-light character.
+    scene.add(new THREE.HemisphereLight(0xeaf5ff, 0x12070e, 1.15));
 
-    const cyanLight = new THREE.PointLight(CYAN, 26, 10, 2);
-    cyanLight.position.set(-2.3, 1.1, 2.4);
+    const frontFill = new THREE.PointLight(0xe7efff, 12, 9, 2);
+    frontFill.position.set(0, 0.25, 3.6);
+    scene.add(frontFill);
+
+    const cyanLight = new THREE.PointLight(CYAN, 34, 10, 2);
+    cyanLight.position.set(-2.25, 1.05, 2.5);
     scene.add(cyanLight);
 
-    const magentaLight = new THREE.PointLight(MAGENTA, 24, 10, 2);
-    magentaLight.position.set(2.3, 0.8, 2.2);
+    const magentaLight = new THREE.PointLight(MAGENTA, 32, 10, 2);
+    magentaLight.position.set(2.25, 0.85, 2.35);
     scene.add(magentaLight);
 
-    const rim = new THREE.PointLight(0xffffff, 15, 8, 2);
+    const rim = new THREE.PointLight(0xffffff, 18, 8, 2);
     rim.position.set(0, 2.7, -1.5);
     scene.add(rim);
 
@@ -66,6 +72,7 @@ export function InteractiveSkullLogo({ isMobile }) {
     let loadedScene = null;
     let targetX = 0;
     let targetY = 0;
+    let targetZ = 0;
     let spinRemaining = 0;
     let lastTime = performance.now();
 
@@ -75,9 +82,9 @@ export function InteractiveSkullLogo({ isMobile }) {
       const size = box.getSize(new THREE.Vector3());
       object.position.sub(center);
 
-      // The bridge now gives the logo a much larger transparent render field.
-      // Keep the model itself close to its previous on-page size inside that field.
-      const targetWorldSize = isMobile ? 1.62 : 1.72;
+      // The bridge gives the logo a larger transparent render field. Keep the
+      // artifact itself compact while leaving room for exaggerated rotation.
+      const targetWorldSize = isMobile ? 1.58 : 1.68;
       const scale = targetWorldSize / Math.max(size.x, size.y, size.z);
       object.scale.setScalar(scale);
       object.updateMatrixWorld(true);
@@ -106,8 +113,15 @@ export function InteractiveSkullLogo({ isMobile }) {
             });
           } else if (child.material) {
             child.material = child.material.clone();
-            child.material.metalness = Math.max(child.material.metalness ?? 0.75, 0.72);
-            child.material.roughness = Math.min(child.material.roughness ?? 0.18, 0.2);
+            child.material.metalness = Math.max(child.material.metalness ?? 0.75, 0.74);
+            child.material.roughness = Math.min(child.material.roughness ?? 0.18, 0.18);
+
+            // Gently lift very dark imported base colours so moving lights reveal
+            // the normal-map and surface detail instead of disappearing into black.
+            if (child.material.color) {
+              child.material.color.lerp(new THREE.Color("#4a5260"), 0.12);
+            }
+
             child.material.needsUpdate = true;
           }
         });
@@ -128,16 +142,28 @@ export function InteractiveSkullLogo({ isMobile }) {
 
     const onPointerMove = (event) => {
       if (reducedMotion || event.pointerType === "touch") return;
+
       const rect = interactionRoot.getBoundingClientRect();
       const nx = THREE.MathUtils.clamp(((event.clientX - rect.left) / rect.width) * 2 - 1, -1, 1);
       const ny = THREE.MathUtils.clamp(((event.clientY - rect.top) / rect.height) * 2 - 1, -1, 1);
-      targetY = nx * THREE.MathUtils.degToRad(14);
-      targetX = ny * THREE.MathUtils.degToRad(8);
+
+      // Slightly nonlinear response makes the skull react clearly even near the
+      // centre, then opens into a more dramatic turn toward the hero edges.
+      const expressiveX = Math.sign(nx) * Math.pow(Math.abs(nx), 0.82);
+      const expressiveY = Math.sign(ny) * Math.pow(Math.abs(ny), 0.86);
+      const maxYaw = THREE.MathUtils.degToRad(isMobile ? 18 : 30);
+      const maxPitch = THREE.MathUtils.degToRad(isMobile ? 10 : 16);
+      const maxRoll = THREE.MathUtils.degToRad(isMobile ? 2.5 : 5);
+
+      targetY = expressiveX * maxYaw;
+      targetX = expressiveY * maxPitch;
+      targetZ = -expressiveX * maxRoll;
     };
 
     const onPointerLeave = () => {
       targetX = 0;
       targetY = 0;
+      targetZ = 0;
     };
 
     const onPointerUp = (event) => {
@@ -154,9 +180,14 @@ export function InteractiveSkullLogo({ isMobile }) {
       if (!alive) return;
       const dt = Math.min((now - lastTime) / 1000, 0.05);
       lastTime = now;
-      const follow = 1 - Math.exp(-7 * dt);
+
+      // A little quicker than the first pass, while still carrying enough lag
+      // to feel like a weighted object rather than a cursor icon.
+      const follow = 1 - Math.exp(-9 * dt);
+      const rollFollow = 1 - Math.exp(-7.5 * dt);
 
       rig.rotation.x = THREE.MathUtils.lerp(rig.rotation.x, targetX, follow);
+      rig.rotation.z = THREE.MathUtils.lerp(rig.rotation.z, targetZ, rollFollow);
 
       if (spinRemaining > 0.001) {
         const step = Math.min(spinRemaining, Math.max(3.2, spinRemaining * 2.8) * dt);
