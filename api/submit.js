@@ -15,6 +15,24 @@ function clean(v, max) {
   return s.slice(0, max);
 }
 
+const META_FIELDS = {
+  intendedUse: 500,
+  budget: 200,
+  timeline: 200,
+  deliverable: 100,
+  pieceId: 100,
+  pieceTitle: 300,
+};
+
+export function sanitizeSubmissionMeta(value) {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+  return Object.fromEntries(
+    Object.entries(META_FIELDS)
+      .map(([key, max]) => [key, clean(value[key], max)])
+      .filter(([, fieldValue]) => fieldValue !== null),
+  );
+}
+
 export default async function handler(req, res) {
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -52,7 +70,7 @@ export default async function handler(req, res) {
     subject: clean(body.subject, 300),
     message,
     source: clean(body.source, 100),
-    meta: body.meta && typeof body.meta === "object" ? body.meta : {},
+    meta: sanitizeSubmissionMeta(body.meta),
   };
 
   try {

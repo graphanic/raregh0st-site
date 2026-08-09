@@ -1,9 +1,11 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { P } from "../data/palette";
 import { SHOP_CATEGORIES } from "../data/shop";
 import { HoverMorphText, ScrollMorphText } from "../components/MorphText";
 import { SEO } from "../components/SEO";
 import { getProducts, getSettings } from "../lib/api";
+import { SHOP_COPY, SEO_COPY } from "../data/siteCopy";
 
 // Map DB row -> shape the existing card UI expects.
 function mapProduct(row) {
@@ -25,14 +27,114 @@ function mapProduct(row) {
   };
 }
 
-const ShopCard = ({ product, onAdd }) => {
+const mono = { fontFamily: "'Courier New', monospace" };
+
+function ProductDetail({ product, onClose, onAdd }) {
+  const dialogRef = useRef(null);
+  const closeRef = useRef(null);
+  const cat = SHOP_CATEGORIES.find((item) => item.id === product.category);
+  const accent = product.colors?.[0] || cat?.color || P.cyan;
+
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    closeRef.current?.focus();
+
+    const onKeyDown = (event) => {
+      if (event.key === "Escape") {
+        event.preventDefault();
+        onClose();
+        return;
+      }
+      if (event.key !== "Tab" || !dialogRef.current) return;
+      const focusable = [...dialogRef.current.querySelectorAll("button, a[href], input, select, textarea, [tabindex]:not([tabindex='-1'])")]
+        .filter((element) => !element.disabled);
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [onClose]);
+
+  const isDigital = product.is_digital || product.category === "digital" || product.category === "courses";
+
+  return createPortal(
+    <div role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }} style={{ position: "fixed", inset: 0, zIndex: 500, display: "flex", alignItems: "center", justifyContent: "center", padding: 20, background: `${P.abyss}f2`, backdropFilter: "blur(16px)", animation: "fadeSlideIn 0.25s ease both" }}>
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby={`product-title-${product.id}`} className="product-detail-grid" style={{ position: "relative", width: "min(980px, 100%)", maxHeight: "min(780px, 92vh)", overflowY: "auto", display: "grid", gridTemplateColumns: "minmax(0, 1.05fr) minmax(320px, 0.95fr)", background: `linear-gradient(145deg, ${P.void}, ${P.surface})`, border: `1px solid ${accent}35`, boxShadow: `0 0 70px ${accent}18` }}>
+        <button ref={closeRef} type="button" onClick={onClose} aria-label="Close product details" style={{ position: "absolute", top: 14, right: 14, zIndex: 4, width: 38, height: 38, background: `${P.abyss}dd`, border: `1px solid ${P.steel}45`, color: P.ghost, cursor: "pointer", fontSize: 17 }}>×</button>
+
+        <div style={{ minHeight: 360, background: P.abyss, position: "relative", overflow: "hidden" }}>
+          {product.image ? (
+            <img src={product.image} alt={product.title} style={{ width: "100%", height: "100%", minHeight: 360, objectFit: "cover", display: "block" }} />
+          ) : (
+            <div aria-hidden style={{ position: "absolute", inset: 0, background: `radial-gradient(circle at 50% 40%, ${accent}18, transparent 55%), linear-gradient(140deg, ${P.abyss}, ${P.surface})` }} />
+          )}
+          <div aria-hidden style={{ position: "absolute", inset: 0, background: `linear-gradient(to top, ${P.abyss}aa, transparent 45%)` }} />
+        </div>
+
+        <div style={{ padding: "54px 38px 38px", display: "flex", flexDirection: "column" }}>
+          <div style={{ ...mono, fontSize: 8, letterSpacing: 4, color: accent, textTransform: "uppercase", marginBottom: 12 }}>
+            {cat?.label || product.category}{product.subcategory ? ` · ${product.subcategory}` : ""}
+          </div>
+          <h2 id={`product-title-${product.id}`} style={{ fontFamily: "'Georgia', serif", fontSize: 29, fontWeight: 400, color: P.ghost, margin: "0 0 12px", lineHeight: 1.18 }}>{product.title}</h2>
+          {product.artwork && <div style={{ ...mono, fontSize: 9, letterSpacing: 2, color: P.bone, opacity: 0.38, marginBottom: 22 }}>Featuring artwork: {product.artwork}</div>}
+          <p style={{ fontFamily: "'Georgia', serif", fontSize: 14, lineHeight: 1.75, color: P.bone, opacity: 0.68, margin: "0 0 24px" }}>{product.description || "An art-led release from the 1RareGh0st studio."}</p>
+
+          <div style={{ display: "grid", gap: 9, padding: "18px 0", borderTop: `1px solid ${P.steel}18`, borderBottom: `1px solid ${P.steel}18` }}>
+            {product.sizes && <DetailRow label="Available" value={product.sizes} />}
+            {product.duration && <DetailRow label="Duration" value={product.duration} />}
+            <DetailRow label="Type" value={isDigital ? "Digital release" : "Made-to-order physical product"} />
+            {!isDigital && <DetailRow label="Ships to" value="Canada and the United States" />}
+          </div>
+
+          <p style={{ ...mono, fontSize: 9, lineHeight: 1.7, color: P.bone, opacity: 0.38, margin: "18px 0 24px" }}>
+            {isDigital
+              ? "Access and delivery details are confirmed after successful checkout. Any usage rights are stated in the product description."
+              : SHOP_COPY.fulfillment}
+          </p>
+
+          <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18, flexWrap: "wrap" }}>
+            <span style={{ ...mono, fontSize: 23, color: P.ghost }}>${product.price}<span style={{ fontSize: 9, opacity: 0.35, marginLeft: 4 }}>CAD</span></span>
+            <button type="button" onClick={() => { onAdd(product); onClose(); }} style={{ ...mono, fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: P.abyss, background: accent, border: `1px solid ${accent}`, padding: "14px 22px", cursor: "pointer" }}>
+              {product.category === "courses" ? "Enroll" : "Add to Cart"}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function DetailRow({ label, value }) {
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "86px 1fr", gap: 12 }}>
+      <span style={{ ...mono, fontSize: 8, letterSpacing: 2, color: P.bone, opacity: 0.3, textTransform: "uppercase" }}>{label}</span>
+      <span style={{ fontFamily: "'Georgia', serif", fontSize: 11, color: P.bone, opacity: 0.58 }}>{value}</span>
+    </div>
+  );
+}
+
+const ShopCard = ({ product, onAdd, onOpen }) => {
   const [h, setH] = useState(false);
   const cat = SHOP_CATEGORIES.find(c => c.id === product.category);
   return (
     <div onMouseEnter={() => setH(true)} onMouseLeave={() => setH(false)} style={{
       background: h ? `${P.surface}88` : `${P.surface}33`,
       border: `1px solid ${h ? product.colors[0] + "30" : P.steel + "10"}`,
-      borderRadius: 3, overflow: "hidden", transition: "all 0.4s", cursor: "pointer",
+      borderRadius: 3, overflow: "hidden", transition: "all 0.4s",
       display: "flex", flexDirection: "column",
     }}>
       <div style={{ aspectRatio: "4/3", background: product.image ? `${P.abyss}` : `linear-gradient(${135 + product.id * 7}deg, ${P.abyss}, ${product.colors[0]}0a, ${product.colors[1] || product.colors[0]}0c, ${P.abyss})`, position: "relative", overflow: "hidden" }}>
@@ -44,19 +146,16 @@ const ShopCard = ({ product, onAdd }) => {
       </div>
       <div style={{ padding: "14px 16px", flex: 1, display: "flex", flexDirection: "column" }}>
         <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: h ? product.colors[0] : P.ghost, transition: "color 0.3s", lineHeight: 1.4, marginBottom: 6 }}><HoverMorphText>{product.title}</HoverMorphText></div>
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, color: P.bone, opacity: 0.3, lineHeight: 1.5, marginBottom: 10, flex: 1 }}>{product.description.slice(0, 80)}{product.description.length > 80 ? "\u2026" : ""}</div>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, color: P.bone, opacity: 0.38, lineHeight: 1.6, marginBottom: 12, flex: 1 }}>{product.description.slice(0, 120)}{product.description.length > 120 ? "\u2026" : ""}</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontFamily: "'Courier New', monospace", fontSize: 16, fontWeight: 700, color: P.ghost }}>${product.price}<span style={{ fontSize: 9, opacity: 0.3, marginLeft: 2 }}>CAD</span></span>
           {product.sizes && <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: P.bone, opacity: 0.25 }}>{product.sizes}</span>}
           {product.duration && <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: P.green, opacity: 0.5 }}>{product.duration}</span>}
         </div>
-        <button onClick={(e) => { e.stopPropagation(); onAdd(product); }} style={{
-          marginTop: 10, width: "100%", background: h ? `${product.colors[0]}0c` : "transparent",
-          border: `1px solid ${h ? product.colors[0] + "30" : P.steel + "12"}`,
-          color: h ? product.colors[0] : P.bone, fontFamily: "'Courier New', monospace",
-          fontSize: 9, letterSpacing: 4, padding: "8px", cursor: "pointer",
-          textTransform: "uppercase", transition: "all 0.3s", opacity: h ? 1 : 0.35,
-        }}>{product.category === "courses" ? "Enroll" : "Add to Cart"}</button>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginTop: 12 }}>
+          <button type="button" onClick={() => onOpen(product)} style={{ background: "transparent", border: `1px solid ${P.steel}25`, color: P.bone, fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 2, padding: "9px 7px", cursor: "pointer", textTransform: "uppercase", opacity: h ? 0.8 : 0.48, transition: "all 0.3s" }}>Explore Details</button>
+          <button type="button" onClick={() => onAdd(product)} style={{ background: h ? `${product.colors[0]}12` : "transparent", border: `1px solid ${h ? product.colors[0] + "40" : P.steel + "18"}`, color: h ? product.colors[0] : P.bone, fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 2, padding: "9px 7px", cursor: "pointer", textTransform: "uppercase", opacity: h ? 1 : 0.48, transition: "all 0.3s" }}>{product.category === "courses" ? "Enroll" : "Add to Cart"}</button>
+        </div>
       </div>
     </div>
   );
@@ -64,7 +163,7 @@ const ShopCard = ({ product, onAdd }) => {
 
 const ComingSoonScreen = ({ announcement }) => (
   <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
-    <SEO title="Shop \u2014 Opening Soon" description="The 1RareGh0st shop is being prepared." path="/shop" />
+    <SEO title="Shop — Opening Soon" description={SEO_COPY.shop} path="/shop" />
     <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 40px", textAlign: "center" }}>
       <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8, color: P.amber, textTransform: "uppercase", marginBottom: 16 }}>
         <ScrollMorphText speed={70}>Opening Soon</ScrollMorphText>
@@ -74,7 +173,7 @@ const ComingSoonScreen = ({ announcement }) => (
       </h2>
       <div style={{ width: 60, height: 1, background: `linear-gradient(to right, transparent, ${P.amber}, transparent)`, margin: "0 auto 32px" }} />
       <div style={{ fontFamily: "'Georgia', serif", fontSize: 15, color: P.bone, opacity: 0.5, lineHeight: 1.7, maxWidth: 560, margin: "0 auto" }}>
-        {announcement || "Prints, apparel, accessories, and digital assets — all curated, all coming. The store is being prepared for launch. Bookmark this page or follow along for updates."}
+        {announcement || "The first art-led releases are being prepared. Join the signal for new work, selected print editions, and the moment the shop opens."}
       </div>
     </div>
   </div>
@@ -89,6 +188,18 @@ const Shop = ({ addToCart }) => {
   const [search, setSearch] = useState("");
   const [itemFilter, setItemFilter] = useState(null);
   const [error, setError] = useState(null);
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const previousFocusRef = useRef(null);
+
+  const openProduct = (product) => {
+    previousFocusRef.current = document.activeElement;
+    setSelectedProduct(product);
+  };
+
+  const closeProduct = () => {
+    setSelectedProduct(null);
+    window.requestAnimationFrame(() => previousFocusRef.current?.focus?.());
+  };
 
   useEffect(() => {
     let live = true;
@@ -123,12 +234,16 @@ const Shop = ({ addToCart }) => {
 
   return (
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
-      <SEO title="Shop" description="1RareGh0st shop \u2014 prints, apparel, digital assets, and creative courses." path="/shop" />
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
+      <SEO title="Shop" description={SEO_COPY.shop} path="/shop" />
+      <div className="page-shell" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
         <div style={{ marginBottom: 40 }}>
-          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.magenta, textTransform: "uppercase", marginBottom: 12 }}><ScrollMorphText speed={75}>Shop</ScrollMorphText></div>
-          <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: 0 }}><ScrollMorphText speed={65}>{"Prints \u00B7 Apparel \u00B7 Digital \u00B7 Courses"}</ScrollMorphText></h2>
+          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.magenta, textTransform: "uppercase", marginBottom: 12 }}><ScrollMorphText speed={75}>{SHOP_COPY.kicker}</ScrollMorphText></div>
+          <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(32px, 5vw, 54px)", fontWeight: 400, color: P.ghost, margin: 0, lineHeight: 1.08 }}><ScrollMorphText speed={65}>{SHOP_COPY.headline}</ScrollMorphText></h1>
           <div style={{ width: 40, height: 1, background: `linear-gradient(to right, ${P.magenta}, transparent)`, marginTop: 16 }} />
+          <div className="shop-intro-grid" style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 24, maxWidth: 900, marginTop: 22 }}>
+            <p style={{ fontFamily: "'Georgia', serif", fontSize: 14, color: P.bone, opacity: 0.6, lineHeight: 1.7, margin: 0 }}>{SHOP_COPY.intro}</p>
+            <p style={{ fontFamily: "'Courier New', monospace", fontSize: 9, color: P.bone, opacity: 0.38, lineHeight: 1.7, margin: 0, paddingLeft: 18, borderLeft: `1px solid ${P.gold}30` }}>{SHOP_COPY.distinction}</p>
+          </div>
           {announcement && (
             <div style={{ marginTop: 16, fontFamily: "'Courier New', monospace", fontSize: 10, color: P.cyan, opacity: 0.7, letterSpacing: 2, lineHeight: 1.6 }}>{announcement}</div>
           )}
@@ -190,22 +305,23 @@ const Shop = ({ addToCart }) => {
         )}
 
         <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, color: P.bone, opacity: 0.2, letterSpacing: 3, marginBottom: 20 }}>
-          {loading ? "LOADING\u2026" : `${filtered.length} ${filtered.length === 1 ? "ITEM" : "ITEMS"}`}{search && ` matching "${search}"`}{itemFilter && ` \u00B7 ${itemFilter}`}
+          {loading ? "LOADING\u2026" : `${filtered.length} ${filtered.length === 1 ? "RELEASE" : "RELEASES"}`}{search && ` matching "${search}"`}{itemFilter && ` \u00B7 ${itemFilter}`}
         </div>
 
         {!loading && filtered.length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 20 }}>
-            {filtered.map(p => <ShopCard key={p.id} product={p} onAdd={addToCart} />)}
+            {filtered.map(p => <ShopCard key={p.id} product={p} onAdd={addToCart} onOpen={openProduct} />)}
           </div>
         )}
 
         {!loading && filtered.length === 0 && (
           <div style={{ textAlign: "center", padding: "80px 0" }}>
-            <div style={{ fontFamily: "'Georgia', serif", fontSize: 16, color: P.bone, opacity: 0.25, marginBottom: 12 }}>No items found</div>
-            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.bone, opacity: 0.15 }}>Try adjusting your filters or search terms</div>
+            <div style={{ fontFamily: "'Georgia', serif", fontSize: 16, color: P.bone, opacity: 0.35, marginBottom: 12 }}>No releases found here.</div>
+            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.bone, opacity: 0.2 }}>Try another category or clear the search signal.</div>
           </div>
         )}
       </div>
+      {selectedProduct && <ProductDetail product={selectedProduct} onClose={closeProduct} onAdd={addToCart} />}
     </div>
   );
 };

@@ -1,18 +1,19 @@
 import { Helmet } from "react-helmet-async";
+import { SEO_COPY } from "../data/siteCopy";
 
 const defaults = {
   siteName: "1RareGh0st",
-  siteUrl: "https://raregh0st.com",
-  image: "https://raregh0st.com/og-image.jpg",
+  siteUrl: "https://raregh0st.studio",
+  image: "https://raregh0st.studio/og-image.jpg",
   twitterHandle: "@RareGh0st",
 };
 
 export const SEO = ({ title, description, path = "/", image }) => {
   const fullTitle = title
     ? `${title} | ${defaults.siteName}`
-    : `${defaults.siteName} \u2014 Trauma Integration Made Visible`;
+    : `${defaults.siteName} \u2014 Inner worlds made visible`;
   const fullUrl = `${defaults.siteUrl}${path}`;
-  const desc = description || "Dark digital collage art, prints, apparel, and creative tools. Explore the artwork and philosophy of 1RareGh0st.";
+  const desc = description || SEO_COPY.defaultDescription;
   const ogImage = image
     ? (image.startsWith("http") ? image : `${defaults.siteUrl}${image}`)
     : defaults.image;

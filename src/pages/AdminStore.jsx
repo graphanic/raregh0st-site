@@ -263,6 +263,14 @@ function InboxTab({ token }) {
   const KIND_COLOR = { contact: P.cyan, inquiry: P.magenta, newsletter: P.amber };
   const newCount = subs.filter(s => s.status === "new").length;
   const FILTERS = ["all", "contact", "inquiry", "newsletter"];
+  const META_LABELS = {
+    intendedUse: "Intended use",
+    budget: "Approximate budget",
+    timeline: "Target date",
+    deliverable: "Base deliverable",
+    pieceId: "Artwork ID",
+    pieceTitle: "Artwork",
+  };
 
   return (
     <div style={ui.card}>
@@ -290,6 +298,7 @@ function InboxTab({ token }) {
           const accent = KIND_COLOR[s.kind] || P.ghost;
           const isOpen = open === s.id;
           const isNew = s.status === "new";
+          const metaEntries = Object.entries(s.meta || {}).filter(([, value]) => value != null && value !== "");
           return (
             <div key={s.id} style={{
               border: `1px solid ${isNew ? accent + "40" : P.steel + "15"}`,
@@ -323,6 +332,20 @@ function InboxTab({ token }) {
                   {s.message && (
                     <div style={{ fontFamily: "'Georgia', serif", fontSize: 14, lineHeight: 1.6, color: P.ghost, whiteSpace: "pre-wrap", borderLeft: `2px solid ${accent}44`, paddingLeft: 14 }}>
                       {s.message}
+                    </div>
+                  )}
+                  {metaEntries.length > 0 && (
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 8 }}>
+                      {metaEntries.map(([key, value]) => (
+                        <div key={key} style={{ padding: "10px 12px", background: `${P.surface}55`, border: `1px solid ${P.steel}15` }}>
+                          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: accent, letterSpacing: 2, textTransform: "uppercase", marginBottom: 5 }}>
+                            {META_LABELS[key] || key.replace(/([a-z])([A-Z])/g, "$1 $2")}
+                          </div>
+                          <div style={{ fontFamily: "'Georgia', serif", fontSize: 12, color: P.ghost, lineHeight: 1.5 }}>
+                            {key === "deliverable" ? String(value).replace(/-/g, " ") : String(value)}
+                          </div>
+                        </div>
+                      ))}
                     </div>
                   )}
                   <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>

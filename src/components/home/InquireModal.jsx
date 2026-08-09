@@ -34,7 +34,7 @@ export function InquireModal({ open, mode, piece, onClose, isMobile }) {
 
   const isCommission = mode === "commission";
   const accent = isCommission ? P.cyan : P.magenta;
-  const title = isCommission ? "Commission a Piece" : "Inquire";
+  const title = isCommission ? "Your Story, Made Visible" : "Inquire";
   const kicker = piece ? `${piece.title} · ${piece.year}` : "Direct to the studio";
   const canSend = form.email.trim() && form.message.trim();
 
@@ -118,7 +118,7 @@ export function InquireModal({ open, mode, piece, onClose, isMobile }) {
             </h2>
             <p style={{ fontFamily: "'Georgia', serif", fontStyle: "italic", fontSize: 13, lineHeight: 1.6, color: P.bone, opacity: 0.6, margin: "0 0 24px" }}>
               {isCommission
-                ? "Tell me what you want made visible — theme, size, and the story behind it."
+                ? "Share the memories, symbols, relationships, or transformation you want this visual world to hold."
                 : "Ask about this piece, prints, or availability. I read every message myself."}
             </p>
 

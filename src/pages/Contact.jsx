@@ -1,32 +1,74 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { P } from "../data/palette";
-import { ScrollMorphText } from "../components/MorphText";
+import { HoverMorphText, ScrollMorphText } from "../components/MorphText";
 import { SEO } from "../components/SEO";
 import { submitForm } from "../lib/api";
 import { SOCIALS } from "../data/socials";
+import { COMMISSION_COPY, NEWSLETTER_COPY, SEO_COPY } from "../data/siteCopy";
 
-// Build the "Connect" list from the single source of truth in socials.js,
-// plus a direct email row.
 const CONNECT_IDS = ["instagram", "x", "youtube", "tiktok"];
 const CONNECT = [
   ...CONNECT_IDS
-    .map(id => SOCIALS.find(s => s.id === id))
+    .map((id) => SOCIALS.find((social) => social.id === id))
     .filter(Boolean)
-    .map(s => ({ platform: s.label, handle: s.handle.startsWith("@") ? s.handle : `@${s.handle}`, url: s.profileUrl })),
+    .map((social) => ({
+      platform: social.label,
+      handle: social.handle.startsWith("@") ? social.handle : `@${social.handle}`,
+      url: social.profileUrl,
+    })),
   { platform: "Email", handle: "hello@raregh0st.com", url: "mailto:hello@raregh0st.com" },
 ];
 
+const INQUIRY_TYPES = [
+  ["general", "General Inquiry"],
+  ["commission", "Personal Commission"],
+  ["collaboration", "Creative Collaboration"],
+  ["licensing", "Licensing / Print Rights"],
+  ["press", "Press / Media"],
+];
+
+const emptyForm = (type = "general") => ({
+  name: "",
+  email: "",
+  type,
+  message: "",
+  intendedUse: "",
+  budget: "",
+  timeline: "",
+});
+
 export const Contact = () => {
-  const [form, setForm] = useState({ name: "", email: "", type: "general", message: "" });
+  const location = useLocation();
+  const [searchParams] = useSearchParams();
+  const requestedType = searchParams.get("type");
+  const safeType = INQUIRY_TYPES.some(([value]) => value === requestedType) ? requestedType : "general";
+  const [form, setForm] = useState(() => emptyForm(safeType));
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState("");
   const [newsletter, setNewsletter] = useState("");
   const [subscribed, setSubscribed] = useState(false);
   const [subError, setSubError] = useState("");
+  const formRef = useRef(null);
 
-  const handleSubmit = async () => {
-    if (!form.name || !form.email || !form.message || sending) return;
+  useEffect(() => {
+    if (!requestedType || !INQUIRY_TYPES.some(([value]) => value === requestedType)) return;
+    setForm((current) => ({ ...current, type: requestedType }));
+  }, [requestedType]);
+
+  useEffect(() => {
+    if (location.hash !== "#signal") return;
+    const frame = window.requestAnimationFrame(() => document.getElementById("signal")?.scrollIntoView({ behavior: "smooth", block: "center" }));
+    return () => window.cancelAnimationFrame(frame);
+  }, [location.hash]);
+
+  const setField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
+  const isCommission = form.type === "commission";
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    if (!form.name.trim() || !form.email.trim() || !form.message.trim() || sending) return;
     setSending(true);
     setError("");
     try {
@@ -37,6 +79,14 @@ export const Contact = () => {
         category: form.type,
         message: form.message,
         source: "contact-page",
+        meta: isCommission
+          ? {
+              intendedUse: form.intendedUse.trim() || null,
+              budget: form.budget.trim() || null,
+              timeline: form.timeline.trim() || null,
+              deliverable: "digital-master",
+            }
+          : {},
       });
       setSubmitted(true);
     } catch (err) {
@@ -46,7 +96,8 @@ export const Contact = () => {
     }
   };
 
-  const handleSubscribe = async () => {
+  const handleSubscribe = async (event) => {
+    event.preventDefault();
     if (!newsletter || !newsletter.includes("@")) return;
     setSubError("");
     try {
@@ -57,129 +108,123 @@ export const Contact = () => {
     }
   };
 
-  const inputStyle = {
-    width: "100%", padding: "12px 16px", background: P.void, border: `1px solid ${P.steel}22`,
-    color: P.ghost, fontFamily: "'Courier New', monospace", fontSize: 12, outline: "none",
-    transition: "border-color 0.3s",
-  };
-
   return (
-    <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
-      <SEO title="Contact" description="Commissions, collaborations, and creative partnerships with 1RareGh0st." path="/contact" />
-      <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 40px" }}>
-        <div style={{ marginBottom: 48 }}>
-          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.gold, textTransform: "uppercase", marginBottom: 12 }}><ScrollMorphText speed={75}>Contact</ScrollMorphText></div>
-          <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: 0 }}><ScrollMorphText speed={80}>Get In Touch</ScrollMorphText></h2>
-          <div style={{ width: 40, height: 1, background: `linear-gradient(to right, ${P.gold}, transparent)`, marginTop: 16, marginBottom: 8 }} />
-          <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.4, lineHeight: 1.6 }}>Commissions, collaborations, and creative partnerships.</div>
-        </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 60, alignItems: "start" }}>
-          <div>
+    <main style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 90 }}>
+      <SEO title="Commission & Contact" description={SEO_COPY.contact} path="/contact" />
+      <div className="page-shell" style={{ maxWidth: 1120, margin: "0 auto", padding: "0 40px" }}>
+        <header style={{ maxWidth: 820, marginBottom: 58 }}>
+          <div style={kickerStyle}><ScrollMorphText speed={75}>{COMMISSION_COPY.kicker}</ScrollMorphText></div>
+          <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(34px, 6vw, 64px)", lineHeight: 1.05, fontWeight: 400, color: P.ghost, margin: "0 0 22px" }}>
+            <ScrollMorphText speed={80}>{COMMISSION_COPY.headline}</ScrollMorphText>
+          </h1>
+          <p style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(15px, 2vw, 19px)", color: P.bone, opacity: 0.68, lineHeight: 1.75, margin: 0, maxWidth: 740 }}>{COMMISSION_COPY.intro}</p>
+          <p style={{ ...mono, fontSize: 9, color: P.gold, letterSpacing: 2, lineHeight: 1.7, margin: "18px 0 0", textTransform: "uppercase" }}>{COMMISSION_COPY.response}</p>
+        </header>
+
+        <section aria-labelledby="commission-process-title" style={{ marginBottom: 72 }}>
+          <div id="commission-process-title" style={{ ...mono, fontSize: 9, letterSpacing: 5, color: P.bone, opacity: 0.35, textTransform: "uppercase", marginBottom: 16 }}>How the collaboration unfolds</div>
+          <div className="commission-process-grid" style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 8 }}>
+            {COMMISSION_COPY.stages.map((stage) => (
+              <article key={stage.number} style={{ padding: "22px 18px", borderTop: `1px solid ${P.gold}40`, background: `${P.surface}44` }}>
+                <div style={{ ...mono, fontSize: 8, letterSpacing: 3, color: P.gold, marginBottom: 12 }}>{stage.number}</div>
+                <h2 style={{ fontFamily: "'Georgia', serif", fontSize: 16, fontWeight: 400, color: P.ghost, margin: "0 0 10px" }}>{stage.title}</h2>
+                <p style={{ fontFamily: "'Georgia', serif", fontSize: 11, color: P.bone, opacity: 0.48, lineHeight: 1.65, margin: 0 }}>{stage.body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <div className="contact-grid" style={{ display: "grid", gridTemplateColumns: "minmax(0, 1.2fr) minmax(300px, 0.8fr)", gap: 50, alignItems: "start" }}>
+          <section ref={formRef} id="commission-inquiry" style={{ padding: "32px", border: `1px solid ${isCommission ? P.gold + "35" : P.steel + "20"}`, background: `linear-gradient(145deg, ${P.void}, ${P.surface}88)` }}>
+            <div style={{ ...mono, fontSize: 9, letterSpacing: 5, color: isCommission ? P.gold : P.cyan, textTransform: "uppercase", marginBottom: 10 }}>{isCommission ? "Commission Request" : "Direct to the Studio"}</div>
+            <h2 style={{ fontFamily: "'Georgia', serif", fontSize: 25, fontWeight: 400, color: P.ghost, margin: "0 0 24px" }}>{isCommission ? "Tell me what you want made visible." : "What would you like to begin?"}</h2>
+
             {submitted ? (
-              <div style={{ padding: 40, border: `1px solid ${P.green}22`, textAlign: "center" }}>
-                <div style={{ fontSize: 28, marginBottom: 16 }}>{"✓"}</div>
-                <div style={{ fontFamily: "'Georgia', serif", fontSize: 18, color: P.ghost, marginBottom: 8 }}>Message Sent</div>
-                <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, color: P.bone, opacity: 0.5 }}>I'll get back to you as soon as possible.</div>
+              <div role="status" style={{ padding: "38px 20px", border: `1px solid ${P.green}30`, textAlign: "center" }}>
+                <div style={{ fontSize: 28, color: P.green, marginBottom: 14 }}>✓</div>
+                <div style={{ fontFamily: "'Georgia', serif", fontSize: 20, color: P.ghost, marginBottom: 10 }}>Signal received.</div>
+                <div style={{ ...mono, fontSize: 10, color: P.bone, opacity: 0.5, lineHeight: 1.7 }}>Your message is in the studio. Eric will reach back within 2–3 business days.</div>
               </div>
             ) : (
-              <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
-                <div>
-                  <label style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: P.bone, opacity: 0.4, textTransform: "uppercase", display: "block", marginBottom: 6, animation: "morphBreathSoft 1s ease-in-out infinite" }}>Name</label>
-                  <input style={inputStyle} value={form.name} onChange={(e) => setForm(p => ({ ...p, name: e.target.value }))}
-                    onFocus={(e) => e.target.style.borderColor = P.gold + "44"}
-                    onBlur={(e) => e.target.style.borderColor = P.steel + "22"} />
-                </div>
-                <div>
-                  <label style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: P.bone, opacity: 0.4, textTransform: "uppercase", display: "block", marginBottom: 6, animation: "morphBreathSoft 1s ease-in-out infinite 0.5s" }}>Email</label>
-                  <input type="email" style={inputStyle} value={form.email} onChange={(e) => setForm(p => ({ ...p, email: e.target.value }))}
-                    onFocus={(e) => e.target.style.borderColor = P.gold + "44"}
-                    onBlur={(e) => e.target.style.borderColor = P.steel + "22"} />
-                </div>
-                <div>
-                  <label style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: P.bone, opacity: 0.4, textTransform: "uppercase", display: "block", marginBottom: 6 }}>Type</label>
-                  <select style={{ ...inputStyle, cursor: "pointer", appearance: "none" }} value={form.type} onChange={(e) => setForm(p => ({ ...p, type: e.target.value }))}>
-                    <option value="general" style={{ background: P.void }}>General Inquiry</option>
-                    <option value="commission" style={{ background: P.void }}>Commission</option>
-                    <option value="collaboration" style={{ background: P.void }}>Collaboration</option>
-                    <option value="licensing" style={{ background: P.void }}>Licensing / Print Rights</option>
-                    <option value="press" style={{ background: P.void }}>Press / Media</option>
-                  </select>
-                </div>
-                <div>
-                  <label style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: P.bone, opacity: 0.4, textTransform: "uppercase", display: "block", marginBottom: 6, animation: "morphBreathSoft 1s ease-in-out infinite 1.5s" }}>Message</label>
-                  <textarea style={{ ...inputStyle, minHeight: 120, resize: "vertical" }} value={form.message} onChange={(e) => setForm(p => ({ ...p, message: e.target.value }))}
-                    onFocus={(e) => e.target.style.borderColor = P.gold + "44"}
-                    onBlur={(e) => e.target.style.borderColor = P.steel + "22"} />
-                </div>
-                <button onClick={handleSubmit} disabled={sending} style={{
-                  background: "none", border: `1px solid ${P.gold}33`, color: P.gold,
-                  fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 5,
-                  padding: "14px 28px", cursor: sending ? "wait" : "pointer", textTransform: "uppercase",
-                  transition: "all 0.3s", marginTop: 4, opacity: sending ? 0.5 : 1,
-                }}
-                  onMouseEnter={(e) => { if (sending) return; e.target.style.borderColor = P.gold; e.target.style.boxShadow = `0 0 20px ${P.gold}15`; }}
-                  onMouseLeave={(e) => { e.target.style.borderColor = P.gold + "33"; e.target.style.boxShadow = "none"; }}
-                >{sending ? "Sending\u2026" : "Send Message"}</button>
-                {error && (
-                  <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.red, letterSpacing: 1, marginTop: 4 }}>{error}</div>
+              <form onSubmit={handleSubmit} style={{ display: "grid", gap: 16 }}>
+                <Field label="Name" required value={form.name} onChange={(value) => setField("name", value)} />
+                <Field label="Email" type="email" required value={form.email} onChange={(value) => setField("email", value)} />
+                <Field label="Inquiry Type" select value={form.type} onChange={(value) => setField("type", value)} options={INQUIRY_TYPES} />
+                <Field label={isCommission ? "Your story or vision" : "Message"} textarea required value={form.message} onChange={(value) => setField("message", value)} placeholder={isCommission ? "Share the memory, relationship, event, symbols, or transformation you want the work to hold." : "Tell me what you are thinking about."} />
+                {isCommission && (
+                  <div className="contact-field-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                    <Field label="Intended use" value={form.intendedUse} onChange={(value) => setField("intendedUse", value)} placeholder="Personal, gift, memorial…" />
+                    <Field label="Target date" value={form.timeline} onChange={(value) => setField("timeline", value)} placeholder="If there is one" />
+                    <div style={{ gridColumn: "1 / -1" }}>
+                      <Field label={COMMISSION_COPY.budgetLabel} value={form.budget} onChange={(value) => setField("budget", value)} placeholder="A range is helpful, but optional" help={COMMISSION_COPY.budgetHelp} />
+                    </div>
+                  </div>
                 )}
-              </div>
+                <button type="submit" disabled={sending} style={{ ...mono, background: isCommission ? P.gold : P.cyan, border: `1px solid ${isCommission ? P.gold : P.cyan}`, color: P.abyss, fontSize: 10, letterSpacing: 4, padding: "15px 24px", cursor: sending ? "wait" : "pointer", textTransform: "uppercase", opacity: sending ? 0.55 : 1 }}>
+                  {sending ? "Sending…" : <HoverMorphText>{isCommission ? "Send Commission Request" : "Send Inquiry"}</HoverMorphText>}
+                </button>
+                {error && <div role="alert" style={{ ...mono, fontSize: 10, color: P.red, lineHeight: 1.6 }}>{error}</div>}
+              </form>
             )}
-          </div>
-          <div style={{ display: "flex", flexDirection: "column", gap: 40 }}>
-            <div style={{ padding: 28, border: `1px solid ${P.steel}11`, background: P.void + "88" }}>
-              <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 6, color: P.cyan, textTransform: "uppercase", marginBottom: 12 }}>Join the Signal</div>
-              <div style={{ fontFamily: "'Georgia', serif", fontSize: 16, color: P.ghost, marginBottom: 8 }}>Newsletter</div>
-              <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, color: P.bone, opacity: 0.4, lineHeight: 1.6, marginBottom: 20 }}>
-                New artwork drops, shop releases, behind-the-scenes process, and transmissions from the void. No spam. Unsubscribe anytime.
-              </div>
-              {subscribed ? (
-                <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, color: P.green, letterSpacing: 2 }}>{"✓"} You're in. Welcome to the signal.</div>
-              ) : (
-                <div style={{ display: "flex", gap: 8 }}>
-                  <input type="email" placeholder="your@email.com" value={newsletter} onChange={(e) => setNewsletter(e.target.value)}
-                    style={{ ...inputStyle, flex: 1 }}
-                    onFocus={(e) => e.target.style.borderColor = P.cyan + "44"}
-                    onBlur={(e) => e.target.style.borderColor = P.steel + "22"} />
-                  <button onClick={handleSubscribe} style={{
-                    background: "none", border: `1px solid ${P.cyan}33`, color: P.cyan,
-                    fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 3,
-                    padding: "12px 18px", cursor: "pointer", textTransform: "uppercase",
-                    transition: "all 0.3s", whiteSpace: "nowrap",
-                  }}
-                    onMouseEnter={(e) => { e.target.style.borderColor = P.cyan; }}
-                    onMouseLeave={(e) => { e.target.style.borderColor = P.cyan + "33"; }}
-                  >Subscribe</button>
-                </div>
-              )}
-              {subError && (
-                <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.red, letterSpacing: 1, marginTop: 10 }}>{subError}</div>
-              )}
+          </section>
+
+          <aside style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+            <div style={{ padding: 26, borderLeft: `2px solid ${P.gold}55`, background: `${P.gold}06` }}>
+              <div style={{ ...mono, fontSize: 8, letterSpacing: 4, color: P.gold, textTransform: "uppercase", marginBottom: 12 }}>Base Commission</div>
+              <p style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.6, lineHeight: 1.75, margin: "0 0 14px" }}>A high-resolution personal-use digital master, developed through close collaboration and major-stage reviews.</p>
+              <p style={{ ...mono, fontSize: 9, color: P.bone, opacity: 0.38, lineHeight: 1.7, margin: 0 }}>Physical prints, commercial use, licensing, and expanded deliverables are scoped and quoted separately. An inquiry is a conversation, not a booking.</p>
             </div>
+
+            <div id="signal" style={{ padding: 26, border: `1px solid ${P.cyan}20`, background: `${P.void}88` }}>
+              <div style={{ ...mono, fontSize: 8, letterSpacing: 5, color: P.cyan, textTransform: "uppercase", marginBottom: 10 }}>{NEWSLETTER_COPY.kicker}</div>
+              <div style={{ fontFamily: "'Georgia', serif", fontSize: 17, color: P.ghost, marginBottom: 8 }}>{NEWSLETTER_COPY.headline}</div>
+              <p style={{ ...mono, fontSize: 9, color: P.bone, opacity: 0.38, lineHeight: 1.65, margin: "0 0 18px" }}>{NEWSLETTER_COPY.body}</p>
+              {subscribed ? (
+                <div role="status" style={{ ...mono, fontSize: 10, color: P.green, letterSpacing: 2 }}>✓ You’re on the signal.</div>
+              ) : (
+                <form onSubmit={handleSubscribe} style={{ display: "flex", gap: 8 }}>
+                  <input type="email" required aria-label="Newsletter email" placeholder="your@email.com" value={newsletter} onChange={(event) => setNewsletter(event.target.value)} style={{ ...inputStyle, flex: 1, minWidth: 0 }} />
+                  <button type="submit" style={{ ...mono, background: "none", border: `1px solid ${P.cyan}44`, color: P.cyan, fontSize: 8, letterSpacing: 2, padding: "11px 13px", cursor: "pointer", textTransform: "uppercase" }}>Join</button>
+                </form>
+              )}
+              {subError && <div role="alert" style={{ ...mono, fontSize: 9, color: P.red, marginTop: 8 }}>{subError}</div>}
+            </div>
+
             <div>
-              <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: P.bone, opacity: 0.3, textTransform: "uppercase", marginBottom: 16 }}>Connect</div>
+              <div style={{ ...mono, fontSize: 8, letterSpacing: 4, color: P.bone, opacity: 0.3, textTransform: "uppercase", marginBottom: 12 }}>Elsewhere</div>
               {CONNECT.map(({ platform, handle, url }) => (
-                <a key={platform} href={url} target="_blank" rel="noopener noreferrer" style={{
-                  display: "flex", justifyContent: "space-between", padding: "10px 0",
-                  borderBottom: `1px solid ${P.steel}0a`, textDecoration: "none", transition: "all 0.3s",
-                }}
-                  onMouseEnter={(e) => e.currentTarget.style.paddingLeft = "6px"}
-                  onMouseLeave={(e) => e.currentTarget.style.paddingLeft = "0"}
-                >
-                  <span style={{ fontFamily: "'Courier New', monospace", fontSize: 11, color: P.bone, opacity: 0.5, letterSpacing: 2 }}>{platform}</span>
-                  <span style={{ fontFamily: "'Courier New', monospace", fontSize: 11, color: P.ghost, opacity: 0.7 }}>{handle}</span>
+                <a key={platform} href={url} {...(url.startsWith("http") ? { target: "_blank", rel: "noopener noreferrer" } : {})} style={{ display: "flex", justifyContent: "space-between", padding: "10px 0", borderBottom: `1px solid ${P.steel}12`, textDecoration: "none" }}>
+                  <span style={{ ...mono, fontSize: 10, color: P.bone, opacity: 0.45, letterSpacing: 2 }}>{platform}</span>
+                  <span style={{ ...mono, fontSize: 10, color: P.ghost, opacity: 0.65 }}>{handle}</span>
                 </a>
               ))}
             </div>
-            <div style={{ padding: 20, borderLeft: `2px solid ${P.magenta}22` }}>
-              <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 4, color: P.magenta, opacity: 0.6, textTransform: "uppercase", marginBottom: 8 }}>Commissions</div>
-              <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, color: P.bone, opacity: 0.4, lineHeight: 1.7 }}>
-                Currently accepting select commissions for custom artwork, brand collaborations, and creative direction. Response time is typically 2-3 business days.
-              </div>
-            </div>
-          </div>
+          </aside>
         </div>
       </div>
-    </div>
+    </main>
   );
 };
+
+function Field({ label, value, onChange, type = "text", textarea, select, options = [], required, placeholder, help }) {
+  const id = `field-${label.toLowerCase().replace(/[^a-z0-9]+/g, "-")}`;
+  return (
+    <label htmlFor={id} style={{ display: "block" }}>
+      <span style={{ ...mono, fontSize: 8, letterSpacing: 3, color: P.bone, opacity: 0.48, textTransform: "uppercase", display: "block", marginBottom: 7 }}>{label}{required ? " *" : ""}</span>
+      {select ? (
+        <select id={id} value={value} onChange={(event) => onChange(event.target.value)} style={{ ...inputStyle, cursor: "pointer" }}>
+          {options.map(([optionValue, optionLabel]) => <option key={optionValue} value={optionValue} style={{ background: P.void }}>{optionLabel}</option>)}
+        </select>
+      ) : textarea ? (
+        <textarea id={id} required={required} rows={5} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} style={{ ...inputStyle, minHeight: 132, resize: "vertical" }} />
+      ) : (
+        <input id={id} type={type} required={required} value={value} onChange={(event) => onChange(event.target.value)} placeholder={placeholder} style={inputStyle} />
+      )}
+      {help && <span style={{ ...mono, display: "block", fontSize: 8, color: P.bone, opacity: 0.3, marginTop: 6, lineHeight: 1.5 }}>{help}</span>}
+    </label>
+  );
+}
+
+const mono = { fontFamily: "'Courier New', monospace" };
+const kickerStyle = { ...mono, fontSize: 9, letterSpacing: 6, color: P.gold, textTransform: "uppercase", marginBottom: 14 };
+const inputStyle = { width: "100%", padding: "12px 14px", background: P.abyss, border: `1px solid ${P.steel}35`, color: P.ghost, fontFamily: "'Courier New', monospace", fontSize: 12, outline: "none", borderRadius: 2 };

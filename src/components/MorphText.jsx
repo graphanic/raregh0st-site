@@ -9,7 +9,7 @@ export const MORPH_VARIANTS = [
   { fontFamily: "'Geist Pixel Line', monospace", opacity: 0.80 },
 ];
 
-export const MorphText = ({ children, speed = 45 }) => {
+export const MorphText = ({ children, speed = 45, allowWrap = false }) => {
   const calm = useContext(CalmContext);
   const text = String(children);
   const chars = text.split("");
@@ -31,7 +31,7 @@ export const MorphText = ({ children, speed = 45 }) => {
   return (
     <span aria-label={text} style={{ display: "inline" }}>
       {chars.map((c, i) => {
-        if (c === " ") return <span key={i}>&nbsp;</span>;
+        if (c === " ") return allowWrap ? <span key={i}> </span> : <span key={i}>&nbsp;</span>;
         const v = MORPH_VARIANTS[Math.floor(Math.random() * 5)];
         return (
           <span
@@ -46,7 +46,7 @@ export const MorphText = ({ children, speed = 45 }) => {
   );
 };
 
-export const ScrollMorphText = ({ children, speed = 45, threshold = 0.3 }) => {
+export const ScrollMorphText = ({ children, speed = 45, threshold = 0.3, allowWrap = false }) => {
   const ref = useRef(null);
   const [triggered, setTriggered] = useState(false);
   useEffect(() => {
@@ -61,7 +61,7 @@ export const ScrollMorphText = ({ children, speed = 45, threshold = 0.3 }) => {
   return (
     <span ref={ref} style={{ display: "inline" }}>
       {triggered
-        ? <MorphText speed={speed}>{children}</MorphText>
+        ? <MorphText speed={speed} allowWrap={allowWrap}>{children}</MorphText>
         : <span data-morph style={{ fontFamily: MORPH_VARIANTS[4].fontFamily, opacity: MORPH_VARIANTS[4].opacity }}>{children}</span>
       }
     </span>

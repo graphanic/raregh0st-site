@@ -13,6 +13,7 @@ import {
 import { HoverMorphText, ScrollMorphText } from "../components/MorphText";
 import { PortfolioPlaceholder, Lightbox } from "../components/PortfolioPlaceholder";
 import { SEO } from "../components/SEO";
+import { ACTION_COPY, SEO_COPY } from "../data/siteCopy";
 
 // Local videos have a first-frame poster (same path, .jpg) generated alongside them.
 // External (blob) videos have no poster; return undefined so the tile shows its gradient.
@@ -333,13 +334,13 @@ const Portfolio = () => {
 
   return (
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
-      <SEO title="Portfolio" description="Photoshop originals, short films, AI adaptations, photography, and graphic design by 1RareGh0st." path="/portfolio" />
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
+      <SEO title="Portfolio" description={SEO_COPY.portfolio} path="/portfolio" />
+      <div className="page-shell" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
         <div style={{ marginBottom: 40 }}>
           <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 6, color: P.cyan, textTransform: "uppercase", marginBottom: 12 }}><ScrollMorphText speed={75}>Portfolio</ScrollMorphText></div>
-          <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: 0 }}><ScrollMorphText speed={85}>The Work</ScrollMorphText></h2>
+          <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(34px, 5vw, 54px)", fontWeight: 400, color: P.ghost, margin: 0 }}><ScrollMorphText speed={85}>Worlds, fragments, and transformations.</ScrollMorphText></h1>
           <div style={{ width: 40, height: 1, background: `linear-gradient(to right, ${P.cyan}, transparent)`, marginTop: 20, marginBottom: 8 }} />
-          <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.4, lineHeight: 1.6 }}>One creative practice, organized by how each work came into the world.</div>
+          <div style={{ fontFamily: "'Georgia', serif", fontSize: 14, color: P.bone, opacity: 0.5, lineHeight: 1.7, maxWidth: 720 }}>One artist-authored practice, organized by how each work came into the world. Explore the image, its lineage, and the process that holds it together.</div>
         </div>
 
         <div className="portfolio-tabs" role="tablist" aria-label="Portfolio categories" style={{ display: "flex", gap: 4, marginBottom: 8, flexWrap: "wrap" }}>
@@ -435,6 +436,16 @@ const Portfolio = () => {
             </button>
           </div>
         )}
+
+        <section style={{ marginTop: 80, padding: "38px 30px", borderTop: `1px solid ${P.steel}20`, borderBottom: `1px solid ${P.steel}20`, textAlign: "center" }}>
+          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 5, color: P.cyan, textTransform: "uppercase", marginBottom: 14 }}>The Work Can Continue</div>
+          <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(23px, 3vw, 34px)", fontWeight: 400, color: P.ghost, margin: "0 0 12px" }}>Collect an existing world—or build one from your own story.</h2>
+          <p style={{ fontFamily: "'Georgia', serif", fontSize: 13, lineHeight: 1.7, color: P.bone, opacity: 0.45, maxWidth: 620, margin: "0 auto 24px" }}>Available products live in the shop. Selected signed editions are marked explicitly. Personal commissions begin as a conversation.</p>
+          <div style={{ display: "flex", justifyContent: "center", gap: 10, flexWrap: "wrap" }}>
+            <button type="button" onClick={() => navigate("/shop")} style={{ background: P.gold, border: `1px solid ${P.gold}`, color: P.abyss, fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 3, padding: "12px 18px", cursor: "pointer", textTransform: "uppercase" }}>{ACTION_COPY.collect}</button>
+            <button type="button" onClick={() => navigate("/contact?type=commission")} style={{ background: "transparent", border: `1px solid ${P.cyan}55`, color: P.cyan, fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 3, padding: "12px 18px", cursor: "pointer", textTransform: "uppercase" }}>{ACTION_COPY.commission}</button>
+          </div>
+        </section>
       </div>
       <Lightbox
         item={lightboxItem}

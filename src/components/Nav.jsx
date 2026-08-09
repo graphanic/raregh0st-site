@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { P, LOGO_IMG } from "../data/palette";
 import { HoverMorphText } from "./MorphText";
+import { ACTION_COPY } from "../data/siteCopy";
 
 const NAV_ITEMS = [
   { path: "/portfolio", label: "Portfolio" },
@@ -20,13 +21,13 @@ export const Nav = ({ cartCount }) => {
 
   return (
     <>
-      <nav style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, padding: "14px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", background: `linear-gradient(to bottom, ${P.abyss}ee, transparent)`, backdropFilter: "blur(8px)" }}>
-        <div onClick={() => handleNav("/")} style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 10, zIndex: 102 }}>
+      <nav className="site-nav" style={{ position: "fixed", top: 0, left: 0, right: 0, zIndex: 100, padding: "14px 32px", display: "flex", justifyContent: "space-between", alignItems: "center", background: `linear-gradient(to bottom, ${P.abyss}ee, transparent)`, backdropFilter: "blur(8px)" }}>
+        <button type="button" onClick={() => handleNav("/")} aria-label="1RareGh0st home" style={{ background: "none", border: "none", padding: 0, cursor: "pointer", display: "flex", alignItems: "center", gap: 10, zIndex: 102 }}>
           <img src={LOGO_IMG} alt="" style={{ width: 22, height: 22, opacity: 0.7 }} />
           <span style={{ fontFamily: "'Courier New', monospace", fontSize: 14, fontWeight: 700, letterSpacing: 5 }}>
             <span style={{ color: P.ghost }}>1</span><span style={{ color: P.cyan }}>RARE</span><span style={{ color: P.magenta }}>GH</span><span style={{ color: P.ghost }}>0</span><span style={{ color: P.magenta }}>ST</span>
           </span>
-        </div>
+        </button>
         {/* Desktop nav */}
         <div className="nav-desktop" style={{ display: "flex", gap: 22, alignItems: "center" }}>
           {NAV_ITEMS.map(({ path, label }) => (
@@ -35,15 +36,18 @@ export const Nav = ({ cartCount }) => {
               onMouseLeave={(e) => { if (!isActive(path)) e.target.style.color = P.bone; }}
             ><HoverMorphText>{label}</HoverMorphText></button>
           ))}
-          <div onClick={() => navigate("/cart")} style={{ cursor: "pointer", position: "relative", color: P.bone, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 2 }}>
+          <button onClick={() => navigate("/contact?type=commission")} style={{ background: `${P.gold}0d`, border: `1px solid ${P.gold}3d`, color: P.gold, fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer", padding: "8px 12px", transition: "all 0.3s" }}>
+            <HoverMorphText>Commission</HoverMorphText>
+          </button>
+          <button type="button" onClick={() => navigate("/cart")} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", position: "relative", color: P.bone, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 2 }}>
             CART{cartCount > 0 && <span style={{ position: "absolute", top: -6, right: -12, background: P.magenta, color: "#fff", fontSize: 8, fontWeight: 700, width: 14, height: 14, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>{cartCount}</span>}
-          </div>
+          </button>
         </div>
         {/* Mobile: cart + hamburger */}
         <div className="nav-mobile-btns" style={{ display: "none", alignItems: "center", gap: 16, zIndex: 102 }}>
-          <div onClick={() => handleNav("/cart")} style={{ cursor: "pointer", position: "relative", color: P.bone, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 2 }}>
+          <button type="button" onClick={() => handleNav("/cart")} style={{ background: "none", border: "none", padding: 0, cursor: "pointer", position: "relative", color: P.bone, fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 2 }}>
             CART{cartCount > 0 && <span style={{ position: "absolute", top: -6, right: -12, background: P.magenta, color: "#fff", fontSize: 8, fontWeight: 700, width: 14, height: 14, borderRadius: "50%", display: "flex", alignItems: "center", justifyContent: "center" }}>{cartCount}</span>}
-          </div>
+          </button>
           <button onClick={() => setMenuOpen(v => !v)} style={{ background: "none", border: "none", cursor: "pointer", padding: 4, display: "flex", flexDirection: "column", gap: 4, zIndex: 102 }} aria-label="Menu">
             <span style={{ display: "block", width: 20, height: 1.5, background: menuOpen ? P.cyan : P.bone, transition: "all 0.3s", transform: menuOpen ? "rotate(45deg) translate(3px, 3px)" : "none" }} />
             <span style={{ display: "block", width: 20, height: 1.5, background: menuOpen ? P.cyan : P.bone, transition: "all 0.3s", opacity: menuOpen ? 0 : 1 }} />
@@ -68,6 +72,9 @@ export const Nav = ({ cartCount }) => {
             transition: `all 0.4s ease ${i * 0.05}s`,
           }}>{label}</button>
         ))}
+        <button onClick={() => handleNav("/contact?type=commission")} style={{ background: `${P.gold}0d`, border: `1px solid ${P.gold}44`, color: P.gold, fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 4, textTransform: "uppercase", cursor: "pointer", padding: "12px 18px", marginTop: 4, opacity: menuOpen ? 1 : 0, transition: `all 0.4s ease ${NAV_ITEMS.length * 0.05}s` }}>
+          {ACTION_COPY.commission}
+        </button>
         <div style={{ width: 40, height: 1, background: `${P.steel}22`, margin: "8px 0" }} />
         <button onClick={() => handleNav("/cart")} style={{
           background: "none", border: "none", color: P.gold,

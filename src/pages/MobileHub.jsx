@@ -1,6 +1,7 @@
 import { useNavigate } from "react-router-dom";
 import { P, LOGO_IMG } from "../data/palette";
 import { SEO } from "../components/SEO";
+import { BRAND_COPY } from "../data/siteCopy";
 
 export const MobileHub = ({ cartCount }) => {
   const navigate = useNavigate();
@@ -10,7 +11,8 @@ export const MobileHub = ({ cartCount }) => {
     { label: "Media", dest: "/media", color: P.magenta, desc: "Motion & Sound" },
     { label: "The Work", dest: "/the-work", color: P.purple, desc: "Process & Philosophy" },
     { label: "Now", dest: "/now", color: P.green, desc: "Current Status" },
-    { label: "Contact", dest: "/contact", color: P.bone, desc: "Get In Touch" },
+    { label: "Commission", dest: "/contact?type=commission", color: P.gold, desc: "Make Your Story Visible" },
+    { label: "Contact", dest: "/contact", color: P.bone, desc: "Direct to the Studio" },
     { label: "About", dest: "/about", color: P.bone, desc: "The Artist" },
   ];
 
@@ -31,7 +33,7 @@ export const MobileHub = ({ cartCount }) => {
           <span style={{ color: P.ghost }}>0</span>
           <span style={{ color: P.magenta }}>st</span>
         </div>
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 6, color: P.bone, textTransform: "uppercase", opacity: 0.3 }}>Trauma Integration Made Visible</div>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 4, color: P.bone, textTransform: "uppercase", opacity: 0.4 }}>{BRAND_COPY.headline}</div>
       </div>
       <div style={{ width: "100%", maxWidth: 360, display: "flex", flexDirection: "column", gap: 12 }}>
         {links.map((link) => (

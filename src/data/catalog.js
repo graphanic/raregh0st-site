@@ -14,7 +14,7 @@ export const PORTFOLIO_CATEGORIES = [
     label: "Photoshop Originals",
     icon: "✦",
     color: P.magenta,
-    description: "Original compositions authored in Photoshop — including works built with thoughtfully chosen AI-assisted assets.",
+    description: "Layered symbolic compositions built in Photoshop through sustained selection, compositing, colour, light, and human judgment. Some works incorporate AI-assisted source material; the finished world remains artist-authored.",
     filterLabel: "Series",
   },
   {
@@ -22,14 +22,14 @@ export const PORTFOLIO_CATEGORIES = [
     label: "Short Films",
     icon: "▶",
     color: P.amber,
-    description: "Completed authored films where image, motion, sound, and story become one work.",
+    description: "Authored films where image, motion, sound, and story converge into one complete world—made to be experienced in time, not reduced to a still frame.",
   },
   {
     id: "ai-adaptations",
     label: "AI Adaptations",
     icon: "✧",
     color: P.purple,
-    description: "AI-led transformations and moving reinterpretations of original works, ideas, and visual lineages.",
+    description: "Transformations of existing works and ideas, using AI as a generative material before selection, motion, editing, and final artistic judgment reshape the result.",
     filterLabel: "Source",
   },
   {
@@ -37,7 +37,7 @@ export const PORTFOLIO_CATEGORIES = [
     label: "Photography",
     icon: "◎",
     color: P.ghost,
-    description: "Observed moments, urban signals, landscapes, and human presence caught through the lens.",
+    description: "Observed encounters with landscape, atmosphere, human presence, and the strange visual signals already waiting in the world.",
     filterLabel: "Subject",
   },
   {
@@ -45,7 +45,7 @@ export const PORTFOLIO_CATEGORIES = [
     label: "Graphic Design",
     icon: "◆",
     color: P.cyan,
-    description: "Identity, broadcast, social, print, and commissioned design shaped for a purpose.",
+    description: "Identity, broadcast, social, and commissioned design where visual atmosphere is shaped around a message, audience, and practical purpose.",
     filterLabel: "Project Type",
   },
 ];

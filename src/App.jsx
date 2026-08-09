@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link, Routes, Route, useLocation } from "react-router-dom";
+import { Routes, Route, useLocation } from "react-router-dom";
 import { CalmContext } from "./components/CalmContext";
 import { P } from "./data/palette";
 import { saveLocal, loadLocal } from "./utils/storage";
@@ -48,7 +48,6 @@ function ScrollToTop() {
 
 export default function App() {
   const isMobile = useIsMobile();
-  const location = useLocation();
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState(() => loadLocal("cart", []));
   const [calm, setCalm] = useState(() => loadLocal("calm", false));
@@ -141,8 +140,6 @@ export default function App() {
     saveLocal("cart", []);
   }, []);
 
-  const isHome = location.pathname === "/";
-
   return (
     <CalmContext.Provider value={calm}>
       <div
@@ -157,106 +154,7 @@ export default function App() {
         {loading && <Preloader onComplete={() => setLoading(false)} />}
         {!isMobile && <Particles />}
 
-        {/* Desktop nav on all pages; also on the mobile home (responsive hamburger) */}
-        {(!isMobile || isHome) && <Nav cartCount={cart.length} />}
-
-        {/* Mobile: minimal sticky header for inner pages */}
-        {isMobile && !isHome && (
-          <nav
-            style={{
-              position: "fixed",
-              top: 0,
-              left: 0,
-              right: 0,
-              zIndex: 100,
-              padding: "12px 20px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-              background: `${P.abyss}f0`,
-              backdropFilter: "blur(12px)",
-              borderBottom: `1px solid ${P.steel}15`,
-            }}
-          >
-            <Link
-              to="/"
-              style={{
-                background: "none",
-                border: "none",
-                cursor: "pointer",
-                display: "flex",
-                alignItems: "center",
-                gap: 8,
-                color: P.cyan,
-                fontFamily: "'Courier New', monospace",
-                fontSize: 10,
-                letterSpacing: 3,
-                textDecoration: "none",
-              }}
-            >
-              <svg
-                width="14"
-                height="14"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="1.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <polyline points="15 18 9 12 15 6" />
-              </svg>
-              HUB
-            </Link>
-            <div
-              style={{
-                fontFamily: "'Courier New', monospace",
-                fontSize: 9,
-                letterSpacing: 4,
-                color: P.bone,
-                textTransform: "uppercase",
-                opacity: 0.5,
-              }}
-            >
-              {location.pathname.replace("/", "").replace(/-/g, " ") || "Home"}
-            </div>
-            <Link
-              to="/cart"
-              style={{
-                cursor: "pointer",
-                position: "relative",
-                color: P.bone,
-                fontFamily: "'Courier New', monospace",
-                fontSize: 9,
-                letterSpacing: 2,
-                textDecoration: "none",
-              }}
-            >
-              CART
-              {cart.length > 0 && (
-                <span
-                  style={{
-                    position: "absolute",
-                    top: -6,
-                    right: -10,
-                    background: P.magenta,
-                    color: "#fff",
-                    fontSize: 7,
-                    fontWeight: 700,
-                    width: 12,
-                    height: 12,
-                    borderRadius: "50%",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  {cart.length}
-                </span>
-              )}
-            </Link>
-          </nav>
-        )}
+        <Nav cartCount={cart.length} />
 
         <div
           style={{

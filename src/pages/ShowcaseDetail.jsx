@@ -53,6 +53,7 @@ const ShowcaseDetail = () => {
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6, padding: "14px 16px", border: `1px solid ${P.gold}25`, background: `${P.gold}08` }}>
                   <span style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 3, color: P.gold, textTransform: "uppercase" }}>Print release coming soon</span>
                   <span style={{ fontFamily: "'Georgia', serif", fontSize: 11, color: P.bone, opacity: 0.45, lineHeight: 1.5 }}>One shared, signed edition of ten across all future print formats.</span>
+                  <button type="button" onClick={() => navigate("/contact#signal")} style={{ marginTop: 8, background: "transparent", border: `1px solid ${P.gold}44`, color: P.gold, fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 2, padding: "8px 11px", cursor: "pointer", textTransform: "uppercase" }}>Join the print release list</button>
                 </div>
               )}
               {adaptations.length > 0 && (
@@ -139,9 +140,9 @@ const ShowcaseDetail = () => {
           </div>
 
           <div style={{ padding: 28, borderLeft: `2px solid ${piece.colors[0]}22`, marginBottom: 40, maxWidth: 600 }}>
-            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 6, color: piece.colors[0], opacity: 0.6, textTransform: "uppercase", marginBottom: 10 }}>Artist Notes</div>
+            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 6, color: piece.colors[0], opacity: 0.6, textTransform: "uppercase", marginBottom: 10 }}>Process & Provenance</div>
             <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.5, lineHeight: 1.7, fontStyle: "italic" }}>
-              "Every piece has a hidden layer. Sometimes literal — a face buried in the noise. Sometimes conceptual — a pattern that only makes sense when you've seen the whole series. Look closer."
+              Built through the cumulative Photoshop process behind 1RareGh0st: source material is selected, altered, layered, coloured, lit, and resolved through sustained human judgment. Every hidden face and recurring symbol is placed in conversation with the whole.
             </div>
           </div>
         </div>

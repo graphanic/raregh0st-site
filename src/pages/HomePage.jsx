@@ -6,8 +6,16 @@ import { SEO } from "../components/SEO";
 import { MorphText, HoverMorphText, ScrollMorphText } from "../components/MorphText";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { GalleryFocus } from "../components/home/GalleryFocus";
-import { InquireModal } from "../components/home/InquireModal";
 import { submitForm } from "../lib/api";
+import {
+  ACTION_COPY,
+  ARTIST_PORTRAIT_URL,
+  BRAND_COPY,
+  COLLECTOR_COPY,
+  COMMISSION_COPY,
+  NEWSLETTER_COPY,
+  SHOP_COPY,
+} from "../data/siteCopy";
 
 // Destination cards — functionally replace the orbiting solar-system nav
 const DESTINATIONS = [
@@ -15,7 +23,7 @@ const DESTINATIONS = [
   { label: "Shop", dest: "/shop", color: P.gold, desc: "Apparel & Prints" },
   { label: "Media", dest: "/media", color: P.magenta, desc: "Motion & Sound" },
   { label: "About", dest: "/about", color: P.bone, desc: "The Artist" },
-  { label: "Contact", dest: "/contact", color: P.bone, desc: "Get In Touch" },
+  { label: "Commission", dest: "/contact?type=commission", color: P.gold, desc: "Make Your Story Visible" },
 ];
 
 const MANTRAS = ["Coherence over intensity", "Presence over performance", "Join the signal"];
@@ -125,7 +133,7 @@ function HeroSection({ isMobile }) {
         }}
       />
 
-      <div style={{ position: "relative", zIndex: 2, animation: "fadeSlideIn 1s ease both" }}>
+      <div style={{ position: "relative", zIndex: 2, width: "100%", animation: "fadeSlideIn 1s ease both" }}>
         <img
           src={heroLogoSrc}
           alt="1RareGh0st"
@@ -150,20 +158,22 @@ function HeroSection({ isMobile }) {
           style={{
             fontFamily: "'Courier New', monospace",
             fontSize: isMobile ? 9 : 11,
-            letterSpacing: isMobile ? 7 : 10,
+            letterSpacing: isMobile ? 1.8 : 5,
             color: P.magenta,
             textTransform: "uppercase",
             marginBottom: 20,
+            maxWidth: 720,
+            lineHeight: 1.6,
           }}
         >
-          <MorphText speed={90}>The Art of</MorphText>
+          <MorphText speed={90} allowWrap>{BRAND_COPY.kicker}</MorphText>
         </div>
-        <h1
+        <div
           style={{
             fontFamily: "'Courier New', monospace",
-            fontSize: isMobile ? 46 : 104,
+            fontSize: isMobile ? 34 : 88,
             fontWeight: 400,
-            letterSpacing: isMobile ? 4 : 10,
+            letterSpacing: isMobile ? 2.5 : 10,
             lineHeight: 1,
             margin: 0,
           }}
@@ -172,37 +182,38 @@ function HeroSection({ isMobile }) {
           <span style={{ color: P.magenta }}>GH</span>
           <span style={{ color: P.ghost }}>0</span>
           <span style={{ color: P.magenta }}>ST</span>
-        </h1>
-        <div
+        </div>
+        <h1
           style={{
             fontFamily: "'Georgia', serif",
-            fontStyle: "italic",
-            fontSize: isMobile ? 14 : 19,
-            color: P.bone,
-            opacity: 0.7,
-            marginTop: 26,
-            maxWidth: 560,
+            fontSize: isMobile ? 27 : 52,
+            fontWeight: 400,
+            color: P.ghost,
+            margin: "26px auto 0",
+            maxWidth: 760,
             marginLeft: "auto",
             marginRight: "auto",
-            lineHeight: 1.6,
+            lineHeight: 1.08,
           }}
         >
-          Dark digital collage born from what we survive — grief, static, and
-          the slow work of putting a mind back together.
-        </div>
+          <ScrollMorphText speed={78} allowWrap>{BRAND_COPY.headline}</ScrollMorphText>
+        </h1>
         <div
           style={{
             fontFamily: "'Courier New', monospace",
             fontSize: isMobile ? 8 : 9,
-            letterSpacing: 6,
+            letterSpacing: isMobile ? 3.2 : 6,
             color: P.cyan,
             textTransform: "uppercase",
-            marginTop: 22,
+            marginTop: 18,
             opacity: 0.75,
           }}
         >
-          <MorphText speed={70}>Trauma Integration Made Visible</MorphText>
+          <MorphText speed={70} allowWrap>{BRAND_COPY.craftLine}</MorphText>
         </div>
+        <p style={{ fontFamily: "'Georgia', serif", fontStyle: "italic", fontSize: isMobile ? 13 : 16, color: P.bone, opacity: 0.62, maxWidth: 620, lineHeight: 1.65, margin: "18px auto 0" }}>
+          {BRAND_COPY.supporting}
+        </p>
 
         <div
           style={{
@@ -213,8 +224,8 @@ function HeroSection({ isMobile }) {
             flexWrap: "wrap",
           }}
         >
-          <CtaButton to="/portfolio" color={P.cyan}>Enter the Portfolio</CtaButton>
-          <CtaButton to="/shop" color={P.gold}>Browse the Shop</CtaButton>
+          <CtaButton to="/shop" color={P.gold}>{ACTION_COPY.collect}</CtaButton>
+          <CtaButton to="/contact?type=commission" color={P.cyan}>{ACTION_COPY.commission}</CtaButton>
         </div>
       </div>
 
@@ -247,6 +258,7 @@ function CtaButton({ to, color, children }) {
   return (
     <Link
       to={to}
+      className="hero-cta"
       onMouseEnter={() => setHover(true)}
       onMouseLeave={() => setHover(false)}
       style={{
@@ -266,6 +278,22 @@ function CtaButton({ to, color, children }) {
     >
       <HoverMorphText>{children}</HoverMorphText>
     </Link>
+  );
+}
+
+function ProofRail({ isMobile }) {
+  return (
+    <section aria-label="How the work is made" style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "26px 24px 12px" : "32px 32px 18px" }}>
+      <div className="home-proof-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", borderTop: `1px solid ${P.steel}20`, borderBottom: `1px solid ${P.steel}20` }}>
+        {BRAND_COPY.proof.map((item, index) => (
+          <div key={item} style={{ padding: isMobile ? "15px 8px" : "18px 24px", textAlign: "center", borderLeft: index ? `1px solid ${P.steel}18` : "none" }}>
+            <span style={{ fontFamily: "'Courier New', monospace", fontSize: isMobile ? 8 : 9, letterSpacing: isMobile ? 2 : 4, color: index === 2 ? P.gold : P.cyan, textTransform: "uppercase", lineHeight: 1.6 }}>
+              {item}
+            </span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }
 
@@ -439,9 +467,9 @@ function Gallery({ isMobile }) {
 
   return (
     <section style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "60px 24px" : "90px 32px" }}>
-      <SectionHead kicker="Selected Works" title="The Gallery" color={P.cyan} link="/portfolio" linkLabel="View All →" />
+      <SectionHead kicker="Selected Works" title="Explore the Worlds" color={P.cyan} link="/portfolio" linkLabel="Explore All →" />
       <p style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.45, lineHeight: 1.7, maxWidth: 620, margin: "-18px 0 28px" }}>
-        A hand-picked path through originals, film, adaptation, photography, and design.
+        A collector-first passage through original compositions, film, adaptation, photography, and commissioned design.
       </p>
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 14 }}>
         {featured.map((piece, index) => (
@@ -555,8 +583,8 @@ function Destinations({ isMobile }) {
   );
 }
 
-// ─── MANIFESTO ───────────────────────────────────────────
-function Manifesto({ isMobile }) {
+// ─── COLLECTOR STATEMENT ─────────────────────────────────
+function CollectorStatement({ isMobile }) {
   return (
     <section
       style={{
@@ -586,48 +614,28 @@ function Manifesto({ isMobile }) {
             marginBottom: 24,
           }}
         >
-          The Philosophy
+          {COLLECTOR_COPY.kicker}
         </div>
+        <h2 style={{ fontFamily: "'Georgia', serif", fontSize: isMobile ? 30 : 48, fontWeight: 400, color: P.ghost, margin: "0 0 24px" }}>
+          <ScrollMorphText speed={75}>{COLLECTOR_COPY.headline}</ScrollMorphText>
+        </h2>
         <p
           style={{
             fontFamily: "'Georgia', serif",
-            fontSize: isMobile ? 20 : 30,
-            lineHeight: 1.5,
-            color: P.ghost,
+            fontSize: isMobile ? 17 : 23,
+            lineHeight: 1.65,
+            color: P.bone,
             margin: 0,
             fontStyle: "italic",
+            opacity: 0.78,
           }}
         >
-          <ScrollMorphText speed={80}>
-            Nothing here is decoration. Every piece is a wound made legible — the
-            static turned into signal, the collapse rebuilt into form.
-          </ScrollMorphText>
+          {COLLECTOR_COPY.body}
         </p>
-        <div
-          style={{
-            display: "flex",
-            gap: isMobile ? 14 : 28,
-            justifyContent: "center",
-            flexWrap: "wrap",
-            marginTop: 44,
-          }}
-        >
-          {MANTRAS.map((m) => (
-            <div
-              key={m}
-              style={{
-                fontFamily: "'Courier New', monospace",
-                fontSize: 9,
-                letterSpacing: 3,
-                color: P.cyan,
-                textTransform: "uppercase",
-                opacity: 0.65,
-              }}
-            >
-              <HoverMorphText>{m}</HoverMorphText>
-            </div>
-          ))}
-        </div>
+        <p style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 1, color: P.bone, opacity: 0.42, lineHeight: 1.8, maxWidth: 660, margin: "28px auto 34px" }}>
+          {COLLECTOR_COPY.note}
+        </p>
+        <CtaButton to="/portfolio" color={P.cyan}>{ACTION_COPY.explore}</CtaButton>
       </div>
     </section>
   );
@@ -664,13 +672,13 @@ function Manifesto({ isMobile }) {
       }}
     >
       <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 5, color: P.cyan, textTransform: "uppercase", marginBottom: 12 }}>
-        The Signal
+        {NEWSLETTER_COPY.kicker}
       </div>
       <div style={{ fontFamily: "'Courier New', monospace", fontSize: isMobile ? 18 : 22, fontWeight: 400, letterSpacing: 2, color: P.ghost, textTransform: "uppercase", marginBottom: 10 }}>
-        <ScrollMorphText>Get New Drops First</ScrollMorphText>
+        <ScrollMorphText>{NEWSLETTER_COPY.headline}</ScrollMorphText>
       </div>
       <p style={{ fontFamily: "'Georgia', serif", fontStyle: "italic", fontSize: 13, lineHeight: 1.6, color: P.bone, opacity: 0.6, margin: "0 0 22px" }}>
-        No noise. Just new work, print releases, and rare originals as they surface.
+        {NEWSLETTER_COPY.body}
       </p>
       {sent ? (
         <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 2, color: P.green, textTransform: "uppercase" }}>
@@ -718,7 +726,7 @@ function Manifesto({ isMobile }) {
               opacity: busy ? 0.6 : 1,
             }}
           >
-            {busy ? "Sending\u2026" : <HoverMorphText>Notify Me</HoverMorphText>}
+            {busy ? "Sending\u2026" : <HoverMorphText>Join the Signal</HoverMorphText>}
           </button>
         </form>
       )}
@@ -729,7 +737,7 @@ function Manifesto({ isMobile }) {
   );
 }
 
-function CommissionCard({ isMobile, onCommission }) {
+function CommissionCard({ isMobile }) {
   const [hover, setHover] = useState(false);
   return (
     <div
@@ -749,17 +757,25 @@ function CommissionCard({ isMobile, onCommission }) {
       <div aria-hidden style={{ position: "absolute", inset: 0, backgroundImage: `url(${ART_IMGS[3]})`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.08 }} />
       <div style={{ position: "relative", zIndex: 2 }}>
         <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 5, color: P.gold, textTransform: "uppercase", marginBottom: 12 }}>
-          Commissions Open
+          {COMMISSION_COPY.kicker}
         </div>
         <div style={{ fontFamily: "'Courier New', monospace", fontSize: isMobile ? 18 : 22, fontWeight: 400, letterSpacing: 2, color: P.ghost, textTransform: "uppercase", marginBottom: 10 }}>
-          <ScrollMorphText>Make Your Story Visible</ScrollMorphText>
+          <ScrollMorphText>{COMMISSION_COPY.headline}</ScrollMorphText>
         </div>
         <p style={{ fontFamily: "'Georgia', serif", fontStyle: "italic", fontSize: 13, lineHeight: 1.6, color: P.bone, opacity: 0.6, margin: 0 }}>
-          Custom digital collage built around your own survival — a one-of-one piece made with you.
+          {COMMISSION_COPY.intro}
         </p>
+        <div className="home-process-grid" style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(4, 1fr)", gap: 8, marginTop: 24 }}>
+          {COMMISSION_COPY.stages.map((stage) => (
+            <div key={stage.number} style={{ padding: "14px 12px", borderTop: `1px solid ${P.gold}30`, background: `${P.abyss}55` }}>
+              <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: P.gold, marginBottom: 7 }}>{stage.number} · {stage.title}</div>
+              <div style={{ fontFamily: "'Georgia', serif", fontSize: 11, lineHeight: 1.55, color: P.bone, opacity: 0.5 }}>{stage.body}</div>
+            </div>
+          ))}
+        </div>
       </div>
-      <button
-        onClick={onCommission}
+      <Link
+        to="/contact?type=commission"
         onMouseEnter={() => setHover(true)}
         onMouseLeave={() => setHover(false)}
         style={{
@@ -777,22 +793,54 @@ function CommissionCard({ isMobile, onCommission }) {
           borderRadius: 2,
           padding: "13px 22px",
           transition: "all 0.25s ease",
+          textDecoration: "none",
         }}
       >
-        <HoverMorphText>Start a Commission</HoverMorphText>
-      </button>
+        <HoverMorphText>{ACTION_COPY.commission}</HoverMorphText>
+      </Link>
     </div>
   );
 }
 
-function ConnectSection({ isMobile, onCommission }) {
+function CommissionSection({ isMobile }) {
   return (
     <section style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "60px 24px" : "90px 32px", borderTop: `1px solid ${P.steel}12` }}>
-      <SectionHead kicker="Connect" title="Own It · Make It · Follow It" color={P.gold} />
-      <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 14 }}>
-        <CommissionCard isMobile={isMobile} onCommission={onCommission} />
-        <NotifyForm isMobile={isMobile} />
+      <SectionHead kicker="Commission" title="Make Something Together" color={P.gold} />
+      <CommissionCard isMobile={isMobile} />
+    </section>
+  );
+}
+
+function ArtistTrust({ isMobile }) {
+  return (
+    <section style={{ maxWidth: 1000, margin: "0 auto", padding: isMobile ? "70px 24px" : "100px 32px", borderTop: `1px solid ${P.steel}12` }}>
+      <div className="home-artist-grid" style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "280px 1fr", gap: isMobile ? 30 : 64, alignItems: "center" }}>
+        <div style={{ position: "relative", maxWidth: isMobile ? 260 : "none", margin: isMobile ? "0 auto" : 0 }}>
+          <div aria-hidden style={{ position: "absolute", inset: -2, background: `linear-gradient(135deg, ${P.cyan}66, ${P.magenta}44, transparent 72%)` }} />
+          <img src={ARTIST_PORTRAIT_URL} alt="Eric Fallis, artist behind 1RareGh0st" style={{ position: "relative", width: "100%", aspectRatio: "1", objectFit: "cover", objectPosition: "center 20%", display: "block", filter: "saturate(0.82) contrast(1.08)" }} />
+        </div>
+        <div>
+          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 6, color: P.cyan, textTransform: "uppercase", marginBottom: 15 }}>The Artist</div>
+          <h2 style={{ fontFamily: "'Georgia', serif", fontSize: isMobile ? 30 : 44, fontWeight: 400, color: P.ghost, margin: "0 0 18px" }}>
+            <ScrollMorphText speed={78}>Eric Fallis is 1RareGh0st.</ScrollMorphText>
+          </h2>
+          <p style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.8, color: P.bone, opacity: 0.62, margin: "0 0 16px" }}>
+            I build visual worlds from fragments—photography, illustration, cultural debris, memory, and emerging tools—then resolve them through sustained composition and human judgment.
+          </p>
+          <p style={{ fontFamily: "'Courier New', monospace", fontSize: 10, lineHeight: 1.8, color: P.bone, opacity: 0.4, margin: "0 0 28px" }}>
+            Some individual works grow through hundreds of layers and evolve over years. AI may generate raw possibility; authorship lives in what is chosen, altered, layered, coloured, lit, and finally kept.
+          </p>
+          <CtaButton to="/about" color={P.cyan}>Meet the Artist</CtaButton>
+        </div>
       </div>
+    </section>
+  );
+}
+
+function NewsletterSection({ isMobile }) {
+  return (
+    <section id="signal" style={{ maxWidth: 880, margin: "0 auto", padding: isMobile ? "20px 24px 80px" : "20px 32px 110px" }}>
+      <NotifyForm isMobile={isMobile} />
     </section>
   );
 }
@@ -845,7 +893,7 @@ function ShopCta({ isMobile }) {
               marginBottom: 12,
             }}
           >
-            Apparel & Prints
+            Available Releases
           </div>
           <div
             style={{
@@ -857,8 +905,11 @@ function ShopCta({ isMobile }) {
               textTransform: "uppercase",
             }}
           >
-            <ScrollMorphText>Take a piece home</ScrollMorphText>
+            <ScrollMorphText>{SHOP_COPY.headline}</ScrollMorphText>
           </div>
+          <p style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.52, lineHeight: 1.65, maxWidth: 600, margin: "14px 0 0" }}>
+            {SHOP_COPY.intro} Selected editions are marked clearly when they are released.
+          </p>
         </div>
         <span
           style={{
@@ -877,7 +928,7 @@ function ShopCta({ isMobile }) {
             whiteSpace: "nowrap",
           }}
         >
-          Visit the Shop →
+          {ACTION_COPY.collect} →
         </span>
       </Link>
     </section>
@@ -887,10 +938,6 @@ function ShopCta({ isMobile }) {
 // ─── PAGE ────────────────────────────────────────────────
 export default function HomePage() {
   const isMobile = useIsMobile();
-  const [inquire, setInquire] = useState({ open: false, mode: "inquire", piece: null });
-
-  const openInquire = (piece, mode = "inquire") => setInquire({ open: true, mode, piece });
-  const closeInquire = () => setInquire((s) => ({ ...s, open: false }));
 
   return (
     <main
@@ -900,19 +947,13 @@ export default function HomePage() {
     >
       <SEO />
       <HeroSection isMobile={isMobile} />
+      <ProofRail isMobile={isMobile} />
       <Gallery isMobile={isMobile} />
-      <Destinations isMobile={isMobile} />
-      <Manifesto isMobile={isMobile} />
-      <ConnectSection isMobile={isMobile} onCommission={() => openInquire(null, "commission")} />
+      <CollectorStatement isMobile={isMobile} />
       <ShopCta isMobile={isMobile} />
-
-      <InquireModal
-        open={inquire.open}
-        mode={inquire.mode}
-        piece={inquire.piece}
-        isMobile={isMobile}
-        onClose={closeInquire}
-      />
+      <CommissionSection isMobile={isMobile} />
+      <ArtistTrust isMobile={isMobile} />
+      <NewsletterSection isMobile={isMobile} />
     </main>
   );
 }

@@ -1132,7 +1132,7 @@ const Hero = () => {
             <span style={{ color: P.steel, opacity: 0.45 }}><MorphText speed={90}>0</MorphText></span>
             <span style={{ color: P.magenta }}><MorphText speed={90}>st</MorphText></span>
           </h1>
-          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 6, color: P.cyan, textTransform: "uppercase", marginTop: 28, opacity: 0.8 }}><MorphText speed={65}>Trauma Integration Made Visible</MorphText></div>
+          <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 6, color: P.cyan, textTransform: "uppercase", marginTop: 28, opacity: 0.8 }}><MorphText speed={65}>Inner Worlds Made Visible</MorphText></div>
         </div>
       </div>
 

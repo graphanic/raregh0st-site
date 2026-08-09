@@ -134,6 +134,18 @@ body[data-calm] *:not([data-morph]) { font-family: inherit !important; animation
 
 /* ─── RESPONSIVE ─────────────────────────────────────── */
 @media (max-width: 768px) {
+  .site-nav { padding: 12px 18px !important; }
+  .site-nav > :first-child { gap: 7px !important; }
+  .site-nav > :first-child > span { font-size: 11px !important; letter-spacing: 3px !important; }
+  .hero-cta {
+    width: 100%;
+    max-width: 300px;
+    padding: 12px 14px !important;
+    font-size: 9px !important;
+    letter-spacing: 2.2px !important;
+    text-align: center;
+  }
+  .page-shell { padding-left: 20px !important; padding-right: 20px !important; }
   .nav-desktop { display: none !important; }
   .nav-mobile-btns { display: flex !important; }
   .showcase-grid { grid-template-columns: 1fr !important; }
@@ -141,4 +153,13 @@ body[data-calm] *:not([data-morph]) { font-family: inherit !important; animation
   .detail-closeups { grid-template-columns: 1fr 1fr !important; }
   .portfolio-tabs { gap: 2px !important; }
   .portfolio-tabs button { padding: 8px 10px !important; font-size: 9px !important; letter-spacing: 2px !important; }
+  .shop-intro-grid,
+  .contact-grid,
+  .product-detail-grid,
+  .home-artist-grid { grid-template-columns: 1fr !important; }
+  .commission-process-grid,
+  .contact-field-grid { grid-template-columns: 1fr !important; }
+  .product-detail-grid { max-height: 94vh !important; }
+  .product-detail-grid > div:first-of-type,
+  .product-detail-grid > div:first-of-type img { min-height: 260px !important; max-height: 340px; }
 }

@@ -3,10 +3,10 @@ import { Link } from "react-router-dom";
 import { P } from "../data/palette";
 import { ScrollMorphText, HoverMorphText } from "../components/MorphText";
 import { SEO } from "../components/SEO";
+import { ACTION_COPY, ARTIST_PORTRAIT_URL, BRAND_COPY, SEO_COPY } from "../data/siteCopy";
 
 /* ─── PORTRAIT ───────────────────────────────────────── */
-const PORTRAIT_URL =
-  "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/IMG_20260723_215820_115-omBagqW9SaKlXl8w1Aae5mn8Ax83NJ.webp";
+const PORTRAIT_URL = ARTIST_PORTRAIT_URL;
 
 /* ─── TOOLKIT DATA ───────────────────────────────────── */
 const TOOLKIT = [
@@ -40,10 +40,22 @@ const TOOLKIT = [
 /* ─── BRIDGE LINKS ───────────────────────────────────── */
 const BRIDGES = [
   {
-    label: "Portfolio",
-    sub: "The evidence. The documentation.",
+    label: ACTION_COPY.explore,
+    sub: "Follow the symbols through the complete portfolio.",
     path: "/portfolio",
     color: P.cyan,
+  },
+  {
+    label: ACTION_COPY.collect,
+    sub: "Explore current art-led releases and selected editions.",
+    path: "/shop",
+    color: P.gold,
+  },
+  {
+    label: ACTION_COPY.commission,
+    sub: "Build a symbolic visual world from your own story.",
+    path: "/contact?type=commission",
+    color: P.magenta,
   },
 ];
 
@@ -135,7 +147,7 @@ const PortraitSection = ({ vis }) => {
         }}
       >
         <ScrollMorphText speed={70}>
-          Trauma Integration Made Visible
+          {BRAND_COPY.headline}
         </ScrollMorphText>
       </div>
 
@@ -173,12 +185,18 @@ const WeightSection = ({ vis }) => (
         animation: "morphBreathStrong 1.2s ease-in-out infinite",
       }}
     >
+      <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 7, color: P.magenta, textTransform: "uppercase", marginBottom: 18 }}>
+        <ScrollMorphText speed={70}>The Work</ScrollMorphText>
+      </div>
       <p style={{ marginTop: 0, marginBottom: 28 }}>
-        My name is Eric Fallis, and 1RareGh0st is the studio practice through which I transform fragmented experience into visual worlds.
+        My name is Eric Fallis, and 1RareGh0st is the studio practice through which I make inner worlds visible. I create dense symbolic compositions for people drawn to beauty, rupture, consciousness, rebellion, and transformation.
       </p>
       <p style={{ marginBottom: 28 }}>
-        I create densely layered digital artworks using Photoshop, photography, illustration, symbolic collage, and emerging AI-assisted processes. Individual pieces can grow through hundreds of layers, sometimes over the course of years. Every element is placed in conversation with the whole: faces, ruins, animals, machines, religious imagery, childhood memories, cultural debris, light, darkness, humour, and grief.
+        The work is built through Photoshop, photography, illustration, symbolic collage, and emerging AI-assisted processes. Individual pieces can grow through hundreds of layers, sometimes over the course of years. Every face, ruin, animal, machine, memory, joke, fragment of culture, and passage of light is placed in conversation with the whole.
       </p>
+      <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 7, color: P.cyan, textTransform: "uppercase", margin: "48px 0 18px" }}>
+        <ScrollMorphText speed={70}>Why It Exists</ScrollMorphText>
+      </div>
       <p style={{ marginBottom: 28, fontStyle: "italic", color: P.ghost }}>
         The result is not simply surrealism for its own sake.
       </p>
@@ -187,6 +205,9 @@ const WeightSection = ({ vis }) => (
       </p>
       <p style={{ marginBottom: 28 }}>
         My art began as a way to survive experiences I did not yet have language for. When ordinary words failed, images became a second nervous system—a place where trauma, beauty, contradiction, and meaning could exist together without being forced into a simple conclusion.
+      </p>
+      <p style={{ marginBottom: 28, fontStyle: "italic", color: P.cyan }}>
+        Trauma Integration Made Visible is where the practice began—but the world it opened now holds consciousness, technology, spirituality, culture, absurdity, love, death, rebellion, and transformation.
       </p>
       <p style={{ marginBottom: 28, fontStyle: "italic", color: P.ghost }}>
         That tension remains at the heart of 1RareGh0st.
@@ -223,11 +244,17 @@ const CraftSection = ({ vis }) => (
         animation: "morphBreathStrong 1.2s ease-in-out infinite",
       }}
     >
+      <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 7, color: P.gold, textTransform: "uppercase", marginBottom: 18 }}>
+        <ScrollMorphText speed={70}>How It Is Made</ScrollMorphText>
+      </div>
       <p style={{ marginTop: 0, marginBottom: 28 }}>
         My process is obsessive, intuitive, and deeply cumulative. I rarely begin with a complete plan. A work develops through discovery—one image calling forth another, one symbol changing the meaning of everything around it. What initially appears chaotic gradually reveals an internal order.
       </p>
+      <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 7, color: P.purple, textTransform: "uppercase", margin: "48px 0 18px" }}>
+        <ScrollMorphText speed={70}>Authorship in an AI Era</ScrollMorphText>
+      </div>
       <p style={{ marginBottom: 28 }}>
-        Artificial intelligence has become one of the materials within that process, but not a replacement for authorship. I use it alongside traditional digital techniques as a means of generating raw visual possibility, which is then selected, altered, composited, painted over, distorted, and integrated by hand. The final work emerges through sustained human judgment rather than a single prompt.
+        Artificial intelligence is one material within the process. It can generate raw visual possibility; authorship remains in selection, composition, symbolism, layering, colour, lighting, alteration, and final judgment. The finished work emerges through sustained decisions inside a larger Photoshop practice—not from a single prompt.
       </p>
       <p style={{ marginBottom: 28, fontStyle: "italic", color: P.ghost }}>
         1RareGh0st is ultimately about transformation.
@@ -264,7 +291,7 @@ const CraftSection = ({ vis }) => (
           opacity: 0.8,
         }}
       >
-        <HoverMorphText speed={60}>Enter the work. Follow the symbols. See what survives.</HoverMorphText>
+        <HoverMorphText speed={60}>Look longer. Follow the symbols. Find what survives.</HoverMorphText>
       </p>
     </div>
   </div>
@@ -447,7 +474,7 @@ const BridgeSection = ({ vis }) => (
         animation: "morphBreathSoft 1.2s ease-in-out infinite",
       }}
     >
-      The art is the documentation. The framework is the protection.
+      The work is the invitation. Choose how you want to enter it.
     </div>
     <div style={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
       {BRIDGES.map((b) => (
@@ -468,10 +495,10 @@ export const About = () => {
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
       <SEO
         title="About"
-        description="Eric Fallis is 1RareGh0st -- a digital artist, consciousness architect, and survivor who transforms lived experience into visual philosophy."
+        description={SEO_COPY.about}
         path="/about"
       />
-      <div style={{ maxWidth: 800, margin: "0 auto", padding: "0 40px" }}>
+      <div className="page-shell" style={{ maxWidth: 800, margin: "0 auto", padding: "0 40px" }}>
         <PortraitSection vis={vis} />
         <WeightSection vis={vis} />
         <CraftSection vis={vis} />

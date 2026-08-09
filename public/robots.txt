@@ -2,4 +2,4 @@ User-agent: *
 Allow: /
 Disallow: /admin/
 
-Sitemap: https://raregh0st.com/sitemap.xml
+Sitemap: https://raregh0st.studio/sitemap.xml
