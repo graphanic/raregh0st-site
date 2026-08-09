@@ -14,6 +14,16 @@ export const MorphText = ({ children, speed = 45, allowWrap = false }) => {
   const text = String(children);
   const chars = text.split("");
   const spanRefs = useRef([]);
+  const initialVariantsRef = useRef({
+    text,
+    variants: chars.map(() => MORPH_VARIANTS[Math.floor(Math.random() * 5)]),
+  });
+  if (initialVariantsRef.current.text !== text) {
+    initialVariantsRef.current = {
+      text,
+      variants: chars.map(() => MORPH_VARIANTS[Math.floor(Math.random() * 5)]),
+    };
+  }
   useEffect(() => {
     if (calm) return;
     const id = setInterval(() => {
@@ -27,21 +37,23 @@ export const MorphText = ({ children, speed = 45, allowWrap = false }) => {
     }, speed);
     return () => clearInterval(id);
   }, [text, speed, calm]);
-  if (calm) return <span aria-label={text}>{text}</span>;
   return (
-    <span aria-label={text} style={{ display: "inline" }}>
-      {chars.map((c, i) => {
-        if (c === " ") return allowWrap ? <span key={i}> </span> : <span key={i}>&nbsp;</span>;
-        const v = MORPH_VARIANTS[Math.floor(Math.random() * 5)];
-        return (
-          <span
-            key={i}
-            ref={el => { spanRefs.current[i] = el; }}
-            data-morph
-            style={{ display: "inline-block", fontFamily: v.fontFamily, opacity: v.opacity }}
-          >{c}</span>
-        );
-      })}
+    <span style={{ display: "inline" }}>
+      <span className="sr-only">{text}</span>
+      <span aria-hidden="true">
+        {chars.map((c, i) => {
+          if (c === " ") return allowWrap ? <span key={i}> </span> : <span key={i}>&nbsp;</span>;
+          const v = initialVariantsRef.current.variants[i];
+          return (
+            <span
+              key={i}
+              ref={el => { spanRefs.current[i] = el; }}
+              data-morph
+              style={{ display: "inline-block", fontFamily: v.fontFamily, opacity: v.opacity }}
+            >{c}</span>
+          );
+        })}
+      </span>
     </span>
   );
 };
@@ -75,7 +87,8 @@ export const HoverMorphText = ({ children, speed = 45 }) => {
   const [hovered, setHovered] = useState(false);
   const spanRefs = useRef([]);
   useEffect(() => {
-    if (calm || !hovered) {
+    if (calm) return;
+    if (!hovered) {
       for (let i = 0; i < spanRefs.current.length; i++) {
         const el = spanRefs.current[i];
         if (!el) continue;

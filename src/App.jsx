@@ -13,7 +13,7 @@ import { Particles } from "./components/Particles";
 import { Preloader } from "./components/Preloader";
 
 import { CookieConsent } from "./components/CookieConsent";
-import { SpotifyBar } from "./components/SpotifyBar";
+import { SignalDock } from "./components/SignalDock";
 import { ProtectedRoute } from "./components/ProtectedRoute";
 
 // Pages
@@ -51,10 +51,11 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState(() => loadLocal("cart", []));
   const [calm, setCalm] = useState(() => loadLocal("calm", false));
+  const [cookieResolved, setCookieResolved] = useState(() => loadLocal("cookies", false));
   const [toast, setToast] = useState(null);
   useImageProtection();
 
-  // Calm mode body styling
+  // Calm pauses the river without replacing its pixel-font state.
   const toggleCalm = () => {
     setCalm((prev) => {
       const next = !prev;
@@ -66,11 +67,10 @@ export default function App() {
   useEffect(() => {
     if (calm) {
       document.body.setAttribute("data-calm", "");
-      document.body.style.fontFamily = "'Geist Sans', sans-serif";
     } else {
       document.body.removeAttribute("data-calm");
-      document.body.style.fontFamily = "'Geist Pixel Square', monospace";
     }
+    document.body.style.fontFamily = "'Geist Pixel Square', monospace";
   }, [calm]);
 
   // Global font river
@@ -107,13 +107,7 @@ export default function App() {
         );
       }
     }, 100);
-    return () => {
-      clearInterval(river);
-      for (let g = 1; g <= 5; g++) {
-        root.style.removeProperty(`--pf${g}`);
-        root.style.removeProperty(`--ss${g}`);
-      }
-    };
+    return () => clearInterval(river);
   }, [calm]);
 
   // Cart operations
@@ -157,6 +151,7 @@ export default function App() {
         <Nav cartCount={cart.length} />
 
         <div
+          id="site-content"
           style={{
             position: "relative",
             zIndex: 2,
@@ -227,47 +222,12 @@ export default function App() {
             {toast}
           </div>
         )}
-        <CookieConsent />
-        <SpotifyBar />
-
-        {/* Calm Mode Toggle */}
-        <button
-          onClick={toggleCalm}
-          aria-label={calm ? "Enable animations" : "Enable calm mode"}
-          title={
-            calm
-              ? "Animations off \u2014 click to enable"
-              : "Calm mode \u2014 click to pause all motion"
-          }
-          style={{
-            position: "fixed",
-            bottom: 42,
-            right: 20,
-            zIndex: 151,
-            background: `${P.abyss}ee`,
-            border: `1px solid ${calm ? P.cyan + "44" : P.cyan + "22"}`,
-            borderRadius: 3,
-            padding: "5px 12px",
-            fontFamily: "'Courier New', monospace",
-            fontSize: 9,
-            letterSpacing: 3,
-            color: calm ? P.cyan : P.bone,
-            opacity: calm ? 1 : 0.5,
-            cursor: "pointer",
-            backdropFilter: "blur(8px)",
-            textTransform: "uppercase",
-          }}
-          onMouseEnter={(e) => {
-            e.target.style.opacity = "1";
-            e.target.style.color = P.cyan;
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.opacity = calm ? "1" : "0.5";
-            e.target.style.color = calm ? P.cyan : P.bone;
-          }}
-        >
-          {calm ? "\u2726 Calm" : "\u2248 River"}
-        </button>
+        <CookieConsent onDismiss={() => setCookieResolved(true)} />
+        <SignalDock
+          calm={calm}
+          onToggleCalm={toggleCalm}
+          hidden={isMobile && !cookieResolved}
+        />
       </div>
     </CalmContext.Provider>
   );

@@ -6,7 +6,7 @@ import { SEO } from "../components/SEO";
 import { MorphText, HoverMorphText, ScrollMorphText } from "../components/MorphText";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { GalleryFocus } from "../components/home/GalleryFocus";
-import { submitForm } from "../lib/api";
+import { NewsletterSignup } from "../components/NewsletterSignup";
 import {
   ACTION_COPY,
   ARTIST_PORTRAIT_URL,
@@ -17,16 +17,6 @@ import {
   SHOP_COPY,
 } from "../data/siteCopy";
 
-// Destination cards — functionally replace the orbiting solar-system nav
-const DESTINATIONS = [
-  { label: "Portfolio", dest: "/portfolio", color: P.cyan, desc: "Five Creative Disciplines" },
-  { label: "Shop", dest: "/shop", color: P.gold, desc: "Apparel & Prints" },
-  { label: "Media", dest: "/media", color: P.magenta, desc: "Motion & Sound" },
-  { label: "About", dest: "/about", color: P.bone, desc: "The Artist" },
-  { label: "Commission", dest: "/contact?type=commission", color: P.gold, desc: "Make Your Story Visible" },
-];
-
-const MANTRAS = ["Coherence over intensity", "Presence over performance", "Join the signal"];
 const HERO_LOGO_TURN_MS = 1533;
 const HERO_LOGO_SETTLE_BUFFER_MS = 34;
 
@@ -169,35 +159,21 @@ function HeroSection({ isMobile }) {
         >
           <MorphText speed={90} allowWrap>{BRAND_COPY.kicker}</MorphText>
         </div>
-        <div
+        <h1
+          aria-label="1RareGh0st"
           style={{
             fontFamily: "'Courier New', monospace",
-            fontSize: isMobile ? 34 : 88,
+            fontSize: isMobile ? "clamp(38px, 11.6vw, 48px)" : "clamp(88px, 8vw, 124px)",
             fontWeight: 400,
-            letterSpacing: isMobile ? 2.5 : 10,
-            lineHeight: 1,
+            letterSpacing: isMobile ? 2 : 10,
+            lineHeight: 0.92,
             margin: 0,
           }}
         >
-          <span style={{ color: P.ghost }}>1</span><span style={{ color: P.cyan }}>RARE</span>
-          <span style={{ color: P.magenta }}>GH</span>
-          <span style={{ color: P.ghost }}>0</span>
-          <span style={{ color: P.magenta }}>ST</span>
-        </div>
-        <h1
-          style={{
-            fontFamily: "'Georgia', serif",
-            fontSize: isMobile ? 27 : 52,
-            fontWeight: 400,
-            color: P.ghost,
-            margin: "26px auto 0",
-            maxWidth: 760,
-            marginLeft: "auto",
-            marginRight: "auto",
-            lineHeight: 1.08,
-          }}
-        >
-          <ScrollMorphText speed={78} allowWrap>{BRAND_COPY.headline}</ScrollMorphText>
+          <span aria-hidden="true" style={{ color: P.ghost }}>1</span><span aria-hidden="true" style={{ color: P.cyan }}>RARE</span>
+          <span aria-hidden="true" style={{ color: P.magenta }}>GH</span>
+          <span aria-hidden="true" style={{ color: P.ghost }}>0</span>
+          <span aria-hidden="true" style={{ color: P.magenta }}>ST</span>
         </h1>
         <div
           style={{
@@ -206,7 +182,7 @@ function HeroSection({ isMobile }) {
             letterSpacing: isMobile ? 3.2 : 6,
             color: P.cyan,
             textTransform: "uppercase",
-            marginTop: 18,
+            marginTop: isMobile ? 24 : 30,
             opacity: 0.75,
           }}
         >
@@ -226,7 +202,7 @@ function HeroSection({ isMobile }) {
           }}
         >
           <CtaButton to="/shop" color={P.gold}>{ACTION_COPY.collect}</CtaButton>
-          <CtaButton to="/contact?type=commission" color={P.cyan}>{ACTION_COPY.commission}</CtaButton>
+          <CtaButton to="/contact?type=commission" color={P.gold}>{ACTION_COPY.commission}</CtaButton>
         </div>
       </div>
 
@@ -282,24 +258,8 @@ function CtaButton({ to, color, children }) {
   );
 }
 
-function ProofRail({ isMobile }) {
-  return (
-    <section aria-label="How the work is made" style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "0 24px 58px" : "0 32px 82px" }}>
-      <div className="home-proof-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", borderTop: `1px solid ${P.steel}20`, borderBottom: `1px solid ${P.steel}20` }}>
-        {BRAND_COPY.proof.map((item, index) => (
-          <div key={item} style={{ padding: isMobile ? "15px 8px" : "18px 24px", textAlign: "center", borderLeft: index ? `1px solid ${P.steel}18` : "none" }}>
-            <span style={{ fontFamily: "'Courier New', monospace", fontSize: isMobile ? 8 : 9, letterSpacing: isMobile ? 2 : 4, color: index === 2 ? P.gold : P.cyan, textTransform: "uppercase", lineHeight: 1.6 }}>
-              {item}
-            </span>
-          </div>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 // ─── SECTION HEADING ─────────────────────────────────────
-function SectionHead({ kicker, title, color = P.cyan, link, linkLabel }) {
+function SectionHead({ number, kicker, title, color = P.cyan, link, linkLabel }) {
   return (
     <div
       style={{
@@ -315,35 +275,36 @@ function SectionHead({ kicker, title, color = P.cyan, link, linkLabel }) {
         <div
           style={{
             fontFamily: "'Courier New', monospace",
-            fontSize: 9,
+            fontSize: 11,
             letterSpacing: 6,
             color,
             textTransform: "uppercase",
             marginBottom: 12,
           }}
         >
-          {kicker}
+          {number && <span style={{ color: P.ghost, marginRight: 12 }}>{number}</span>}{kicker}
         </div>
         <h2
           style={{
-            fontFamily: "'Courier New', monospace",
-            fontSize: 26,
+            fontFamily: "'Georgia', serif",
+            fontSize: "clamp(27px, 4vw, 42px)",
             fontWeight: 400,
-            letterSpacing: 3,
+            letterSpacing: 0,
             color: P.ghost,
             margin: 0,
-            textTransform: "uppercase",
+            lineHeight: 1.12,
           }}
         >
           <ScrollMorphText>{title}</ScrollMorphText>
         </h2>
+        <div aria-hidden style={{ width: 72, height: 1, marginTop: 13, background: `linear-gradient(to right, ${color}, transparent)` }} />
       </div>
       {link && (
         <Link
           to={link}
           style={{
             fontFamily: "'Courier New', monospace",
-            fontSize: 9,
+            fontSize: 11,
             letterSpacing: 3,
             color: P.bone,
             textTransform: "uppercase",
@@ -390,6 +351,7 @@ function GalleryCard({ piece, onOpen, isMobile }) {
       {isVideo ? (
         <video
           src={piece.img}
+          aria-hidden="true"
           muted
           loop
           playsInline
@@ -468,8 +430,8 @@ function Gallery({ isMobile }) {
 
   return (
     <section style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "60px 24px 30px" : "90px 32px 38px" }}>
-      <SectionHead kicker="Selected Works" title="Explore the Worlds" color={P.cyan} link="/portfolio" linkLabel="Explore All →" />
-      <p style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.45, lineHeight: 1.7, maxWidth: 620, margin: "-18px 0 28px" }}>
+      <SectionHead number="01" kicker="Selected Works" title="Explore the Worlds" color={P.cyan} link="/portfolio" linkLabel="Explore All →" />
+      <p style={{ fontFamily: "'Georgia', serif", fontSize: 15, color: P.bone, opacity: 0.72, lineHeight: 1.75, maxWidth: 680, margin: "-18px 0 28px" }}>
         A collector-first passage through original compositions, film, adaptation, photography, and commissioned design.
       </p>
       <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)", gap: 14 }}>
@@ -488,98 +450,6 @@ function Gallery({ isMobile }) {
           onView={onView}
         />
       )}
-    </section>
-  );
-}
-
-// ─── DESTINATIONS (replaces solar-system nav) ────────────
-function DestinationCard({ item }) {
-  const [hover, setHover] = useState(false);
-  const navigate = useNavigate();
-  return (
-    <button
-      onClick={() => navigate(item.dest)}
-      onMouseEnter={() => setHover(true)}
-      onMouseLeave={() => setHover(false)}
-      style={{
-        textAlign: "left",
-        cursor: "pointer",
-        background: hover ? `${item.color}12` : `${item.color}06`,
-        border: `1px solid ${item.color}${hover ? "55" : "22"}`,
-        borderRadius: 3,
-        padding: "22px 22px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        gap: 12,
-        transition: "all 0.3s ease",
-        boxShadow: hover ? `0 0 24px ${item.color}22` : "none",
-      }}
-    >
-      <div>
-        <div
-          style={{
-            fontFamily: "'Courier New', monospace",
-            fontSize: 14,
-            letterSpacing: 4,
-            color: item.color,
-            textTransform: "uppercase",
-            fontWeight: 400,
-          }}
-        >
-          <HoverMorphText>{item.label}</HoverMorphText>
-        </div>
-        <div
-          style={{
-            fontFamily: "'Georgia', serif",
-            fontSize: 11,
-            color: P.bone,
-            opacity: 0.4,
-            marginTop: 6,
-          }}
-        >
-          {item.desc}
-        </div>
-      </div>
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke={item.color}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        style={{ opacity: hover ? 0.9 : 0.4, transform: hover ? "translateX(3px)" : "none", transition: "all 0.3s ease", flexShrink: 0 }}
-      >
-        <polyline points="9 18 15 12 9 6" />
-      </svg>
-    </button>
-  );
-}
-
-function Destinations({ isMobile }) {
-  return (
-    <section
-      style={{
-        maxWidth: 1200,
-        margin: "0 auto",
-        padding: isMobile ? "60px 24px" : "90px 32px",
-        borderTop: `1px solid ${P.steel}12`,
-      }}
-    >
-      <SectionHead kicker="Navigate" title="Enter the System" color={P.magenta} />
-      <div
-        style={{
-          display: "grid",
-          gridTemplateColumns: isMobile ? "1fr" : "repeat(3, 1fr)",
-          gap: 14,
-        }}
-      >
-        {DESTINATIONS.map((item) => (
-          <DestinationCard key={item.dest} item={item} />
-        ))}
-      </div>
     </section>
   );
 }
@@ -615,7 +485,7 @@ function CollectorStatement({ isMobile }) {
             marginBottom: 24,
           }}
         >
-          {COLLECTOR_COPY.kicker}
+          <span style={{ color: P.ghost, marginRight: 12 }}>02</span>{COLLECTOR_COPY.kicker}
         </div>
         <h2 style={{ fontFamily: "'Georgia', serif", fontSize: isMobile ? 30 : 48, fontWeight: 400, color: P.ghost, margin: "0 0 24px" }}>
           <ScrollMorphText speed={75}>{COLLECTOR_COPY.headline}</ScrollMorphText>
@@ -642,105 +512,6 @@ function CollectorStatement({ isMobile }) {
   );
 }
 
-// ─── CONNECT: COMMISSION + NOTIFY ────────────────────────
-  function NotifyForm({ isMobile, embedded = false }) {
-    const [email, setEmail] = useState("");
-    const [sent, setSent] = useState(false);
-    const [focus, setFocus] = useState(false);
-    const [busy, setBusy] = useState(false);
-    const [err, setErr] = useState("");
-    const submit = async (e) => {
-      e.preventDefault();
-      if (!email.trim() || busy) return;
-      setBusy(true);
-      setErr("");
-      try {
-        await submitForm({ kind: "newsletter", email: email.trim(), source: "home-signal" });
-        setSent(true);
-      } catch (e2) {
-        setErr(e2.message || "Could not subscribe. Try again.");
-      } finally {
-        setBusy(false);
-      }
-    };
-  return (
-    <div
-      style={{
-        border: embedded ? "none" : `1px solid ${P.cyan}22`,
-        borderRadius: embedded ? 0 : 4,
-        padding: embedded ? (isMobile ? "28px 24px" : "34px 36px") : (isMobile ? "28px 24px" : "36px 36px"),
-        background: embedded ? "transparent" : `linear-gradient(150deg, ${P.void} 0%, ${P.surface} 100%)`,
-        height: embedded ? "100%" : "auto",
-        display: embedded ? "flex" : "block",
-        flexDirection: embedded ? "column" : undefined,
-      }}
-    >
-      <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 5, color: P.cyan, textTransform: "uppercase", marginBottom: 12 }}>
-        {NEWSLETTER_COPY.kicker}
-      </div>
-      <div style={{ fontFamily: "'Courier New', monospace", fontSize: isMobile ? 18 : 22, fontWeight: 400, letterSpacing: 2, color: P.ghost, textTransform: "uppercase", marginBottom: 10 }}>
-        <ScrollMorphText>{NEWSLETTER_COPY.headline}</ScrollMorphText>
-      </div>
-      <p style={{ fontFamily: "'Georgia', serif", fontStyle: "italic", fontSize: 13, lineHeight: 1.6, color: P.bone, opacity: 0.6, margin: "0 0 22px" }}>
-        {NEWSLETTER_COPY.body}
-      </p>
-      {sent ? (
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, letterSpacing: 2, color: P.green, textTransform: "uppercase" }}>
-          <MorphText speed={60}>✓ You're on the signal</MorphText>
-        </div>
-      ) : (
-        <form onSubmit={submit} style={{ display: "flex", flexDirection: isMobile ? "column" : "row", gap: 10, marginTop: embedded ? "auto" : 0 }}>
-          <input
-            type="email"
-            required
-            value={email}
-            onFocus={() => setFocus(true)}
-            onBlur={() => setFocus(false)}
-            onChange={(e) => setEmail(e.target.value)}
-            placeholder="you@signal.void"
-            style={{
-              flex: 1,
-              fontFamily: "'Courier New', monospace",
-              fontSize: 13,
-              color: P.ghost,
-              background: P.abyss,
-              border: `1px solid ${focus ? P.cyan + "88" : P.steel + "55"}`,
-              borderRadius: 2,
-              padding: "13px 14px",
-              outline: "none",
-              transition: "border-color 0.2s ease",
-              boxSizing: "border-box",
-            }}
-          />
-          <button
-            type="submit"
-            disabled={busy}
-            style={{
-              fontFamily: "'Courier New', monospace",
-              fontSize: 10,
-              letterSpacing: 3,
-              textTransform: "uppercase",
-              color: P.abyss,
-              background: P.cyan,
-              border: `1px solid ${P.cyan}`,
-              borderRadius: 2,
-              padding: "13px 22px",
-              cursor: busy ? "wait" : "pointer",
-              whiteSpace: "nowrap",
-              opacity: busy ? 0.6 : 1,
-            }}
-          >
-            {busy ? "Sending\u2026" : <HoverMorphText>Join the Signal</HoverMorphText>}
-          </button>
-        </form>
-      )}
-      {err && !sent && (
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.red, letterSpacing: 1, marginTop: 10 }}>{err}</div>
-      )}
-    </div>
-  );
-}
-
 function PathwayAction({ to, color, children }) {
   return (
     <Link
@@ -755,6 +526,23 @@ function PathwayAction({ to, color, children }) {
       <HoverMorphText>{children}</HoverMorphText>
       <span aria-hidden>→</span>
     </Link>
+  );
+}
+
+function HomeNewsletterCard({ isMobile }) {
+  return (
+    <div style={{ padding: isMobile ? "28px 24px" : "34px 36px", height: "100%", display: "flex", flexDirection: "column" }}>
+      <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 5, color: P.cyan, textTransform: "uppercase", marginBottom: 12 }}>
+        {NEWSLETTER_COPY.kicker}
+      </div>
+      <h2 style={{ fontFamily: "'Georgia', serif", fontSize: isMobile ? 25 : 30, fontWeight: 400, color: P.ghost, margin: "0 0 12px", lineHeight: 1.15 }}>
+        <ScrollMorphText>{NEWSLETTER_COPY.headline}</ScrollMorphText>
+      </h2>
+      <p style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.7, color: P.bone, opacity: 0.72, margin: "0 0 24px" }}>
+        {NEWSLETTER_COPY.body}
+      </p>
+      <NewsletterSignup source="home-signal" accent={P.cyan} className="home-signal-signup" />
+    </div>
   );
 }
 
@@ -787,6 +575,7 @@ function HomePathways({ isMobile }) {
 
   return (
     <section aria-label="Collect, commission, meet the artist, and join the signal" style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "64px 24px 88px" : "86px 32px 112px", borderTop: `1px solid ${P.steel}12` }}>
+      <SectionHead number="03" kicker="Paths Forward" title="Continue Through the System" color={P.gold} />
       <div
         className="home-pathways-grid"
         style={{
@@ -799,7 +588,7 @@ function HomePathways({ isMobile }) {
           boxShadow: `0 0 70px ${P.purple}0a`,
         }}
       >
-        <article className="home-pathway-card" style={{ position: "relative", overflow: "hidden", padding: cardPadding, background: `linear-gradient(145deg, ${P.void}, ${P.surface}b8)`, display: "flex", flexDirection: "column" }}>
+        <article className="home-pathway-card" style={{ position: "relative", overflow: "hidden", padding: cardPadding, borderTop: `2px solid ${P.gold}`, background: `linear-gradient(145deg, ${P.void}, ${P.surface}b8)`, display: "flex", flexDirection: "column" }}>
           <div aria-hidden style={{ position: "absolute", inset: 0, backgroundImage: `url(${ART_IMGS[3]})`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.075 }} />
           <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", height: "100%" }}>
             <div style={kicker(P.gold)}>Commission</div>
@@ -818,10 +607,10 @@ function HomePathways({ isMobile }) {
           </div>
         </article>
 
-        <article className="home-pathway-card" style={{ position: "relative", overflow: "hidden", padding: cardPadding, background: `linear-gradient(145deg, ${P.void}, ${P.surface}b8)`, display: "flex", flexDirection: "column" }}>
+        <article className="home-pathway-card" style={{ position: "relative", overflow: "hidden", padding: cardPadding, borderTop: `2px solid ${P.gold}`, background: `linear-gradient(145deg, ${P.void}, ${P.surface}b8)`, display: "flex", flexDirection: "column" }}>
           <div aria-hidden style={{ position: "absolute", inset: 0, backgroundImage: `url(${ART_IMGS[0]})`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.075 }} />
           <div style={{ position: "relative", zIndex: 2, display: "flex", flexDirection: "column", height: "100%" }}>
-            <div style={kicker(P.magenta)}>Available Releases</div>
+            <div style={kicker(P.gold)}>Available Releases</div>
             <h2 style={headingStyle}><ScrollMorphText allowWrap>{SHOP_COPY.headline}</ScrollMorphText></h2>
             <p style={bodyStyle}>{SHOP_COPY.intro}</p>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, margin: "22px 0 24px" }}>
@@ -835,12 +624,12 @@ function HomePathways({ isMobile }) {
               </div>
             </div>
             <div style={{ marginTop: "auto" }}>
-              <PathwayAction to="/shop" color={P.magenta}>{ACTION_COPY.collect}</PathwayAction>
+              <PathwayAction to="/shop" color={P.gold}>{ACTION_COPY.collect}</PathwayAction>
             </div>
           </div>
         </article>
 
-        <article className="home-pathway-card" style={{ padding: cardPadding, background: `linear-gradient(145deg, ${P.void}, ${P.surface}b8)` }}>
+        <article className="home-pathway-card" style={{ padding: cardPadding, borderTop: `2px solid ${P.cyan}`, background: `linear-gradient(145deg, ${P.void}, ${P.surface}b8)` }}>
           <div className="home-pathway-artist" style={{ display: "grid", gridTemplateColumns: isMobile ? "96px minmax(0, 1fr)" : "132px minmax(0, 1fr)", gap: isMobile ? 18 : 26, alignItems: "start", height: "100%" }}>
             <div style={{ position: "relative" }}>
               <div aria-hidden style={{ position: "absolute", inset: -1, background: `linear-gradient(135deg, ${P.cyan}66, ${P.magenta}44, transparent 72%)` }} />
@@ -858,8 +647,8 @@ function HomePathways({ isMobile }) {
           </div>
         </article>
 
-        <article id="signal" className="home-pathway-card" style={{ background: `linear-gradient(145deg, ${P.void}, ${P.surface}b8)` }}>
-          <NotifyForm isMobile={isMobile} embedded />
+        <article id="signal" className="home-pathway-card" style={{ borderTop: `2px solid ${P.cyan}`, background: `linear-gradient(145deg, ${P.void}, ${P.surface}b8)` }}>
+          <HomeNewsletterCard isMobile={isMobile} />
         </article>
       </div>
     </section>
@@ -879,7 +668,6 @@ export default function HomePage() {
       <SEO />
       <HeroSection isMobile={isMobile} />
       <Gallery isMobile={isMobile} />
-      <ProofRail isMobile={isMobile} />
       <CollectorStatement isMobile={isMobile} />
       <HomePathways isMobile={isMobile} />
     </main>

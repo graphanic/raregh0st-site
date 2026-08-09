@@ -1,11 +1,15 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { createPortal } from "react-dom";
+import { Link } from "react-router-dom";
 import { P } from "../data/palette";
 import { SHOP_CATEGORIES } from "../data/shop";
 import { HoverMorphText, ScrollMorphText } from "../components/MorphText";
+import { NewsletterSignup } from "../components/NewsletterSignup";
 import { SEO } from "../components/SEO";
 import { getProducts, getSettings } from "../lib/api";
+import { SHOP_MODES, resolveShopMode } from "../lib/shopState";
 import { SHOP_COPY, SEO_COPY } from "../data/siteCopy";
+import { PORTFOLIO_WORKS, getWorkHref } from "../data/catalog";
 
 // Map DB row -> shape the existing card UI expects.
 function mapProduct(row) {
@@ -89,7 +93,7 @@ function ProductDetail({ product, onClose, onAdd }) {
             {cat?.label || product.category}{product.subcategory ? ` · ${product.subcategory}` : ""}
           </div>
           <h2 id={`product-title-${product.id}`} style={{ fontFamily: "'Georgia', serif", fontSize: 29, fontWeight: 400, color: P.ghost, margin: "0 0 12px", lineHeight: 1.18 }}>{product.title}</h2>
-          {product.artwork && <div style={{ ...mono, fontSize: 9, letterSpacing: 2, color: P.bone, opacity: 0.38, marginBottom: 22 }}>Featuring artwork: {product.artwork}</div>}
+          {product.artwork && <div style={{ ...mono, fontSize: 11, letterSpacing: 2, color: "var(--text-muted)", marginBottom: 22 }}>Featuring artwork: {product.artwork}</div>}
           <p style={{ fontFamily: "'Georgia', serif", fontSize: 14, lineHeight: 1.75, color: P.bone, opacity: 0.68, margin: "0 0 24px" }}>{product.description || "An art-led release from the 1RareGh0st studio."}</p>
 
           <div style={{ display: "grid", gap: 9, padding: "18px 0", borderTop: `1px solid ${P.steel}18`, borderBottom: `1px solid ${P.steel}18` }}>
@@ -99,14 +103,14 @@ function ProductDetail({ product, onClose, onAdd }) {
             {!isDigital && <DetailRow label="Ships to" value="Canada and the United States" />}
           </div>
 
-          <p style={{ ...mono, fontSize: 9, lineHeight: 1.7, color: P.bone, opacity: 0.38, margin: "18px 0 24px" }}>
+          <p style={{ ...mono, fontSize: 12, lineHeight: 1.7, color: "var(--text-muted)", margin: "18px 0 24px" }}>
             {isDigital
               ? "Access and delivery details are confirmed after successful checkout. Any usage rights are stated in the product description."
               : SHOP_COPY.fulfillment}
           </p>
 
           <div style={{ marginTop: "auto", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 18, flexWrap: "wrap" }}>
-            <span style={{ ...mono, fontSize: 23, color: P.ghost }}>${product.price}<span style={{ fontSize: 9, opacity: 0.35, marginLeft: 4 }}>CAD</span></span>
+            <span style={{ ...mono, fontSize: 23, color: P.ghost }}>${product.price}<span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 4 }}>CAD</span></span>
             <button type="button" onClick={() => { onAdd(product); onClose(); }} style={{ ...mono, fontSize: 10, letterSpacing: 4, textTransform: "uppercase", color: P.abyss, background: accent, border: `1px solid ${accent}`, padding: "14px 22px", cursor: "pointer" }}>
               {product.category === "courses" ? "Enroll" : "Add to Cart"}
             </button>
@@ -121,8 +125,8 @@ function ProductDetail({ product, onClose, onAdd }) {
 function DetailRow({ label, value }) {
   return (
     <div style={{ display: "grid", gridTemplateColumns: "86px 1fr", gap: 12 }}>
-      <span style={{ ...mono, fontSize: 8, letterSpacing: 2, color: P.bone, opacity: 0.3, textTransform: "uppercase" }}>{label}</span>
-      <span style={{ fontFamily: "'Georgia', serif", fontSize: 11, color: P.bone, opacity: 0.58 }}>{value}</span>
+      <span style={{ ...mono, fontSize: 11, letterSpacing: 2, color: "var(--text-muted)", textTransform: "uppercase" }}>{label}</span>
+      <span style={{ fontFamily: "'Georgia', serif", fontSize: 14, color: "var(--text-secondary)" }}>{value}</span>
     </div>
   );
 }
@@ -141,16 +145,16 @@ const ShopCard = ({ product, onAdd, onOpen }) => {
         {product.image && <img src={product.image} alt={product.title} style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", opacity: h ? 1 : 0.85, transition: "opacity 0.3s" }} />}
         <div style={{ position: "absolute", inset: 0, background: "repeating-linear-gradient(0deg, transparent, transparent 3px, rgba(255,255,255,0.004) 3px, rgba(255,255,255,0.004) 6px)" }} />
         <div style={{ position: "absolute", top: 10, left: 10, fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, color: cat?.color || P.bone, opacity: 0.7, textTransform: "uppercase", padding: "3px 8px", border: `1px solid ${cat?.color || P.bone}30`, background: `${P.abyss}aa` }}>{product.subcategory}</div>
-        {product.artwork && <div style={{ position: "absolute", bottom: 10, left: 10, fontFamily: "'Courier New', monospace", fontSize: 7, letterSpacing: 2, color: P.bone, opacity: 0.4, textTransform: "uppercase" }}>{"\u2726"} {product.artwork}</div>}
+        {product.artwork && <div style={{ position: "absolute", bottom: 10, left: 10, fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 2, color: "var(--text-secondary)", textTransform: "uppercase", textShadow: `0 1px 8px ${P.abyss}` }}>{"\u2726"} {product.artwork}</div>}
         <div style={{ position: "absolute", bottom: 10, right: 10, fontFamily: "'Courier New', monospace", fontSize: 20, fontWeight: 700, color: product.colors[0], opacity: h ? 0.12 : 0.04, transition: "opacity 0.4s" }}>{String(product.id).slice(-2)}</div>
       </div>
       <div style={{ padding: "14px 16px", flex: 1, display: "flex", flexDirection: "column" }}>
         <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: h ? product.colors[0] : P.ghost, transition: "color 0.3s", lineHeight: 1.4, marginBottom: 6 }}><HoverMorphText>{product.title}</HoverMorphText></div>
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, color: P.bone, opacity: 0.38, lineHeight: 1.6, marginBottom: 12, flex: 1 }}>{product.description.slice(0, 120)}{product.description.length > 120 ? "\u2026" : ""}</div>
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, color: "var(--text-muted)", lineHeight: 1.6, marginBottom: 12, flex: 1 }}>{product.description.slice(0, 120)}{product.description.length > 120 ? "\u2026" : ""}</div>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontFamily: "'Courier New', monospace", fontSize: 16, fontWeight: 700, color: P.ghost }}>${product.price}<span style={{ fontSize: 9, opacity: 0.3, marginLeft: 2 }}>CAD</span></span>
-          {product.sizes && <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: P.bone, opacity: 0.25 }}>{product.sizes}</span>}
-          {product.duration && <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: P.green, opacity: 0.5 }}>{product.duration}</span>}
+          <span style={{ fontFamily: "'Courier New', monospace", fontSize: 16, fontWeight: 700, color: P.ghost }}>${product.price}<span style={{ fontSize: 11, color: "var(--text-muted)", marginLeft: 2 }}>CAD</span></span>
+          {product.sizes && <span style={{ fontFamily: "'Courier New', monospace", fontSize: 11, color: "var(--text-muted)" }}>{product.sizes}</span>}
+          {product.duration && <span style={{ fontFamily: "'Courier New', monospace", fontSize: 11, color: P.green }}>{product.duration}</span>}
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7, marginTop: 12 }}>
           <button type="button" onClick={() => onOpen(product)} style={{ background: "transparent", border: `1px solid ${P.steel}25`, color: P.bone, fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 2, padding: "9px 7px", cursor: "pointer", textTransform: "uppercase", opacity: h ? 0.8 : 0.48, transition: "all 0.3s" }}>Explore Details</button>
@@ -161,28 +165,81 @@ const ShopCard = ({ product, onAdd, onOpen }) => {
   );
 };
 
-const ComingSoonScreen = ({ announcement }) => (
-  <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
+const PRELAUNCH_WORKS = PORTFOLIO_WORKS
+  .filter((work) => work.printEdition && work.img)
+  .slice(0, 3);
+
+const ShopLoadingScreen = () => (
+  <main aria-busy="true" aria-label="Loading shop status" style={{ minHeight: "100vh", display: "grid", placeItems: "center", padding: 32 }}>
+    <div style={{ ...mono, fontSize: 12, letterSpacing: 5, color: P.bone, opacity: 0.62, textTransform: "uppercase" }}>Resolving the release signal…</div>
+  </main>
+);
+
+const PrelaunchScreen = ({ announcement }) => (
+  <main style={{ minHeight: "100vh", paddingTop: 112, paddingBottom: 90 }}>
     <SEO title="Shop — Opening Soon" description={SEO_COPY.shop} path="/shop" />
-    <div style={{ maxWidth: 720, margin: "0 auto", padding: "0 40px", textAlign: "center" }}>
-      <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 8, color: P.amber, textTransform: "uppercase", marginBottom: 16 }}>
-        <ScrollMorphText speed={70}>Opening Soon</ScrollMorphText>
-      </div>
-      <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: "0 0 24px 0" }}>
-        <ScrollMorphText speed={90}>The Shop</ScrollMorphText>
-      </h2>
-      <div style={{ width: 60, height: 1, background: `linear-gradient(to right, transparent, ${P.amber}, transparent)`, margin: "0 auto 32px" }} />
-      <div style={{ fontFamily: "'Georgia', serif", fontSize: 15, color: P.bone, opacity: 0.5, lineHeight: 1.7, maxWidth: 560, margin: "0 auto" }}>
-        {announcement || "The first art-led releases are being prepared. Join the signal for new work, selected print editions, and the moment the shop opens."}
-      </div>
+    <div className="page-shell" style={{ maxWidth: 1120, margin: "0 auto", padding: "0 40px" }}>
+      <section className="shop-prelaunch-hero" aria-labelledby="prelaunch-title" style={{ minHeight: "calc(100vh - 150px)", display: "grid", gridTemplateColumns: "minmax(0, 1.05fr) minmax(320px, 0.75fr)", gap: 54, alignItems: "center", paddingBottom: 56 }}>
+        <div>
+          <div style={{ ...mono, fontSize: 11, letterSpacing: "clamp(3px, 1vw, 7px)", color: P.gold, textTransform: "uppercase", marginBottom: 18 }}>
+            <ScrollMorphText speed={70}>Opening Signal · Pre-Launch</ScrollMorphText>
+          </div>
+          <h1 id="prelaunch-title" style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(38px, 7vw, 72px)", lineHeight: 1.02, fontWeight: 400, color: P.ghost, margin: "0 0 24px" }}>
+            <ScrollMorphText speed={90}>Collect the work,</ScrollMorphText><br />
+            <ScrollMorphText speed={90}>when it arrives.</ScrollMorphText>
+          </h1>
+          <div style={{ width: 92, height: 1, background: `linear-gradient(to right, ${P.gold}, transparent)`, marginBottom: 26 }} />
+          <p style={{ fontFamily: "'Georgia', serif", fontSize: 16, color: P.bone, opacity: 0.76, lineHeight: 1.75, maxWidth: 640, margin: 0 }}>
+            {announcement || "The first art-led releases are being prepared: selected editions, open releases, and studio objects rooted in the original worlds."}
+          </p>
+        </div>
+
+        <aside id="shop-signal" style={{ padding: "28px 26px", border: `1px solid ${P.cyan}36`, borderTop: `2px solid ${P.cyan}`, background: `linear-gradient(145deg, ${P.void}, ${P.cyan}08)`, boxShadow: `0 24px 80px ${P.cyan}0a` }}>
+          <div style={{ ...mono, fontSize: 11, letterSpacing: 4, color: P.cyan, textTransform: "uppercase", marginBottom: 12 }}>First access</div>
+          <h2 style={{ fontFamily: "'Georgia', serif", fontSize: 24, fontWeight: 400, color: P.ghost, margin: "0 0 10px" }}>Enter the release signal.</h2>
+          <p style={{ fontFamily: "'Georgia', serif", fontSize: 14, color: P.bone, opacity: 0.7, lineHeight: 1.65, margin: "0 0 20px" }}>Receive new-work notes, edition announcements, and the opening notice. No noise.</p>
+          <NewsletterSignup source="shop-prelaunch" accent={P.cyan} buttonLabel="Notify me" />
+        </aside>
+      </section>
+
+      <section aria-labelledby="shop-preview-title" style={{ paddingTop: 64, borderTop: `1px solid ${P.steel}24` }}>
+        <div style={{ ...mono, fontSize: 11, letterSpacing: 5, color: P.magenta, textTransform: "uppercase", marginBottom: 12 }}>Release preview</div>
+        <h2 id="shop-preview-title" style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 44px)", fontWeight: 400, color: P.ghost, margin: "0 0 14px" }}>Three worlds being considered.</h2>
+        <p style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.7, color: P.bone, opacity: 0.68, maxWidth: 710, margin: "0 0 32px" }}>These are artwork previews, not products yet. Explore each original now; release status appears here only when the storefront is live.</p>
+
+        <div className="shop-prelaunch-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 18 }}>
+          {PRELAUNCH_WORKS.map((work) => (
+            <Link key={work.id} to={getWorkHref(work)} className="shop-preview-card" style={{ display: "block", color: "inherit", textDecoration: "none", border: `1px solid ${P.steel}2b`, background: `${P.surface}38`, overflow: "hidden" }}>
+              <div style={{ aspectRatio: "4 / 5", overflow: "hidden", background: P.abyss }}>
+                <img src={work.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block", transition: "transform 0.45s ease" }} />
+              </div>
+              <div style={{ padding: "18px 18px 20px", borderTop: `2px solid ${work.colors?.[0] || P.magenta}` }}>
+                <div style={{ ...mono, fontSize: 11, color: P.cyan, letterSpacing: 3, textTransform: "uppercase", marginBottom: 8 }}>{work.series || "Original work"}</div>
+                <h3 style={{ fontFamily: "'Georgia', serif", fontSize: 18, lineHeight: 1.35, fontWeight: 400, color: P.ghost, margin: "0 0 12px" }}>{work.title}</h3>
+                <span style={{ ...mono, fontSize: 11, letterSpacing: 2, color: P.magenta, textTransform: "uppercase" }}>Enter artwork →</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      <section className="shop-edition-note" aria-labelledby="edition-note-title" style={{ marginTop: 76, padding: "34px 0", display: "grid", gridTemplateColumns: "0.7fr 1.3fr", gap: 40, borderTop: `1px solid ${P.gold}38`, borderBottom: `1px solid ${P.gold}22` }}>
+        <div>
+          <div style={{ ...mono, fontSize: 11, letterSpacing: 4, color: P.gold, textTransform: "uppercase", marginBottom: 9 }}>Collector note</div>
+          <h2 id="edition-note-title" style={{ fontFamily: "'Georgia', serif", fontSize: 26, fontWeight: 400, color: P.ghost, margin: 0 }}>How releases will differ.</h2>
+        </div>
+        <div style={{ display: "grid", gap: 18 }}>
+          <p style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.75, color: P.bone, opacity: 0.72, margin: 0 }}><strong style={{ color: P.ghost, fontWeight: 400 }}>Numbered editions</strong> are finite runs tied to a specific artwork, size, and production record. Once the run closes, it does not silently expand.</p>
+          <p style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.75, color: P.bone, opacity: 0.72, margin: 0 }}><strong style={{ color: P.ghost, fontWeight: 400 }}>Open releases</strong> remain available without a fixed edition count. Each live product will state its release type before collecting.</p>
+        </div>
+      </section>
     </div>
-  </div>
+  </main>
 );
 
 const Shop = ({ addToCart }) => {
   const [products, setProducts] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [shopLive, setShopLive] = useState(true);
+  const [mode, setMode] = useState(SHOP_MODES.LOADING);
   const [announcement, setAnnouncement] = useState("");
   const [category, setCategory] = useState("all");
   const [search, setSearch] = useState("");
@@ -203,15 +260,19 @@ const Shop = ({ addToCart }) => {
 
   useEffect(() => {
     let live = true;
-    Promise.all([getSettings().catch(() => ({})), getProducts().catch(() => ({ products: [] }))])
+    Promise.all([getSettings(), getProducts()])
       .then(([s, p]) => {
         if (!live) return;
-        setShopLive(s.shop_live ?? false);
-        setAnnouncement(s.shop_announcement || "");
-        setProducts((p.products || []).map(mapProduct));
-        setLoading(false);
+        const nextMode = resolveShopMode(s, p);
+        setAnnouncement(typeof s?.shop_announcement === "string" ? s.shop_announcement : "");
+        setProducts(nextMode === SHOP_MODES.LIVE ? p.products.map(mapProduct) : []);
+        setMode(nextMode);
       })
-      .catch(err => { if (live) { setError(err.message); setLoading(false); } });
+      .catch(() => {
+        if (!live) return;
+        setProducts([]);
+        setMode(SHOP_MODES.PRELAUNCH);
+      });
     return () => { live = false; };
   }, []);
 
@@ -230,7 +291,8 @@ const Shop = ({ addToCart }) => {
     return category === "all" ? all : [...new Set(products.filter(p => p.category === category).map(p => p.subcategory).filter(Boolean))];
   }, [products, category]);
 
-  if (!loading && !shopLive) return <ComingSoonScreen announcement={announcement} />;
+  if (mode === SHOP_MODES.LOADING) return <ShopLoadingScreen />;
+  if (mode === SHOP_MODES.PRELAUNCH) return <PrelaunchScreen announcement={announcement} />;
 
   return (
     <div style={{ minHeight: "100vh", paddingTop: 120, paddingBottom: 80 }}>
@@ -242,7 +304,7 @@ const Shop = ({ addToCart }) => {
           <div style={{ width: 40, height: 1, background: `linear-gradient(to right, ${P.magenta}, transparent)`, marginTop: 16 }} />
           <div className="shop-intro-grid" style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 24, maxWidth: 900, marginTop: 22 }}>
             <p style={{ fontFamily: "'Georgia', serif", fontSize: 14, color: P.bone, opacity: 0.6, lineHeight: 1.7, margin: 0 }}>{SHOP_COPY.intro}</p>
-            <p style={{ fontFamily: "'Courier New', monospace", fontSize: 9, color: P.bone, opacity: 0.38, lineHeight: 1.7, margin: 0, paddingLeft: 18, borderLeft: `1px solid ${P.gold}30` }}>{SHOP_COPY.distinction}</p>
+            <p style={{ fontFamily: "'Courier New', monospace", fontSize: 12, color: "var(--text-muted)", lineHeight: 1.7, margin: 0, paddingLeft: 18, borderLeft: `1px solid ${P.gold}30` }}>{SHOP_COPY.distinction}</p>
           </div>
           {announcement && (
             <div style={{ marginTop: 16, fontFamily: "'Courier New', monospace", fontSize: 10, color: P.cyan, opacity: 0.7, letterSpacing: 2, lineHeight: 1.6 }}>{announcement}</div>
@@ -257,7 +319,7 @@ const Shop = ({ addToCart }) => {
 
         <div style={{ marginBottom: 28 }}>
           <div style={{ position: "relative", maxWidth: 440 }}>
-            <span style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontFamily: "'Courier New', monospace", fontSize: 12, color: P.bone, opacity: 0.2 }}>{"\u2315"}</span>
+            <span aria-hidden="true" style={{ position: "absolute", left: 14, top: "50%", transform: "translateY(-50%)", fontFamily: "'Courier New', monospace", fontSize: 12, color: "var(--text-muted)" }}>{"\u2315"}</span>
             <input
               type="text" value={search} onChange={(e) => setSearch(e.target.value)}
               placeholder="Search products, artworks, tags..."
@@ -270,7 +332,7 @@ const Shop = ({ addToCart }) => {
               onFocus={(e) => { e.target.style.borderColor = P.cyan + "40"; }}
               onBlur={(e) => { e.target.style.borderColor = P.steel + "20"; }}
             />
-            {search && <button onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: P.bone, opacity: 0.3, cursor: "pointer", fontFamily: "'Courier New', monospace", fontSize: 14 }}>{"\u00D7"}</button>}
+            {search && <button aria-label="Clear search" onClick={() => setSearch("")} style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", color: "var(--text-secondary)", cursor: "pointer", fontFamily: "'Courier New', monospace", fontSize: 18 }}>{"\u00D7"}</button>}
           </div>
         </div>
 
@@ -290,7 +352,7 @@ const Shop = ({ addToCart }) => {
 
         {visibleItems.length > 1 && (
           <div style={{ display: "flex", gap: 4, alignItems: "center", flexWrap: "wrap", marginBottom: 32 }}>
-            <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: P.bone, opacity: 0.2, letterSpacing: 2, textTransform: "uppercase", marginRight: 6 }}>TYPE</span>
+            <span style={{ fontFamily: "'Courier New', monospace", fontSize: 11, color: "var(--text-muted)", letterSpacing: 2, textTransform: "uppercase", marginRight: 6 }}>TYPE</span>
             {visibleItems.map(item => (
               <button key={item} onClick={() => setItemFilter(itemFilter === item ? null : item)} style={{
                 background: itemFilter === item ? `${P.cyan}12` : "transparent",
@@ -304,20 +366,20 @@ const Shop = ({ addToCart }) => {
           </div>
         )}
 
-        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, color: P.bone, opacity: 0.2, letterSpacing: 3, marginBottom: 20 }}>
-          {loading ? "LOADING\u2026" : `${filtered.length} ${filtered.length === 1 ? "RELEASE" : "RELEASES"}`}{search && ` matching "${search}"`}{itemFilter && ` \u00B7 ${itemFilter}`}
+        <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, color: "var(--text-muted)", letterSpacing: 3, marginBottom: 20 }}>
+          {`${filtered.length} ${filtered.length === 1 ? "RELEASE" : "RELEASES"}`}{search && ` matching "${search}"`}{itemFilter && ` \u00B7 ${itemFilter}`}
         </div>
 
-        {!loading && filtered.length > 0 && (
+        {filtered.length > 0 && (
           <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: 20 }}>
             {filtered.map(p => <ShopCard key={p.id} product={p} onAdd={addToCart} onOpen={openProduct} />)}
           </div>
         )}
 
-        {!loading && filtered.length === 0 && (
+        {filtered.length === 0 && (
           <div style={{ textAlign: "center", padding: "80px 0" }}>
-            <div style={{ fontFamily: "'Georgia', serif", fontSize: 16, color: P.bone, opacity: 0.35, marginBottom: 12 }}>No releases found here.</div>
-            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, color: P.bone, opacity: 0.2 }}>Try another category or clear the search signal.</div>
+            <div style={{ fontFamily: "'Georgia', serif", fontSize: 16, color: "var(--text-secondary)", marginBottom: 12 }}>No releases found here.</div>
+            <div style={{ fontFamily: "'Courier New', monospace", fontSize: 12, color: "var(--text-muted)" }}>Try another category or clear the search signal.</div>
           </div>
         )}
       </div>

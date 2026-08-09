@@ -2,10 +2,19 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { P } from "../data/palette";
 import { PIECES } from "../data/pieces";
-import { getAdaptationsForWork, getCategory, getWorkHref } from "../data/catalog";
+import {
+  getAdaptationsForWork,
+  getAdjacentWorks,
+  getCategory,
+  getOriginalForWork,
+  getRelatedWorks,
+  getWorkById,
+  getWorkHref,
+} from "../data/catalog";
 import { ScrollMorphText } from "../components/MorphText";
 import { PortfolioPlaceholder } from "../components/PortfolioPlaceholder";
 import { SEO } from "../components/SEO";
+import { NewsletterSignup } from "../components/NewsletterSignup";
 
 const ShowcaseDetail = () => {
   const navigate = useNavigate();
@@ -21,7 +30,11 @@ const ShowcaseDetail = () => {
 
   const isVideo = piece.mediaType === "video" && piece.img;
   const category = getCategory("photoshop-originals");
+  const catalogWork = getWorkById(piece.id);
   const adaptations = getAdaptationsForWork(piece.id);
+  const original = getOriginalForWork(catalogWork);
+  const adjacent = getAdjacentWorks(piece.id);
+  const related = getRelatedWorks(piece.id);
   const galleryImages = [
     // Skip the hero src in the image lightbox if it's a video — video gets its own native player.
     ...(!isVideo && piece.img ? [{ src: piece.img, label: piece.title }] : []),
@@ -31,30 +44,39 @@ const ShowcaseDetail = () => {
   return (
     <div style={{ minHeight: "100vh", paddingTop: 100, paddingBottom: 80 }}>
       <SEO title={piece.title} description={piece.description} path={`/portfolio/${id}`} />
-      <div style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
-        <button onClick={() => navigate("/portfolio?category=photoshop-originals")} style={{ background: "none", border: "none", color: P.bone, fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 4, cursor: "pointer", opacity: 0.4, marginBottom: 32, textTransform: "uppercase" }}>&larr; Photoshop Originals</button>
+      <div className="page-shell" style={{ maxWidth: 1200, margin: "0 auto", padding: "0 40px" }}>
+        <nav aria-label="Artwork breadcrumbs" style={{ display: "flex", flexWrap: "wrap", alignItems: "center", gap: 9, marginBottom: 32 }}>
+          <button onClick={() => navigate("/portfolio?category=photoshop-originals")} style={{ background: "none", border: "none", color: P.cyan, fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 3, cursor: "pointer", textTransform: "uppercase" }}>Portfolio</button>
+          <span aria-hidden style={{ color: P.steel }}>→</span>
+          <button onClick={() => navigate("/portfolio?category=photoshop-originals")} style={{ background: "none", border: "none", color: P.bone, fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 2, cursor: "pointer", textTransform: "uppercase" }}>{category.label}</button>
+          <span aria-hidden style={{ color: P.steel }}>→</span>
+          <span style={{ color: P.gold, fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 2, textTransform: "uppercase" }}>{piece.series}</span>
+        </nav>
         <div style={{ opacity: vis ? 1 : 0, transform: vis ? "translateY(0)" : "translateY(12px)", transition: "all 0.6s cubic-bezier(0.16,1,0.3,1)" }}>
           <div className="showcase-grid" style={{ display: "grid", gridTemplateColumns: "1.2fr 1fr", gap: 52, marginBottom: 48 }}>
             <div>
               <div style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 5, color: piece.colors[0], textTransform: "uppercase", marginBottom: 12 }}>{category.label} &mdash; {piece.series} &mdash; {piece.year}</div>
-              <h2 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 3.5vw, 42px)", fontWeight: 400, color: P.ghost, margin: "0 0 16px 0", lineHeight: 1.1 }}><ScrollMorphText speed={80}>{piece.title}</ScrollMorphText></h2>
+              <h1 style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 3.5vw, 42px)", fontWeight: 400, color: P.ghost, margin: "0 0 16px 0", lineHeight: 1.1 }}><ScrollMorphText speed={80}>{piece.title}</ScrollMorphText></h1>
               <p style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.7, color: P.bone, opacity: 0.6, margin: 0, maxWidth: 480, animation: "morphBreathSoft 1s ease-in-out infinite" }}>{piece.description}</p>
             </div>
             <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
               <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 28, paddingTop: 16, borderTop: `1px solid ${P.steel}20` }}>
                 {[["Medium", piece.medium], ["Edition", piece.printEdition ? `Signed print edition of ${piece.printEdition.size}` : null], ["Tags", piece.tags.join(" \u00B7 ")]].filter(([, value]) => value).map(([l, v]) => (
                   <div key={l} style={{ display: "flex", gap: 12 }}>
-                    <span style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 3, color: P.bone, opacity: 0.3, textTransform: "uppercase", minWidth: 55 }}>{l}</span>
-                    <span style={{ fontFamily: "'Georgia', serif", fontSize: 12, color: P.bone, opacity: 0.55 }}>{v}</span>
+                    <span style={{ fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 3, color: "var(--text-muted)", textTransform: "uppercase", minWidth: 65 }}>{l}</span>
+                    <span style={{ fontFamily: "'Georgia', serif", fontSize: 14, lineHeight: 1.5, color: "var(--text-secondary)" }}>{v}</span>
                   </div>
                 ))}
               </div>
               {piece.printEdition && (
                 <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-start", gap: 6, padding: "14px 16px", border: `1px solid ${P.gold}25`, background: `${P.gold}08` }}>
                   <span style={{ fontFamily: "'Courier New', monospace", fontSize: 10, letterSpacing: 3, color: P.gold, textTransform: "uppercase" }}>Print release coming soon</span>
-                  <span style={{ fontFamily: "'Georgia', serif", fontSize: 11, color: P.bone, opacity: 0.45, lineHeight: 1.5 }}>One shared, signed edition of ten across all future print formats.</span>
-                  <button type="button" onClick={() => navigate("/contact#signal")} style={{ marginTop: 8, background: "transparent", border: `1px solid ${P.gold}44`, color: P.gold, fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 2, padding: "8px 11px", cursor: "pointer", textTransform: "uppercase" }}>Join the print release list</button>
+                  <span style={{ fontFamily: "'Georgia', serif", fontSize: 14, color: P.bone, opacity: 0.72, lineHeight: 1.6 }}>One shared, signed edition of ten across all future print formats.</span>
+                  <button type="button" onClick={() => navigate("/shop")} style={{ marginTop: 8, minHeight: 44, background: `${P.gold}12`, border: `1px solid ${P.gold}66`, color: P.gold, fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 2, padding: "10px 13px", cursor: "pointer", textTransform: "uppercase" }}>View release signal →</button>
                 </div>
+              )}
+              {original && (
+                <button type="button" onClick={() => navigate(getWorkHref(original))} style={{ marginTop: 16, background: `${P.purple}0a`, border: `1px solid ${P.purple}35`, color: P.purple, fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 2, padding: "10px 12px", cursor: "pointer", textAlign: "left" }}>Original world: {original.title} ↗</button>
               )}
               {adaptations.length > 0 && (
                 <div style={{ marginTop: 18 }}>
@@ -86,10 +108,20 @@ const ShowcaseDetail = () => {
             </div>
           ) : (
             <div
+              role="button"
+              tabIndex={0}
+              aria-label={`View ${piece.title} full size`}
               style={{ position: "relative", overflow: "hidden", cursor: "pointer", marginBottom: 48, border: `1px solid ${piece.colors[0]}15` }}
               onMouseEnter={() => setImgHover(true)}
               onMouseLeave={() => setImgHover(false)}
               onClick={() => { if (piece.img) { setGalleryIdx(0); setGalleryOpen(true); } }}
+              onKeyDown={(event) => {
+                if ((event.key === "Enter" || event.key === " ") && piece.img) {
+                  event.preventDefault();
+                  setGalleryIdx(0);
+                  setGalleryOpen(true);
+                }
+              }}
               onContextMenu={(e) => e.preventDefault()}
             >
               {piece.img ? (
@@ -114,37 +146,69 @@ const ShowcaseDetail = () => {
             </div>
           )}
 
-          <div style={{ marginBottom: 48 }}>
+          {piece.details?.length > 0 && <div style={{ marginBottom: 48 }}>
             <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 6, color: P.bone, opacity: 0.25, textTransform: "uppercase", marginBottom: 20 }}>Details & Close-ups</div>
             <div className="detail-closeups" style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
-              {(piece.details && piece.details.length > 0 ? piece.details : [
-                { label: "Detail I \u2014 Center", aspect: "1" },
-                { label: "Detail II \u2014 Texture", aspect: "1" },
-                { label: "Detail III \u2014 Symbol", aspect: "1" },
-              ]).map(({ label, aspect, img: detailImg }, i) => (
-                <div key={i} style={{ cursor: detailImg ? "pointer" : "default" }} onClick={() => { if (detailImg) { setGalleryIdx(i + 1); setGalleryOpen(true); } }}>
-                  {detailImg ? (
-                    <div style={{ aspectRatio: aspect || "1", overflow: "hidden", position: "relative" }}>
-                      <img src={detailImg} alt={label} style={{ width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }} />
-                    </div>
-                  ) : (
-                    <PortfolioPlaceholder colors={[piece.colors[i % 2], piece.colors[(i + 1) % 2]]} aspect={aspect || "1"} />
-                  )}
+              {piece.details.map(({ label, aspect, img: detailImg }, i) => (
+                <div key={i} style={{ cursor: "pointer" }} onClick={() => { setGalleryIdx(i + 1); setGalleryOpen(true); }}>
+                  <div style={{ aspectRatio: aspect || "1", overflow: "hidden", position: "relative" }}>
+                    <img src={detailImg} alt={label} style={{ width: "100%", height: "100%", objectFit: "cover", pointerEvents: "none" }} />
+                  </div>
                   <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: P.bone, opacity: 0.2, marginTop: 6, letterSpacing: 2, textTransform: "uppercase" }}>{label}</div>
                 </div>
               ))}
             </div>
-            {(!piece.details || piece.details.length === 0) && (
-              <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, color: P.bone, opacity: 0.15, marginTop: 12, letterSpacing: 2, textAlign: "center" }}>REPLACE WITH CLOSE-UP CROPS FROM PHOTOSHOP</div>
-            )}
-          </div>
+          </div>}
 
           <div style={{ padding: 28, borderLeft: `2px solid ${piece.colors[0]}22`, marginBottom: 40, maxWidth: 600 }}>
             <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 6, color: piece.colors[0], opacity: 0.6, textTransform: "uppercase", marginBottom: 10 }}>Process & Provenance</div>
-            <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.5, lineHeight: 1.7, fontStyle: "italic" }}>
+            <div style={{ fontFamily: "'Georgia', serif", fontSize: 15, color: "var(--text-secondary)", lineHeight: 1.7, fontStyle: "italic" }}>
               Built through the cumulative Photoshop process behind 1RareGh0st: source material is selected, altered, layered, coloured, lit, and resolved through sustained human judgment. Every hidden face and recurring symbol is placed in conversation with the whole.
             </div>
           </div>
+
+          <section className="artwork-onward" aria-labelledby="artwork-onward-title" style={{ position: "relative", marginTop: 72, padding: "54px 0 0", borderTop: `1px solid ${P.steel}30` }}>
+            <div aria-hidden style={{ position: "absolute", inset: "-50px 0 auto", height: 310, backgroundImage: `linear-gradient(${P.abyss}b8, ${P.abyss}), url(${piece.img})`, backgroundSize: "cover", backgroundPosition: "center", opacity: 0.1, filter: "blur(22px) saturate(1.35)", pointerEvents: "none" }} />
+            <div style={{ position: "relative" }}>
+              <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 5, color: P.magenta, textTransform: "uppercase", marginBottom: 10 }}>Related worlds</div>
+              <h2 id="artwork-onward-title" style={{ fontFamily: "'Georgia', serif", fontSize: "clamp(28px, 4vw, 42px)", fontWeight: 400, color: P.ghost, margin: "0 0 28px" }}>Follow the signal outward.</h2>
+              <div className="related-world-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
+                {related.map((work) => (
+                  <button key={work.id} type="button" onClick={() => navigate(getWorkHref(work))} style={{ padding: 0, textAlign: "left", background: `${P.surface}72`, border: `1px solid ${work.colors?.[0] || P.magenta}45`, color: P.ghost, cursor: "pointer", overflow: "hidden" }}>
+                    <div style={{ aspectRatio: "4 / 3", background: P.abyss, overflow: "hidden" }}>
+                      {work.img && <img src={work.img} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+                    </div>
+                    <div style={{ padding: 16 }}>
+                      <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 2, color: P.cyan, textTransform: "uppercase", marginBottom: 7 }}>{work.series || getCategory(work.primaryCategory)?.label}</div>
+                      <div style={{ fontFamily: "'Georgia', serif", fontSize: 17, lineHeight: 1.35 }}>{work.title}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+
+              <div className="artwork-actions-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 22 }}>
+                <div style={{ padding: 22, borderTop: `2px solid ${P.gold}`, background: `${P.gold}08` }}>
+                  <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 3, color: P.gold, textTransform: "uppercase", marginBottom: 9 }}>Commission from this world</div>
+                  <p style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.65, color: P.bone, opacity: 0.76, margin: "0 0 16px" }}>Carry a mood, symbol, or compositional instinct into an entirely personal work.</p>
+                  <button type="button" onClick={() => navigate(`/contact?type=commission&piece=${encodeURIComponent(piece.id)}`)} style={{ minHeight: 44, padding: "10px 14px", background: P.gold, border: `1px solid ${P.gold}`, color: P.abyss, fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>Begin with this piece →</button>
+                </div>
+                <div style={{ padding: 22, borderTop: `2px solid ${P.cyan}`, background: `${P.cyan}07` }}>
+                  <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 3, color: P.cyan, textTransform: "uppercase", marginBottom: 9 }}>Release notes</div>
+                  <p style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.65, color: P.bone, opacity: 0.76, margin: "0 0 16px" }}>Hear when this work or a related edition enters the collecting path.</p>
+                  <NewsletterSignup source="artwork-release" accent={P.cyan} meta={{ pieceId: String(piece.id), pieceTitle: piece.title }} compact />
+                </div>
+              </div>
+
+              <nav aria-label="Adjacent artworks" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 22 }}>
+                {adjacent.previous ? (
+                  <button type="button" onClick={() => navigate(getWorkHref(adjacent.previous))} style={{ minHeight: 64, padding: "12px 16px", textAlign: "left", background: "none", border: `1px solid ${P.steel}35`, color: P.bone, cursor: "pointer", fontFamily: "'Courier New', monospace", fontSize: 11, lineHeight: 1.5 }}>← Previous work<br /><span style={{ color: P.ghost }}>{adjacent.previous.title}</span></button>
+                ) : <span />}
+                {adjacent.next ? (
+                  <button type="button" onClick={() => navigate(getWorkHref(adjacent.next))} style={{ minHeight: 64, padding: "12px 16px", textAlign: "right", background: "none", border: `1px solid ${P.steel}35`, color: P.bone, cursor: "pointer", fontFamily: "'Courier New', monospace", fontSize: 11, lineHeight: 1.5 }}>Next work →<br /><span style={{ color: P.ghost }}>{adjacent.next.title}</span></button>
+                ) : <span />}
+              </nav>
+            </div>
+          </section>
         </div>
       </div>
 

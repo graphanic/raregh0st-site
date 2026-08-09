@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { P } from "../data/palette";
 import { saveLocal, loadLocal } from "../utils/storage";
 
-export const CookieConsent = () => {
+export const CookieConsent = ({ onDismiss }) => {
   const [visible, setVisible] = useState(false);
   const [dismissed, setDismissed] = useState(() => loadLocal("cookies", false));
 
@@ -12,12 +12,16 @@ export const CookieConsent = () => {
     return () => clearTimeout(timer);
   }, [dismissed]);
 
-  const handleDismiss = () => { setDismissed(true); saveLocal("cookies", true); };
+  const handleDismiss = () => {
+    setDismissed(true);
+    saveLocal("cookies", true);
+    onDismiss?.();
+  };
 
   if (dismissed || !visible) return null;
 
   return (
-    <div style={{
+    <div data-app-utility="consent" style={{
       position: "fixed", bottom: 90, left: 20, right: 20, maxWidth: 480, zIndex: 250,
       background: `${P.surface}f5`, border: `1px solid ${P.steel}22`,
       backdropFilter: "blur(16px)", padding: "16px 20px",

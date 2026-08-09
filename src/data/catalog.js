@@ -210,6 +210,11 @@ export const getAdaptationsForWork = (id) => PORTFOLIO_WORKS
   .filter((work) => String(work.sourceWorkId || "") === String(id))
   .sort((a, b) => a.sortOrder - b.sortOrder);
 
+export const getOriginalForWork = (workOrId) => {
+  const work = typeof workOrId === "object" ? workOrId : getWorkById(workOrId);
+  return work?.sourceWorkId ? getWorkById(work.sourceWorkId) || null : null;
+};
+
 export const getWorksByCategory = (categoryId) => PORTFOLIO_WORKS
   .filter((work) => work.primaryCategory === normalizeCategoryId(categoryId))
   .sort((a, b) => (
@@ -217,6 +222,57 @@ export const getWorksByCategory = (categoryId) => PORTFOLIO_WORKS
     || String(b.year || "").localeCompare(String(a.year || ""))
     || a.title.localeCompare(b.title)
   ));
+
+export const getAdjacentWorks = (id) => {
+  const current = getWorkById(id);
+  if (!current) return { previous: null, next: null };
+  const ordered = getWorksByCategory(current.primaryCategory);
+  const index = ordered.findIndex((work) => work.id === current.id);
+  if (index < 0) return { previous: null, next: null };
+  return {
+    previous: index > 0 ? ordered[index - 1] : null,
+    next: index < ordered.length - 1 ? ordered[index + 1] : null,
+  };
+};
+
+const relatedScore = (current, candidate) => {
+  const directRelation = candidate.sourceWorkId === current.id || current.sourceWorkId === candidate.id;
+  const sharedOriginal = current.sourceWorkId
+    && candidate.sourceWorkId
+    && current.sourceWorkId === candidate.sourceWorkId;
+  const sharedSeries = current.series && candidate.series && current.series === candidate.series;
+  const currentTags = new Set(current.tags || []);
+  const overlappingTags = (candidate.tags || []).filter((tag) => currentTags.has(tag)).length;
+  const sameCategory = current.primaryCategory === candidate.primaryCategory;
+
+  return (directRelation ? 1000 : 0)
+    + (sharedOriginal ? 800 : 0)
+    + (sharedSeries ? 300 : 0)
+    + (overlappingTags * 80)
+    + (sameCategory ? 40 : 0);
+};
+
+export const getRelatedWorks = (id, limit = 3) => {
+  const current = getWorkById(id);
+  if (!current || limit <= 0) return [];
+  const catalogOrder = new Map(PORTFOLIO_WORKS.map((work, index) => [work.id, index]));
+  const ranked = PORTFOLIO_WORKS
+    .filter((work) => work.id !== current.id)
+    .map((work) => ({ work, score: relatedScore(current, work) }))
+    .filter(({ score }) => score > 0)
+    .sort((a, b) => b.score - a.score || catalogOrder.get(a.work.id) - catalogOrder.get(b.work.id))
+    .map(({ work }) => work);
+
+  const result = [];
+  const add = (work) => {
+    if (work && !result.some((item) => item.id === work.id) && result.length < limit) result.push(work);
+  };
+  ranked.forEach(add);
+  getWorksByCategory(current.primaryCategory).forEach((work) => {
+    if (work.id !== current.id) add(work);
+  });
+  return result;
+};
 
 export const getWorkFilterValue = (work) => {
   if (work.primaryCategory === "photoshop-originals") return work.series;
