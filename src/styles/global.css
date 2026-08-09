@@ -110,6 +110,34 @@ body[data-calm] *:not([data-morph]) { font-family: inherit !important; animation
   animation: heroLogoAura 6s ease-in-out infinite;
   will-change: filter;
 }
+.home-pathway-card {
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+}
+.home-pathway-card:hover {
+  box-shadow: inset 0 0 38px rgba(0, 229, 255, 0.025);
+}
+.home-pathway-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  min-width: 188px;
+  padding: 11px 14px;
+  font-family: 'Courier New', monospace;
+  font-size: 8px;
+  letter-spacing: 2.5px;
+  line-height: 1.4;
+  text-transform: uppercase;
+  text-decoration: none;
+  transition: background-color 0.25s ease, color 0.25s ease, box-shadow 0.25s ease;
+}
+.home-pathway-action:hover,
+.home-pathway-action:focus-visible {
+  color: #06060c !important;
+  background: var(--pathway-accent);
+  box-shadow: 0 0 24px color-mix(in srgb, var(--pathway-accent) 28%, transparent);
+  outline: none;
+}
 @media (prefers-reduced-motion: reduce) {
   .hero-logo { animation: none; filter: drop-shadow(0 0 24px rgba(0, 229, 255, 0.30)); }
 }
@@ -145,6 +173,8 @@ body[data-calm] *:not([data-morph]) { font-family: inherit !important; animation
     letter-spacing: 2.2px !important;
     text-align: center;
   }
+  .home-pathways-grid { grid-template-columns: 1fr !important; grid-auto-rows: auto !important; }
+  .home-pathway-action { width: 100%; min-width: 0; }
   .page-shell { padding-left: 20px !important; padding-right: 20px !important; }
   .nav-desktop { display: none !important; }
   .nav-mobile-btns { display: flex !important; }
