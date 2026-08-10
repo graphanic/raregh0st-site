@@ -6,7 +6,10 @@ import { SEO } from "../components/SEO";
 import { MorphText, HoverMorphText, ScrollMorphText } from "../components/MorphText";
 import { useIsMobile } from "../hooks/useIsMobile";
 import { GalleryFocus } from "../components/home/GalleryFocus";
+import { ProcessInMotion } from "../components/home/ProcessInMotion";
+import { SectionHead } from "../components/home/SectionHead";
 import { NewsletterSignup } from "../components/NewsletterSignup";
+import { SANITY_PROCESS_FEATURE, resolveProcessFeatureState } from "../data/homeFeatures";
 import {
   ACTION_COPY,
   ARTIST_PORTRAIT_URL,
@@ -110,7 +113,7 @@ function HeroSection({ isMobile }) {
           backgroundImage: `url(https://hebbkx1anhila5yf.public.blob.vercel-storage.com/Art%20Collage-5GLlE6Fy49KuQ8zCwDUIKhNS3BgoCi.jpg)`,
           backgroundSize: "cover",
           backgroundPosition: "center",
-          opacity: 0.18,
+          opacity: 0.24,
           filter: "saturate(1.2)",
         }}
       />
@@ -255,69 +258,6 @@ function CtaButton({ to, color, children }) {
     >
       <HoverMorphText>{children}</HoverMorphText>
     </Link>
-  );
-}
-
-// ─── SECTION HEADING ─────────────────────────────────────
-function SectionHead({ number, kicker, title, color = P.cyan, link, linkLabel }) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        justifyContent: "space-between",
-        alignItems: "flex-end",
-        flexWrap: "wrap",
-        gap: 12,
-        marginBottom: 32,
-      }}
-    >
-      <div>
-        <div
-          style={{
-            fontFamily: "'Courier New', monospace",
-            fontSize: 11,
-            letterSpacing: 6,
-            color,
-            textTransform: "uppercase",
-            marginBottom: 12,
-          }}
-        >
-          {number && <span style={{ color: P.ghost, marginRight: 12 }}>{number}</span>}{kicker}
-        </div>
-        <h2
-          style={{
-            fontFamily: "'Georgia', serif",
-            fontSize: "clamp(27px, 4vw, 42px)",
-            fontWeight: 400,
-            letterSpacing: 0,
-            color: P.ghost,
-            margin: 0,
-            lineHeight: 1.12,
-          }}
-        >
-          <ScrollMorphText>{title}</ScrollMorphText>
-        </h2>
-        <div aria-hidden style={{ width: 72, height: 1, marginTop: 13, background: `linear-gradient(to right, ${color}, transparent)` }} />
-      </div>
-      {link && (
-        <Link
-          to={link}
-          style={{
-            fontFamily: "'Courier New', monospace",
-            fontSize: 11,
-            letterSpacing: 3,
-            color: P.bone,
-            textTransform: "uppercase",
-            textDecoration: "none",
-            opacity: 0.6,
-            borderBottom: `1px solid ${P.steel}55`,
-            paddingBottom: 4,
-          }}
-        >
-          <HoverMorphText>{linkLabel}</HoverMorphText>
-        </Link>
-      )}
-    </div>
   );
 }
 
@@ -546,7 +486,7 @@ function HomeNewsletterCard({ isMobile }) {
   );
 }
 
-function HomePathways({ isMobile }) {
+function HomePathways({ isMobile, chapterNumber }) {
   const cardPadding = isMobile ? "28px 24px" : "34px 36px";
   const headingStyle = {
     fontFamily: "'Georgia', serif",
@@ -575,7 +515,7 @@ function HomePathways({ isMobile }) {
 
   return (
     <section aria-label="Collect, commission, meet the artist, and join the signal" style={{ maxWidth: 1200, margin: "0 auto", padding: isMobile ? "64px 24px 88px" : "86px 32px 112px", borderTop: `1px solid ${P.steel}12` }}>
-      <SectionHead number="03" kicker="Paths Forward" title="Continue Through the System" color={P.gold} />
+      <SectionHead number={chapterNumber} kicker="Paths Forward" title="Continue Through the System" color={P.gold} />
       <div
         className="home-pathways-grid"
         style={{
@@ -658,6 +598,10 @@ function HomePathways({ isMobile }) {
 // ─── PAGE ────────────────────────────────────────────────
 export default function HomePage() {
   const isMobile = useIsMobile();
+  const processFeatureState = resolveProcessFeatureState(
+    SANITY_PROCESS_FEATURE.videoSrc,
+    Boolean(import.meta.env.DEV),
+  );
 
   return (
     <main
@@ -669,7 +613,8 @@ export default function HomePage() {
       <HeroSection isMobile={isMobile} />
       <Gallery isMobile={isMobile} />
       <CollectorStatement isMobile={isMobile} />
-      <HomePathways isMobile={isMobile} />
+      <ProcessInMotion feature={SANITY_PROCESS_FEATURE} state={processFeatureState} />
+      <HomePathways isMobile={isMobile} chapterNumber={processFeatureState.pathwaysChapter} />
     </main>
   );
 }
