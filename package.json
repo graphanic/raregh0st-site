@@ -8,7 +8,8 @@
     "build": "vite build",
     "test": "node --test",
     "preview": "vite preview",
-    "validate:catalog": "node scripts/validate-catalog.mjs"
+    "validate:catalog": "node scripts/validate-catalog.mjs",
+    "setup:commission-storage": "node scripts/setup-commission-reference-storage.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "2.105.1",

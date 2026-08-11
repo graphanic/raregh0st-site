@@ -1,12 +1,22 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { P } from "../data/palette";
 import { HoverMorphText, ScrollMorphText } from "../components/MorphText";
 import { SEO } from "../components/SEO";
-import { submitForm } from "../lib/api";
+import {
+  cleanupCommissionReferenceUploads,
+  submitForm,
+  uploadCommissionReferenceFiles,
+} from "../lib/api";
 import { NewsletterSignup } from "../components/NewsletterSignup";
-import { buildCommissionMeta, resolveCommissionPiece } from "../lib/commissionContext";
-import { getWorkHref } from "../data/catalog";
+import { CommissionInspirationBoard } from "../components/CommissionInspirationBoard";
+import { buildCommissionMeta, resolveCommissionReference } from "../lib/commissionContext";
+import {
+  MAX_UPLOAD_REFERENCES,
+  prepareReferenceImage,
+  referenceKey,
+  releaseReferencePreview,
+} from "../lib/commissionReferences";
 import { SOCIALS } from "../data/socials";
 import { COMMISSION_COPY, NEWSLETTER_COPY, SEO_COPY } from "../data/siteCopy";
 
@@ -47,13 +57,16 @@ export const Contact = () => {
   const requestedType = searchParams.get("type");
   const requestedPieceId = searchParams.get("piece");
   const safeType = INQUIRY_TYPES.some(([value]) => value === requestedType) ? requestedType : "general";
-  const requestedPiece = safeType === "commission" ? resolveCommissionPiece(requestedPieceId) : null;
+  const requestedReference = safeType === "commission" ? resolveCommissionReference(requestedPieceId) : null;
   const [form, setForm] = useState(() => emptyForm(safeType));
-  const [pieceContext, setPieceContext] = useState(requestedPiece);
+  const [references, setReferences] = useState(() => requestedReference ? [requestedReference] : []);
   const [submitted, setSubmitted] = useState(false);
   const [sending, setSending] = useState(false);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [uploadError, setUploadError] = useState("");
   const [error, setError] = useState("");
   const formRef = useRef(null);
+  const referencesRef = useRef(references);
 
   useEffect(() => {
     if (!requestedType || !INQUIRY_TYPES.some(([value]) => value === requestedType)) return;
@@ -61,8 +74,21 @@ export const Contact = () => {
   }, [requestedType]);
 
   useEffect(() => {
-    setPieceContext(safeType === "commission" ? resolveCommissionPiece(requestedPieceId) : null);
+    if (safeType !== "commission") return;
+    const nextReference = resolveCommissionReference(requestedPieceId);
+    if (!nextReference) return;
+    setReferences((current) => current.some((reference) => reference.type === "portfolio" && reference.workId === nextReference.workId)
+      ? current
+      : [nextReference, ...current]);
   }, [requestedPieceId, safeType]);
+
+  useEffect(() => {
+    referencesRef.current = references;
+  }, [references]);
+
+  useEffect(() => () => {
+    referencesRef.current.forEach(releaseReferencePreview);
+  }, []);
 
   useEffect(() => {
     if (location.hash !== "#signal") return;
@@ -73,12 +99,66 @@ export const Contact = () => {
   const setField = (field, value) => setForm((current) => ({ ...current, [field]: value }));
   const isCommission = form.type === "commission";
 
+  const handlePortfolioChange = (portfolioReferences) => {
+    setReferences((current) => [
+      ...portfolioReferences,
+      ...current.filter((reference) => reference.type === "upload"),
+    ]);
+  };
+
+  const handleReferenceNoteChange = (target, note) => {
+    const key = referenceKey(target);
+    setReferences((current) => current.map((reference) => referenceKey(reference) === key ? { ...reference, note } : reference));
+  };
+
+  const handleReferenceRemove = (target) => {
+    releaseReferencePreview(target);
+    const key = referenceKey(target);
+    setReferences((current) => current.filter((reference) => referenceKey(reference) !== key));
+  };
+
+  const handleReferenceFiles = async (files) => {
+    const remaining = MAX_UPLOAD_REFERENCES - references.filter((reference) => reference.type === "upload").length;
+    if (remaining <= 0 || files.length === 0) return;
+    setUploadBusy(true);
+    setUploadError("");
+    const prepared = [];
+    const failures = [];
+    const chosen = files.slice(0, remaining);
+
+    if (files.length > remaining) {
+      failures.push(`Only ${remaining} more reference photo${remaining === 1 ? "" : "s"} can be added.`);
+    }
+
+    for (const file of chosen) {
+      try {
+        prepared.push(await prepareReferenceImage(file));
+      } catch (prepareError) {
+        failures.push(`${file.name || "Image"}: ${prepareError.message}`);
+      }
+    }
+
+    if (prepared.length > 0) setReferences((current) => [...current, ...prepared]);
+    if (failures.length > 0) setUploadError(failures.join(" "));
+    setUploadBusy(false);
+  };
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     if (!form.name.trim() || !form.email.trim() || !form.message.trim() || sending) return;
     setSending(true);
     setError("");
+    let uploaded = [];
     try {
+      let submissionReferences = references;
+      if (isCommission && references.some((reference) => reference.type === "upload" && !reference.storagePath)) {
+        const uploadResult = await uploadCommissionReferenceFiles(references.filter((reference) => reference.type === "upload"));
+        uploaded = uploadResult.uploads;
+        const completedById = new Map(uploadResult.references.map((reference) => [reference.clientId, reference]));
+        submissionReferences = references.map((reference) => (
+          reference.type === "upload" ? completedById.get(reference.clientId) || reference : reference
+        ));
+      }
       await submitForm({
         kind: "contact",
         name: form.name,
@@ -86,10 +166,14 @@ export const Contact = () => {
         category: form.type,
         message: form.message,
         source: "contact-page",
-        meta: isCommission ? buildCommissionMeta(form, pieceContext) : {},
+        meta: isCommission ? buildCommissionMeta(form, submissionReferences) : {},
       });
+      references.forEach(releaseReferencePreview);
       setSubmitted(true);
     } catch (err) {
+      if (uploaded.length > 0) {
+        await cleanupCommissionReferenceUploads(uploaded).catch(() => {});
+      }
       setError(err.message || "Something went wrong. Please try again.");
     } finally {
       setSending(false);
@@ -135,15 +219,16 @@ export const Contact = () => {
               </div>
             ) : (
               <form onSubmit={handleSubmit} style={{ display: "grid", gap: 16 }}>
-                {isCommission && pieceContext && (
-                  <div className="commission-piece-context" style={{ display: "grid", gridTemplateColumns: "86px minmax(0, 1fr) 44px", gap: 14, alignItems: "center", padding: 12, border: `1px solid ${P.gold}45`, background: `${P.gold}09` }}>
-                    {pieceContext.img && <img src={pieceContext.img} alt="" style={{ width: 86, height: 72, objectFit: "cover", display: "block" }} />}
-                    <div style={{ minWidth: 0 }}>
-                      <div style={{ ...mono, fontSize: 11, letterSpacing: 2, color: P.gold, textTransform: "uppercase", marginBottom: 5 }}>Inspired by…</div>
-                      <Link to={getWorkHref(pieceContext)} style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.35, color: P.ghost, textDecoration: "none" }}>{pieceContext.title} ↗</Link>
-                    </div>
-                    <button type="button" onClick={() => setPieceContext(null)} aria-label="Remove inspired-by artwork" style={{ width: 44, height: 44, background: "none", border: `1px solid ${P.steel}35`, color: P.bone, cursor: "pointer", fontSize: 18 }}>×</button>
-                  </div>
+                {isCommission && (
+                  <CommissionInspirationBoard
+                    references={references}
+                    onPortfolioChange={handlePortfolioChange}
+                    onFilesSelected={handleReferenceFiles}
+                    onNoteChange={handleReferenceNoteChange}
+                    onRemove={handleReferenceRemove}
+                    uploadBusy={uploadBusy}
+                    uploadError={uploadError}
+                  />
                 )}
                 <Field label="Name" required value={form.name} onChange={(value) => setField("name", value)} />
                 <Field label="Email" type="email" required value={form.email} onChange={(value) => setField("email", value)} />
@@ -158,8 +243,8 @@ export const Contact = () => {
                     </div>
                   </div>
                 )}
-                <button type="submit" disabled={sending} style={{ ...mono, background: isCommission ? P.gold : P.cyan, border: `1px solid ${isCommission ? P.gold : P.cyan}`, color: P.abyss, fontSize: 10, letterSpacing: 4, padding: "15px 24px", cursor: sending ? "wait" : "pointer", textTransform: "uppercase", opacity: sending ? 0.55 : 1 }}>
-                  {sending ? "Sending…" : <HoverMorphText>{isCommission ? "Send Commission Request" : "Send Inquiry"}</HoverMorphText>}
+                <button type="submit" disabled={sending || uploadBusy} style={{ ...mono, background: isCommission ? P.gold : P.cyan, border: `1px solid ${isCommission ? P.gold : P.cyan}`, color: P.abyss, fontSize: 10, letterSpacing: 4, padding: "15px 24px", cursor: sending ? "wait" : "pointer", textTransform: "uppercase", opacity: sending ? 0.55 : 1 }}>
+                  {sending ? (isCommission && references.some((reference) => reference.type === "upload") ? "Sending references…" : "Sending…") : <HoverMorphText>{isCommission ? "Send Commission Request" : "Send Inquiry"}</HoverMorphText>}
                 </button>
                 {error && <div role="alert" style={{ ...mono, fontSize: 10, color: P.red, lineHeight: 1.6 }}>{error}</div>}
               </form>
@@ -169,7 +254,7 @@ export const Contact = () => {
           <aside style={{ display: "flex", flexDirection: "column", gap: 28 }}>
             <div style={{ padding: 26, borderLeft: `2px solid ${P.gold}55`, background: `${P.gold}06` }}>
               <div style={{ ...mono, fontSize: 8, letterSpacing: 4, color: P.gold, textTransform: "uppercase", marginBottom: 12 }}>Base Commission</div>
-              <p style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.6, lineHeight: 1.75, margin: "0 0 14px" }}>A high-resolution personal-use digital master, developed through close collaboration and major-stage reviews.</p>
+              <p style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.bone, opacity: 0.68, lineHeight: 1.75, margin: "0 0 14px" }}>A high-resolution personal-use digital master, developed through close collaboration and major-stage reviews.</p>
               <p style={{ ...mono, fontSize: 12, color: "var(--text-muted)", lineHeight: 1.7, margin: 0 }}>Physical prints, commercial use, licensing, and expanded deliverables are scoped and quoted separately. An inquiry is a conversation, not a booking.</p>
             </div>
 

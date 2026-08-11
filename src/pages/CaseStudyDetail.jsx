@@ -103,7 +103,7 @@ const CaseStudyDetail = () => {
               <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 4, color: project.colors[0], textTransform: "uppercase", marginBottom: 10 }}>Commissioned Design</div>
               <div style={{ fontFamily: "'Georgia', serif", fontSize: 18, color: P.ghost, marginBottom: 9 }}>Need a visual world built around a message or story?</div>
               <p style={{ fontFamily: "'Georgia', serif", fontSize: 12, color: P.bone, opacity: 0.5, lineHeight: 1.65, margin: "0 0 16px" }}>Share the purpose, audience, references, and desired deliverables. Commercial scope and usage rights are quoted separately.</p>
-              <button type="button" onClick={() => navigate("/contact?type=commission")} style={{ background: "transparent", border: `1px solid ${project.colors[0]}55`, color: project.colors[0], fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, padding: "10px 14px", cursor: "pointer", textTransform: "uppercase" }}>Commission Your Story</button>
+              <button type="button" aria-label={`Use ${project.title} as inspiration in a commission request`} onClick={() => navigate(`/contact?type=commission&piece=${encodeURIComponent(project.id)}`)} style={{ background: "transparent", border: `1px solid ${project.colors[0]}55`, color: project.colors[0], fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 3, padding: "10px 14px", cursor: "pointer", textTransform: "uppercase" }}>Use this as inspiration</button>
             </div>
           </div>
         </div>
@@ -113,6 +113,7 @@ const CaseStudyDetail = () => {
       <Lightbox
         item={lightboxItem}
         items={galleryItems.length > 0 ? galleryItems : undefined}
+        commissionWork={project}
         onNavigate={setLightboxItem}
         onClose={() => setLightboxItem(null)}
       />

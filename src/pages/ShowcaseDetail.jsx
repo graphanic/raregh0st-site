@@ -190,7 +190,7 @@ const ShowcaseDetail = () => {
                 <div style={{ padding: 22, borderTop: `2px solid ${P.gold}`, background: `${P.gold}08` }}>
                   <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 3, color: P.gold, textTransform: "uppercase", marginBottom: 9 }}>Commission from this world</div>
                   <p style={{ fontFamily: "'Georgia', serif", fontSize: 15, lineHeight: 1.65, color: P.bone, opacity: 0.76, margin: "0 0 16px" }}>Carry a mood, symbol, or compositional instinct into an entirely personal work.</p>
-                  <button type="button" onClick={() => navigate(`/contact?type=commission&piece=${encodeURIComponent(piece.id)}`)} style={{ minHeight: 44, padding: "10px 14px", background: P.gold, border: `1px solid ${P.gold}`, color: P.abyss, fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>Begin with this piece →</button>
+                  <button type="button" aria-label={`Use ${piece.title} as inspiration in a commission request`} onClick={() => navigate(`/contact?type=commission&piece=${encodeURIComponent(piece.id)}`)} style={{ minHeight: 44, padding: "10px 14px", background: P.gold, border: `1px solid ${P.gold}`, color: P.abyss, fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>Use this as inspiration →</button>
                 </div>
                 <div style={{ padding: 22, borderTop: `2px solid ${P.cyan}`, background: `${P.cyan}07` }}>
                   <div style={{ fontFamily: "'Courier New', monospace", fontSize: 11, letterSpacing: 3, color: P.cyan, textTransform: "uppercase", marginBottom: 9 }}>Release notes</div>

@@ -16,9 +16,11 @@ import {
   adminSyncPrintful,
   adminUploadDigital,
   adminGetSubmissions,
+  adminGetSubmissionReferences,
   adminUpdateSubmission,
   adminDeleteSubmission,
 } from "../lib/api";
+import { getWorkById, getWorkHref } from "../data/catalog";
 
 // ─── shared styles ────────────────────────────────────────────────────────────
 const ui = {
@@ -234,6 +236,7 @@ function InboxTab({ token }) {
   const [loading, setLoading] = useState(true);
   const [kind, setKind] = useState("all");     // all | contact | inquiry | newsletter
   const [open, setOpen] = useState(null);       // expanded submission id
+  const [referencePreviews, setReferencePreviews] = useState({});
 
   const load = () => {
     setLoading(true);
@@ -258,6 +261,34 @@ function InboxTab({ token }) {
       await adminDeleteSubmission(token, id);
       setSubs(prev => prev.filter(s => s.id !== id));
     } catch (e) { setErr(e.message); }
+  };
+
+  const toggleOpen = async (submission) => {
+    const nextOpen = open === submission.id ? null : submission.id;
+    setOpen(nextOpen);
+    if (submission.status === "new") setStatus(submission.id, "read");
+    const uploadReferences = Array.isArray(submission.meta?.references)
+      ? submission.meta.references.filter((reference) => reference?.type === "upload")
+      : [];
+    const previewState = referencePreviews[submission.id];
+    if (!nextOpen || uploadReferences.length === 0 || previewState?.loading || previewState?.loaded) return;
+
+    setReferencePreviews((current) => ({
+      ...current,
+      [submission.id]: { loading: true, loaded: false, items: current[submission.id]?.items || [] },
+    }));
+    try {
+      const data = await adminGetSubmissionReferences(token, submission.id);
+      setReferencePreviews((current) => ({
+        ...current,
+        [submission.id]: { loading: false, loaded: true, items: data.references || [] },
+      }));
+    } catch (previewError) {
+      setReferencePreviews((current) => ({
+        ...current,
+        [submission.id]: { loading: false, loaded: false, items: [], error: previewError.message },
+      }));
+    }
   };
 
   const KIND_COLOR = { contact: P.cyan, inquiry: P.magenta, newsletter: P.amber };
@@ -298,7 +329,10 @@ function InboxTab({ token }) {
           const accent = KIND_COLOR[s.kind] || P.ghost;
           const isOpen = open === s.id;
           const isNew = s.status === "new";
-          const metaEntries = Object.entries(s.meta || {}).filter(([, value]) => value != null && value !== "");
+          const submissionReferences = Array.isArray(s.meta?.references) ? s.meta.references : [];
+          const previewState = referencePreviews[s.id] || {};
+          const previewByPath = new Map((previewState.items || []).map((item) => [item.storagePath, item.previewUrl]));
+          const metaEntries = Object.entries(s.meta || {}).filter(([key, value]) => key !== "references" && value != null && value !== "");
           return (
             <div key={s.id} style={{
               border: `1px solid ${isNew ? accent + "40" : P.steel + "15"}`,
@@ -306,7 +340,7 @@ function InboxTab({ token }) {
               borderRadius: 2,
             }}>
               <div
-                onClick={() => { setOpen(isOpen ? null : s.id); if (isNew) setStatus(s.id, "read"); }}
+                onClick={() => toggleOpen(s)}
                 style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px", cursor: "pointer", flexWrap: "wrap" }}
               >
                 <span style={{ fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 2, color: accent, textTransform: "uppercase", border: `1px solid ${accent}40`, borderRadius: 2, padding: "3px 6px", minWidth: 74, textAlign: "center" }}>
@@ -333,6 +367,42 @@ function InboxTab({ token }) {
                     <div style={{ fontFamily: "'Georgia', serif", fontSize: 14, lineHeight: 1.6, color: P.ghost, whiteSpace: "pre-wrap", borderLeft: `2px solid ${accent}44`, paddingLeft: 14 }}>
                       {s.message}
                     </div>
+                  )}
+                  {submissionReferences.length > 0 && (
+                    <section aria-label="Commission references" style={{ display: "grid", gap: 9 }}>
+                      <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: P.gold, letterSpacing: 3, textTransform: "uppercase" }}>
+                        Inspiration board · {submissionReferences.length} reference{submissionReferences.length === 1 ? "" : "s"}
+                      </div>
+                      {previewState.loading && <div style={{ fontFamily: "'Courier New', monospace", fontSize: 9, color: P.bone, opacity: 0.5 }}>Opening private previews…</div>}
+                      {previewState.error && <div style={ui.err}>{previewState.error}</div>}
+                      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))", gap: 10 }}>
+                        {submissionReferences.map((reference, referenceIndex) => {
+                          const work = reference.type === "portfolio" ? getWorkById(reference.workId) : null;
+                          const previewUrl = reference.type === "upload" ? previewByPath.get(reference.storagePath) : work?.img;
+                          const title = reference.type === "portfolio" ? (work?.title || reference.title) : reference.originalName;
+                          return (
+                            <article key={`${reference.type}-${reference.workId || reference.storagePath || referenceIndex}`} style={{ overflow: "hidden", border: `1px solid ${P.gold}28`, background: `${P.gold}05` }}>
+                              {previewUrl && (
+                                <div style={{ aspectRatio: "16 / 9", overflow: "hidden", background: P.abyss }}>
+                                  {work?.mediaType === "video"
+                                    ? <video src={previewUrl} muted controls preload="metadata" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                                    : <img src={previewUrl} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />}
+                                </div>
+                              )}
+                              <div style={{ padding: "11px 12px" }}>
+                                <div style={{ fontFamily: "'Courier New', monospace", fontSize: 8, color: P.gold, letterSpacing: 2, textTransform: "uppercase", marginBottom: 5 }}>
+                                  {reference.type === "portfolio" ? "Portfolio artwork" : "Private photo"}
+                                </div>
+                                <div style={{ fontFamily: "'Georgia', serif", fontSize: 13, color: P.ghost, lineHeight: 1.4 }}>{title}</div>
+                                {reference.note && <p style={{ fontFamily: "'Georgia', serif", fontSize: 12, color: P.bone, opacity: 0.72, lineHeight: 1.55, margin: "8px 0 0", whiteSpace: "pre-wrap" }}>{reference.note}</p>}
+                                {work && <a href={getWorkHref(work)} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 9, color: P.cyan, fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 1.5, textTransform: "uppercase" }}>Open portfolio work ↗</a>}
+                                {reference.type === "upload" && previewUrl && <a href={previewUrl} target="_blank" rel="noreferrer" style={{ display: "inline-block", marginTop: 9, color: P.cyan, fontFamily: "'Courier New', monospace", fontSize: 8, letterSpacing: 1.5, textTransform: "uppercase" }}>Open private reference ↗</a>}
+                              </div>
+                            </article>
+                          );
+                        })}
+                      </div>
+                    </section>
                   )}
                   {metaEntries.length > 0 && (
                     <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(190px, 1fr))", gap: 8 }}>

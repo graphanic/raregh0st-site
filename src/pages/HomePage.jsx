@@ -147,29 +147,33 @@ function HeroSection({ isMobile }) {
             touchAction: "manipulation",
           }}
         />
-        <div
+        <p
           style={{
-            fontFamily: "'Courier New', monospace",
-            fontSize: isMobile ? 9 : 11,
-            letterSpacing: isMobile ? 1.8 : 5,
-            color: P.magenta,
+            fontFamily: "'Georgia', serif",
+            fontStyle: "normal",
+            fontWeight: 700,
+            letterSpacing: isMobile ? 2.8 : 7,
             textTransform: "uppercase",
-            margin: "0 auto 20px",
-            width: "100%",
+            fontSize: 8,
+            color: P.magenta,
+            opacity: 0.62,
             maxWidth: 720,
-            lineHeight: 1.6,
+            lineHeight: 1.65,
+            margin: "0 auto 18px",
           }}
         >
-          <MorphText speed={90} allowWrap>{BRAND_COPY.kicker}</MorphText>
-        </div>
+          {BRAND_COPY.kicker}
+        </p>
         <h1
           aria-label="1RareGh0st"
           style={{
             fontFamily: "'Courier New', monospace",
-            fontSize: isMobile ? "clamp(38px, 11.6vw, 48px)" : "clamp(88px, 8vw, 124px)",
+            fontSize: isMobile ? "clamp(42px, calc((100vw - 68px) / 6), 117px)" : "clamp(102px, calc((100vw - 164px) / 6), 173px)",
             fontWeight: 400,
             letterSpacing: isMobile ? 2 : 10,
             lineHeight: 0.92,
+            width: "100%",
+            whiteSpace: "nowrap",
             margin: 0,
           }}
         >
@@ -178,19 +182,23 @@ function HeroSection({ isMobile }) {
           <span aria-hidden="true" style={{ color: P.ghost }}>0</span>
           <span aria-hidden="true" style={{ color: P.magenta }}>ST</span>
         </h1>
-        <div
+        <p
           style={{
-            fontFamily: "'Courier New', monospace",
-            fontSize: isMobile ? 8 : 9,
-            letterSpacing: isMobile ? 3.2 : 6,
-            color: P.cyan,
+            fontFamily: "'Georgia', serif",
+            fontStyle: "normal",
+            fontWeight: 700,
+            letterSpacing: isMobile ? 2.8 : 7,
             textTransform: "uppercase",
-            marginTop: isMobile ? 24 : 30,
-            opacity: 0.75,
+            fontSize: 8,
+            color: P.cyan,
+            opacity: 0.62,
+            maxWidth: 720,
+            lineHeight: 1.65,
+            margin: "18px auto 0",
           }}
         >
-          <MorphText speed={70} allowWrap>{BRAND_COPY.craftLine}</MorphText>
-        </div>
+          {BRAND_COPY.craftLine}
+        </p>
         <p style={{ fontFamily: "'Georgia', serif", fontStyle: "italic", fontSize: isMobile ? 13 : 16, color: P.bone, opacity: 0.62, maxWidth: 620, lineHeight: 1.65, margin: "18px auto 0" }}>
           {BRAND_COPY.supporting}
         </p>

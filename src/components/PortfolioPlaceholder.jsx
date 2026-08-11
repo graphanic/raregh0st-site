@@ -289,7 +289,7 @@ const NavButton = ({ direction, onClick }) => {
   );
 };
 
-export const Lightbox = ({ item, items, onClose, onNavigate }) => {
+export const Lightbox = ({ item, items, commissionWork, onClose, onNavigate }) => {
   const [zoom, setZoom] = useState(1);
   const [panOffset, setPanOffset] = useState({ x: 0, y: 0 });
   const [showInfo, setShowInfo] = useState(true);
@@ -361,6 +361,7 @@ export const Lightbox = ({ item, items, onClose, onNavigate }) => {
   const showCounter = items && items.length > 1;
   const category = item.primaryCategory ? getCategory(item.primaryCategory) : null;
   const sourceWork = item.sourceWorkId ? getWorkById(item.sourceWorkId) : null;
+  const commissionReference = commissionWork || item;
 
   return (
     <div
@@ -484,6 +485,16 @@ export const Lightbox = ({ item, items, onClose, onNavigate }) => {
           </div>
         )}
         <div style={{ fontFamily: "'Georgia', serif", fontSize: 17, color: P.ghost }}>{item.title}</div>
+        {commissionReference?.id && (
+          <Link
+            to={`/contact?type=commission&piece=${encodeURIComponent(commissionReference.id)}`}
+            onClick={(event) => event.stopPropagation()}
+            aria-label={`Use ${commissionReference.title || item.title} as inspiration in a commission request`}
+            style={{ display: "inline-block", marginTop: 10, minHeight: 36, padding: "8px 12px", border: `1px solid ${P.gold}66`, background: `${P.gold}0d`, color: P.gold, fontFamily: "'Courier New', monospace", fontSize: 8, lineHeight: 1.5, letterSpacing: 2, textTransform: "uppercase", textDecoration: "none" }}
+          >
+            Use this as inspiration
+          </Link>
+        )}
         {sourceWork && (
           <Link
             to={getWorkHref(sourceWork)}

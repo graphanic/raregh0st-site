@@ -47,6 +47,7 @@ function ScrollToTop() {
 }
 
 export default function App() {
+  const { pathname } = useLocation();
   const isMobile = useIsMobile();
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState(() => loadLocal("cart", []));
@@ -226,7 +227,7 @@ export default function App() {
         <SignalDock
           calm={calm}
           onToggleCalm={toggleCalm}
-          hidden={isMobile && !cookieResolved}
+          hidden={pathname === "/contact" || (isMobile && !cookieResolved)}
         />
       </div>
     </CalmContext.Provider>

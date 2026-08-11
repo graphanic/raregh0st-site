@@ -18,3 +18,15 @@ A browser session alone is not authorization. Before either route renders, `GET 
 The project URL and publishable key in `config/supabase.js` are public browser configuration. The secret key stays server-only. The code still accepts the legacy `SUPABASE_SERVICE_ROLE_KEY` server variable during migration, but new deployments should prefer `SUPABASE_SECRET_KEY`.
 
 After the first successful login, the API links the private allowlist row to the Supabase Auth user UUID. `SUPABASE_ADMIN_EMAILS` and `SUPABASE_ADMIN_USER_IDS` remain optional server-only overrides. Remove the obsolete `STORE_ADMIN_PASSWORD_V2` deployment variable; passwords and custom daily admin tokens are no longer used.
+
+## Private commission reference photos
+
+Commission requests can include prepared WebP reference photos. These belong in the private `commission-references` Storage bucket; the browser receives time-limited upload grants, and only an authenticated admin can request short-lived preview URLs.
+
+Provision or reconcile the bucket after setting the server variables:
+
+```bash
+npm run setup:commission-storage
+```
+
+The setup command keeps the bucket private, restricts it to WebP images, and enforces the same 8 MB limit as the public upload-grant API. Deleting a commission submission from the admin inbox removes its stored reference photos before deleting the row.

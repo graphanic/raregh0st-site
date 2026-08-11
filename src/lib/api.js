@@ -1,6 +1,12 @@
 // Thin fetch wrappers for the public + admin APIs.
 // All endpoints live under /api/* on the same origin.
 
+import { supabase } from "./supabase";
+import {
+  COMMISSION_REFERENCE_BUCKET,
+  MAX_UPLOAD_REFERENCES,
+} from "./commissionReferences";
+
 const j = (r) => r.json().then(d => (r.ok ? d : Promise.reject(new Error(d?.error || `HTTP ${r.status}`))));
 
 // ─── Public ──────────────────────────────────────────────────────────────────
@@ -31,6 +37,68 @@ export const submitForm = (payload) =>
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   }).then(j);
+
+export const cleanupCommissionReferenceUploads = (uploads = []) => {
+  if (uploads.length === 0) return Promise.resolve({ ok: true });
+  return fetch("/api/commission-upload-cleanup", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      uploads: uploads.map(({ path, cleanupToken }) => ({ path, cleanupToken })),
+    }),
+  }).then(j);
+};
+
+export async function uploadCommissionReferenceFiles(references = []) {
+  if (references.length === 0) return { references: [], uploads: [] };
+  if (references.length > MAX_UPLOAD_REFERENCES) {
+    throw new Error(`Choose no more than ${MAX_UPLOAD_REFERENCES} reference photos.`);
+  }
+  if (!supabase) throw new Error("Reference photo storage is unavailable right now.");
+
+  const files = references.map((reference) => reference.file).filter(Boolean);
+  if (files.length !== references.length) throw new Error("One of the reference photos is no longer available. Please add it again.");
+
+  const { uploads } = await fetch("/api/commission-upload-token", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      files: files.map((file) => ({ name: file.name, type: file.type, size: file.size })),
+    }),
+  }).then(j);
+  if (
+    !Array.isArray(uploads)
+    || uploads.length !== files.length
+    || uploads.some((grant) => !grant?.path || !grant?.token || !grant?.cleanupToken)
+  ) {
+    throw new Error("The secure reference upload could not be prepared. Please try again.");
+  }
+
+  try {
+    for (let index = 0; index < uploads.length; index += 1) {
+      const grant = uploads[index];
+      const file = files[index];
+      const { error } = await supabase.storage
+        .from(COMMISSION_REFERENCE_BUCKET)
+        .uploadToSignedUrl(grant.path, grant.token, file, {
+          contentType: file.type,
+          cacheControl: "3600",
+        });
+      if (error) throw error;
+    }
+  } catch (error) {
+    await cleanupCommissionReferenceUploads(uploads).catch(() => {});
+    throw new Error(error.message || "A reference photo could not be uploaded.");
+  }
+
+  return {
+    uploads,
+    references: references.map((reference, index) => ({
+      ...reference,
+      storagePath: uploads[index].path,
+    })),
+  };
+}
 
 // ─── Admin ───────────────────────────────────────────────────────────────────
 function adminHeaders(token, extra = {}) {
@@ -104,6 +172,11 @@ export const adminGetSubmissions = (token, params = {}) => {
   Object.entries(params).forEach(([k, v]) => v != null && v !== "" && q.set(k, String(v)));
   return fetch(`/api/admin/submissions?${q.toString()}`, { headers: adminHeaders(token) }).then(j);
 };
+
+export const adminGetSubmissionReferences = (token, id) =>
+  fetch(`/api/admin/submissions?id=${encodeURIComponent(id)}&references=1`, {
+    headers: adminHeaders(token),
+  }).then(j);
 
 export const adminUpdateSubmission = (token, id, status) =>
   fetch("/api/admin/submissions", {
