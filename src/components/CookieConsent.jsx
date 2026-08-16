@@ -1,24 +1,29 @@
 import { useState, useEffect } from "react";
 import { P } from "../data/palette";
-import { saveLocal, loadLocal } from "../utils/storage";
+import { saveLocal } from "../utils/storage";
+import {
+  ANALYTICS_CONSENT,
+  ANALYTICS_CONSENT_KEY,
+} from "../lib/apolloTracker";
 
-export const CookieConsent = ({ onDismiss }) => {
+export const CookieConsent = ({ consent, onConsentChange }) => {
   const [visible, setVisible] = useState(false);
-  const [dismissed, setDismissed] = useState(() => loadLocal("cookies", false));
 
   useEffect(() => {
-    if (dismissed) return;
+    if (consent) {
+      setVisible(false);
+      return;
+    }
     const timer = setTimeout(() => setVisible(true), 2500);
     return () => clearTimeout(timer);
-  }, [dismissed]);
+  }, [consent]);
 
-  const handleDismiss = () => {
-    setDismissed(true);
-    saveLocal("cookies", true);
-    onDismiss?.();
+  const handleChoice = (choice) => {
+    saveLocal(ANALYTICS_CONSENT_KEY, choice);
+    onConsentChange?.(choice);
   };
 
-  if (dismissed || !visible) return null;
+  if (consent || !visible) return null;
 
   return (
     <div data-app-utility="consent" style={{
@@ -33,26 +38,28 @@ export const CookieConsent = ({ onDismiss }) => {
           Cookies & Privacy
         </div>
         <div style={{ fontFamily: "'Georgia', serif", fontSize: 11, color: P.bone, opacity: 0.5, lineHeight: 1.5 }}>
-          We use minimal analytics cookies to understand how visitors interact with the site. No tracking, no ads, no third-party data sharing.
+          We use essential storage for site preferences. With your permission,
+          Apollo analytics helps us understand visits and improve the site. Apollo
+          loads only if you allow analytics. <a href="/privacy" style={{ color: P.cyan }}>Privacy details</a>
         </div>
       </div>
       <div style={{ display: "flex", gap: 8 }}>
-        <button onClick={handleDismiss} style={{
+        <button onClick={() => handleChoice(ANALYTICS_CONSENT.ESSENTIAL)} style={{
+          background: "none", border: `1px solid ${P.steel}22`, color: P.bone,
+          fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2,
+          padding: "8px 16px", cursor: "pointer", textTransform: "uppercase", opacity: 0.55, transition: "all 0.3s",
+        }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = "0.8"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.55"; }}
+        >Essential only</button>
+        <button onClick={() => handleChoice(ANALYTICS_CONSENT.ALLOW)} style={{
           background: `${P.cyan}12`, border: `1px solid ${P.cyan}30`, color: P.ghost,
           fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2,
           padding: "8px 16px", cursor: "pointer", textTransform: "uppercase", transition: "all 0.3s",
         }}
-          onMouseEnter={(e) => { e.target.style.background = `${P.cyan}22`; }}
-          onMouseLeave={(e) => { e.target.style.background = `${P.cyan}12`; }}
-        >Accept</button>
-        <button onClick={handleDismiss} style={{
-          background: "none", border: `1px solid ${P.steel}22`, color: P.bone,
-          fontFamily: "'Courier New', monospace", fontSize: 9, letterSpacing: 2,
-          padding: "8px 16px", cursor: "pointer", textTransform: "uppercase", opacity: 0.4, transition: "all 0.3s",
-        }}
-          onMouseEnter={(e) => { e.target.style.opacity = "0.7"; }}
-          onMouseLeave={(e) => { e.target.style.opacity = "0.4"; }}
-        >Decline</button>
+          onMouseEnter={(e) => { e.currentTarget.style.background = `${P.cyan}22`; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = `${P.cyan}12`; }}
+        >Allow analytics</button>
       </div>
     </div>
   );

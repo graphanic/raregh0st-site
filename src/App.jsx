@@ -13,8 +13,13 @@ import { Particles } from "./components/Particles";
 import { Preloader } from "./components/Preloader";
 
 import { CookieConsent } from "./components/CookieConsent";
+import { ApolloTracker } from "./components/ApolloTracker";
 import { SignalDock } from "./components/SignalDock";
 import { ProtectedRoute } from "./components/ProtectedRoute";
+import {
+  ANALYTICS_CONSENT_KEY,
+  isAnalyticsAllowed,
+} from "./lib/apolloTracker";
 
 // Pages
 import HomePage from "./pages/HomePage";
@@ -52,7 +57,10 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [cart, setCart] = useState(() => loadLocal("cart", []));
   const [calm, setCalm] = useState(() => loadLocal("calm", false));
-  const [cookieResolved, setCookieResolved] = useState(() => loadLocal("cookies", false));
+  const [analyticsConsent, setAnalyticsConsent] = useState(() =>
+    loadLocal(ANALYTICS_CONSENT_KEY, null)
+  );
+  const cookieResolved = Boolean(analyticsConsent);
   const [toast, setToast] = useState(null);
   useImageProtection();
 
@@ -223,7 +231,11 @@ export default function App() {
             {toast}
           </div>
         )}
-        <CookieConsent onDismiss={() => setCookieResolved(true)} />
+        <ApolloTracker enabled={isAnalyticsAllowed(analyticsConsent)} />
+        <CookieConsent
+          consent={analyticsConsent}
+          onConsentChange={setAnalyticsConsent}
+        />
         <SignalDock
           calm={calm}
           onToggleCalm={toggleCalm}

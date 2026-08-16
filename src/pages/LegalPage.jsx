@@ -8,9 +8,9 @@ const PAGES = {
     sections: [
       { h: "Information We Collect", p: "When you visit raregh0st.studio, we may collect information you provide directly, including contact and commission-form details, newsletter signups, order information, and shipping details required to complete a purchase. We do not sell, trade, or rent your personal information." },
       { h: "How We Use Your Information", p: "We use this information to respond to inquiries, evaluate commission requests, process and fulfill orders, provide order updates, send communications you have requested, prevent abuse, and improve the website." },
-      { h: "Cookies & Analytics", p: "We may use privacy-respecting analytics to understand how visitors interact with our site. We do not use invasive tracking or sell data to advertisers." },
+      { h: "Cookies & Analytics", p: "We use essential browser storage for site preferences. If you choose Allow analytics, we load Apollo's website tracker to understand visits and site engagement. Apollo is not loaded when you choose Essential only. We do not sell your personal information." },
       { h: "Payments", p: "Payments are processed by Stripe. 1RareGh0st does not directly store complete payment-card numbers. Stripe receives and processes payment information under its own privacy policy." },
-      { h: "Third-Party Services", p: "Physical orders may be fulfilled and shipped by Printful. Store, order, and submission records are maintained through Supabase. These providers process only the information needed to perform their services and operate under their own privacy policies." },
+      { h: "Third-Party Services", p: "Physical orders may be fulfilled and shipped by Printful. Store, order, and submission records are maintained through Supabase. If analytics are allowed, Apollo provides website analytics. These providers process information under their own privacy policies." },
       { h: "Your Rights", p: "You may request access to, correction of, or deletion of your personal data at any time by contacting us through our contact form or emailing hello@raregh0st.com." },
       { h: "Changes", p: "We may update this policy periodically. Changes will be posted on this page with an updated revision date." },
     ]
