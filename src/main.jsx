@@ -5,6 +5,7 @@ import { BrowserRouter } from "react-router-dom";
 import { HelmetProvider } from "react-helmet-async";
 import App from "./App.jsx";
 import { AuthProvider } from "./components/AuthContext.jsx";
+import { InteractiveHeroLogoBridge } from "./components/home/InteractiveHeroLogoBridge.jsx";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
@@ -12,6 +13,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <AuthProvider>
         <BrowserRouter>
           <App />
+          <InteractiveHeroLogoBridge />
         </BrowserRouter>
       </AuthProvider>
     </HelmetProvider>
